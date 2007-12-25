@@ -3,6 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiprog", "multiprog\multiprog.vcproj", "{5EF36991-6818-48D4-9226-E801AD489FE8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cycles", "samples\cycles\cycles.vcproj", "{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5EF36991-6818-48D4-9226-E801AD489FE8} = {5EF36991-6818-48D4-9226-E801AD489FE8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong", "samples\ping-pong\ping-pong.vcproj", "{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5EF36991-6818-48D4-9226-E801AD489FE8} = {5EF36991-6818-48D4-9226-E801AD489FE8}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,8 +31,24 @@ Global
 		{5EF36991-6818-48D4-9226-E801AD489FE8}.Release|Win32.Build.0 = Release|Win32
 		{5EF36991-6818-48D4-9226-E801AD489FE8}.Release|x64.ActiveCfg = Release|x64
 		{5EF36991-6818-48D4-9226-E801AD489FE8}.Release|x64.Build.0 = Release|x64
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Debug|Win32.Build.0 = Debug|Win32
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Debug|x64.ActiveCfg = Debug|Win32
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Release|Win32.ActiveCfg = Release|Win32
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Release|Win32.Build.0 = Release|Win32
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}.Release|x64.ActiveCfg = Release|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Debug|Win32.Build.0 = Debug|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Debug|x64.ActiveCfg = Debug|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Release|Win32.ActiveCfg = Release|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Release|Win32.Build.0 = Release|Win32
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB} = {A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}
+		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B} = {A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}
 	EndGlobalSection
 EndGlobal
