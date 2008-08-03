@@ -1,9 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiprog", "multiprog\multiprog.vcproj", "{5EF36991-6818-48D4-9226-E801AD489FE8}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiprog", "multiprog\multiprog.vcproj", "{5EF36991-6818-48D4-9226-E801AD489FE8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cycles", "samples\cycles\cycles.vcproj", "{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}"
 	ProjectSection(ProjectDependencies) = postProject
