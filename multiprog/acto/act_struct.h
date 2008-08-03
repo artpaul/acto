@@ -2,7 +2,7 @@
 //                                     The acto Library                                          //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
+// Copyright © 2007 - 2008                                                                       //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
@@ -20,42 +20,34 @@
 
 // Структуры, специально адаптированные под задачи библиотеки
 
-namespace multiprog 
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
-namespace core
-{
+namespace core {
 
-namespace structs
-{
+namespace structs {
 
 // Desc: Элемент списка
 template <typename T>
-struct item_t 
-{
+struct item_t {
     T*      next;
 };
 
 template <typename T>
-struct sequence_t 
-{
+struct sequence_t {
     T*      head;
 
 public:
     sequence_t(T* const item) : head(item) { }
 
-    T* extract()
-    {
+    T* extract() {
         T* const result = head;
         head = 0;
         return result;
     }
 
-    T* pop()
-    {
+    T* pop() {
         T* const result = head;
         // -
         if (result) {
@@ -71,44 +63,37 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
 template <typename T, typename Guard = system::section_t>
-class queue_t
-{
+class queue_t {
 public:
     typedef T       node_t;
 
 public:
-    queue_t()
-    {
+    queue_t() {
         head = 0;
         tail = 0;
     }
 
-    void push(node_t* const node)
-    {
+    void push(node_t* const node) {
         system::MutexLocker lock(m_cs);
         // -
-        if (tail)
-        {
+        if (tail) {
             tail->next = node;
             node->next = 0;
             tail = node;
         }
-        else
-        {
+        else {
             node->next = 0;
             head = node;
             tail = node;
         }
     }
 
-    node_t* pop()
-    {
+    node_t* pop() {
         system::MutexLocker lock(m_cs);
         // -
         node_t* const result = head;
         // -
-        if (head)
-        {
+        if (head) {
             head = head->next;
             // -
             if (head == 0)
@@ -120,8 +105,7 @@ public:
         return result;
     }
 
-    bool empty() const
-    {
+    bool empty() const {
         return (head == 0);
     }
 
@@ -138,8 +122,7 @@ private:
 //    Используемый алгоритм будет корректно работать, если только 
 //    единственный поток извлекает объекты из стека и удаляет их.
 template <typename T>
-class stack_t
-{
+class stack_t {
 public:
     typedef T       node_t;
 
@@ -149,13 +132,11 @@ public:
     {
     }
 
-    bool    empty() const
-    {
+    bool empty() const {
         return (m_head == 0);
     }
 
-    sequence_t<T> extract()
-    {
+    sequence_t<T> extract() {
         node_t*     top;
 
         while(true) {
@@ -167,8 +148,7 @@ public:
         }
     }
 
-    void push(node_t* const node)
-    {
+    void push(node_t* const node) {
         node_t*     top;
 
         while (true) {
@@ -179,14 +159,12 @@ public:
         }
     }
 
-    void push(sequence_t<T> seq)
-    {
+    void push(sequence_t<T> seq) {
         while (T* const item = seq.pop())
             this->push(item);
     }
 
-    node_t* pop()
-    {
+    node_t* pop() {
         node_t*     top;
         node_t*     next;
 
@@ -207,8 +185,7 @@ private:
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
 template <typename T>
-class localstack_t
-{
+class localstack_t {
 public:
     typedef T       node_t;
 
@@ -218,8 +195,7 @@ public:
     {
     }
 
-    ~localstack_t()
-    {
+    ~localstack_t() {
         assert(m_head == 0);
     }
 
@@ -228,32 +204,27 @@ public:
     {
     }
 
-    bool    empty() const
-    {
+    bool empty() const {
         return (m_head == 0);
     }
 
-    sequence_t<T> extract()
-    {
+    sequence_t<T> extract() {
         sequence_t<T> top = sequence_t<T>(m_head);
         m_head = 0;
         return top;
     }
 
-    void push(node_t* const node)
-    {
+    void push(node_t* const node) {
         node->next = m_head;
         m_head     = node;
     }
 
-    void push(sequence_t<T> seq)
-    {
+    void push(sequence_t<T> seq) {
         while (T* const item = seq.pop())
             this->push(item);
     }
 
-    node_t* pop()
-    {
+    node_t* pop() {
         node_t* const result = m_head;
         // -
         if (result)

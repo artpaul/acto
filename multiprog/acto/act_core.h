@@ -2,7 +2,7 @@
 //                                     The act_o Library                                         //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
+// Copyright © 2007 - 2008                                                                       //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
@@ -18,22 +18,18 @@
 #define __multiprogs__act_core_h__
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
-namespace core
-{
+namespace core {
 
 // -
 class worker_t;
 
 
 // Desc: 
-struct HandlerItem
-{
+struct HandlerItem {
 	// Обработчик
 	i_handler*		handler;
 	// Тип обработчика
@@ -45,8 +41,7 @@ public:
 
 
 // Desc:
-struct LinkItem
-{
+struct LinkItem {
 	typedef fastdelegate::FastDelegate< void (const acto::actor_t&) >	Notifier;
 
 	// -
@@ -58,8 +53,7 @@ struct LinkItem
 
 // Desc: 
 template <typename T>
-class type_box_t
-{
+class type_box_t {
 public:
 	// Оборачиваемый тип
 	typedef T		type_type;
@@ -77,8 +71,7 @@ public:
 		bool operator == (const type_box_t< U >& rhs) const;
 
 	// Преобразование к типу идентификатора
-	operator value_type () const
-	{
+	operator value_type () const {
 		return m_id;
 	}
 
@@ -98,22 +91,19 @@ typedef system::MutexLocker                 Exclusive;
 
 
 // Desc: Базовый тип для сообщений
-struct ACTO_API msg_t
-{
+struct ACTO_API msg_t {
 public:
 	virtual ~msg_t() { }
 };
 
 
 // Desc: Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских). 
-class ACTO_API base_t
-{
+class ACTO_API base_t {
 	// -
 	friend class worker_t;
 
 public:
-	struct msg_destroy : public msg_t
-	{
+	struct msg_destroy : public msg_t {
 		// Объект, который необходимо удалить
 		object_t*	object;
 	};
@@ -139,8 +129,7 @@ private:
 };
 
 // Desc:
-struct ACTO_API i_handler
-{
+struct ACTO_API i_handler {
 	// Идентификатор типа сообщения
 	const TYPEID		m_type;
 
@@ -154,8 +143,7 @@ public:
 
 
 // Desc: Объект
-struct ACTO_API object_t
-{
+struct ACTO_API object_t {
 	// Критическая секция для доступа к полям
     system::section_t   cs;
     // Флаги состояния текущего объекта
@@ -181,8 +169,7 @@ public:
 
 
 // Desc: Транспортный пакет для сообщения
-struct ACTO_API package_t
-{
+struct ACTO_API package_t {
 	// Данные сообщения
 	msg_t* const		data;
     // -
@@ -202,8 +189,7 @@ public:
 
 // Desc: Обертка для вызова обработчика сообщения конкретного типа
 template <typename MsgT>
-class handler_t : public i_handler
-{
+class handler_t : public i_handler {
 public:
 	typedef fastdelegate::FastDelegate< void (acto::actor_t&, const MsgT&) >	delegate_t;
 
@@ -223,10 +209,8 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Данные среды выполнения
-class runtime_t
-{
-	struct resources_t
-	{
+class runtime_t {
+	struct resources_t {
 		// Для контейнера заголовков актеров
         system::section_t       actors;
         // Для контейнера типов
@@ -247,8 +231,7 @@ class runtime_t
     typedef structs::stack_t< worker_t >	WorkerStack;
 
     // 
-    struct workers_t
-    {
+    struct workers_t {
         // Текущее кол-во потоков
         volatile long   count;
         // Текущее кол-во удаляемых потоков
@@ -348,8 +331,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Системный поток
-class worker_t : public structs::item_t< worker_t >
-{
+class worker_t : public structs::item_t< worker_t > {
     typedef fastdelegate::FastDelegate< void (object_t* const) >    PushDelete;
     typedef fastdelegate::FastDelegate< void (worker_t* const) >    PushIdle;
 

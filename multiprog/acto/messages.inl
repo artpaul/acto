@@ -4,11 +4,9 @@
 //      ПРЕДОПРЕДЕЛЕННЫЕ ТИПЫ СООБЩЕНИЙ        //
 /////////////////////////////////////////////////
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
     // Desc:
     struct msg_destroy : public msg_t { };
 

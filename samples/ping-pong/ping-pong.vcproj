@@ -4,6 +4,7 @@
 	Version="9,00"
 	Name="ping-pong"
 	ProjectGUID="{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}"
+	RootNamespace="ping-pong"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -59,6 +60,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
@@ -130,6 +132,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
+				GenerateManifest="false"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

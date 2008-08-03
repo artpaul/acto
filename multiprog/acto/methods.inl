@@ -4,15 +4,12 @@
 //                        РЕАЛИЗАЦИЯ ВСТРАИВАЕМЫХ И ШАБЛОННЫХ МЕТОДОВ                            //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
 // Desc: 
-inline core::object_t* dereference(object_t& object)
-{
+inline core::object_t* dereference(object_t& object) {
 	return object.m_object;
 }
 
@@ -20,8 +17,7 @@ inline core::object_t* dereference(object_t& object)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------	
 template <typename ActorT>
-	instance_t< ActorT >::instance_t() : object_t() 
-	{
+	instance_t< ActorT >::instance_t() : object_t() {
 		// 1.
 		ActorT* const value = new ActorT();
 		// 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
@@ -31,8 +27,7 @@ template <typename ActorT>
 	}
 //-------------------------------------------------------------------------------------------------	
 template <typename ActorT>
-	instance_t< ActorT >::instance_t(actor_t& context) : object_t() 
-	{
+	instance_t< ActorT >::instance_t(actor_t& context) : object_t() {
 		// 1.
 		ActorT* const value = new ActorT();
 		// 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
@@ -43,8 +38,7 @@ template <typename ActorT>
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename ActorT>
-	instance_t< ActorT >::instance_t(const int options) : object_t()
-	{
+	instance_t< ActorT >::instance_t(const int options) : object_t() {
 		// 1.
 		ActorT* const value = new ActorT();
 		// 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
@@ -54,8 +48,7 @@ template <typename ActorT>
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename ActorT>
-	instance_t< ActorT >::instance_t(actor_t& context, const int options)
-	{
+	instance_t< ActorT >::instance_t(actor_t& context, const int options) {
 		// 1.
 		ActorT* const value = new ActorT();
 		// 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
@@ -69,31 +62,27 @@ template <typename ActorT>
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 template <typename ActorT>
-	actor_t::actor_t(const instance_t< ActorT >& inst) : object_t( inst )
-	{
+	actor_t::actor_t(const instance_t< ActorT >& inst) : object_t( inst ) {
 		// -
 	}
 
 //-------------------------------------------------------------------------------------------------
 template <typename MsgT>
-	void actor_t::send(const MsgT& msg) const
-	{
+	void actor_t::send(const MsgT& msg) const {
 		if (m_object)
 			// Отправить сообщение 
             return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename ActorT>
-	actor_t& actor_t::operator = (const instance_t< ActorT >& inst)
-	{
+	actor_t& actor_t::operator = (const instance_t< ActorT >& inst) {
 		object_t::assign(inst);
 		return *this;
 	}
 
 
 
-namespace core
-{
+namespace core {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
@@ -110,15 +99,13 @@ template <typename T>
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename T>
-	bool type_box_t< T >::operator == (const value_type& rhs) const
-	{
+	bool type_box_t< T >::operator == (const value_type& rhs) const {
 		return (m_id == rhs);
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename T>
 template <typename U>
-	bool type_box_t< T >::operator == (const type_box_t< U >& rhs) const
-	{
+	bool type_box_t< T >::operator == (const type_box_t< U >& rhs) const {
 		return (m_id == rhs.m_id);
 	}
 
@@ -126,8 +113,7 @@ template <typename U>
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 template < typename MsgT, typename ClassName >
-	inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) )
-	{
+	inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
 		// Тип сообщения
 		type_box_t< MsgT >		        a_type     = type_box_t< MsgT >();
 		// Метод, обрабатывающий сообщение
@@ -140,8 +126,7 @@ template < typename MsgT, typename ClassName >
 	}
 //-------------------------------------------------------------------------------------------------
 template < typename MsgT >
-	inline void base_t::Handler()
-	{
+	inline void base_t::Handler() {
         // Тип сообщения
 		type_box_t< MsgT >	a_type = type_box_t< MsgT >();
 		// Сбросить обработчик указанного типа
@@ -160,8 +145,7 @@ template <typename MsgT>
 	}
 //-------------------------------------------------------------------------------------------------
 template <typename MsgT>
-	void handler_t< MsgT >::invoke(object_t* const sender, msg_t* const msg)
-	{
+	void handler_t< MsgT >::invoke(object_t* const sender, msg_t* const msg) {
 		m_delegate(acto::actor_t(sender), *static_cast< MsgT* const >(msg));
 	}
 

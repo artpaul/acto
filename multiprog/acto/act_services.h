@@ -2,8 +2,8 @@
 //                                     The act_o Library                                         //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                    //
+// Copyright © 2007 - 2008                                                                       //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
 //     Code covered by the MIT License.                                                          //
@@ -18,15 +18,12 @@
 #define __multiprog__act_services_h__
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
 // Дополнительные сервисы
-namespace services
-{
+namespace services {
 
 // -
 void finalize();
@@ -35,16 +32,14 @@ void initialize();
 
 
 // Desc: Базовый класс для всех служб
-class ACTO_API service_t
-{
+class ACTO_API service_t {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: 
 //    Обеспечивает посылку уведомлений актерам через 
 //    заданные промежутки времени. 
-class ACTO_API timer_t : public service_t
-{
+class ACTO_API timer_t : public service_t {
     friend void finalize();
 
 public:
@@ -71,7 +66,6 @@ extern timer_t  timer;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                        РЕАЛИЗАЦИЯ ВСТРАИВАЕМЫХ И ШАБЛОННЫХ МЕТОДОВ                            //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 }; // namespace services
 

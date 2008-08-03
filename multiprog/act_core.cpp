@@ -2,14 +2,11 @@
 #include "multiprog.h"
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
-namespace core
-{
+namespace core {
 
 using fastdelegate::FastDelegate;
 using fastdelegate::MakeDelegate;
@@ -21,13 +18,11 @@ runtime_t	runtime;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
-base_t::base_t()
-{
+base_t::base_t() {
     // -
 }
 //-------------------------------------------------------------------------------------------------
-base_t::~base_t()
-{
+base_t::~base_t() {
 	for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
 		// Удалить обработчик
 		if ((*i)->handler) delete (*i)->handler;
@@ -37,8 +32,7 @@ base_t::~base_t()
 }
 
 //-------------------------------------------------------------------------------------------------
-void base_t::set_handler(i_handler* const handler, const TYPEID type)
-{
+void base_t::set_handler(i_handler* const handler, const TYPEID type) {
 	for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
 		if ( (*i)->type == type ) {
 			// 1. Удалить предыдущий обработчик
@@ -92,8 +86,7 @@ package_t::package_t(msg_t* const data_, const TYPEID type_) :
 {
 }
 //-------------------------------------------------------------------------------------------------
-package_t::~package_t()
-{
+package_t::~package_t() {
 	// Освободить ссылки на объекты
 	if (sender) 
         runtime.release(sender);
@@ -122,8 +115,7 @@ runtime_t::runtime_t() :
     m_processors = system::NumberOfProcessors();
 }
 //-------------------------------------------------------------------------------------------------
-runtime_t::~runtime_t()
-{
+runtime_t::~runtime_t() {
 	// Удалить рабочие потоки
 }
 
@@ -134,15 +126,13 @@ runtime_t::~runtime_t()
 //-------------------------------------------------------------------------------------------------
 // Desc: Захватить ссылку на объект
 //-------------------------------------------------------------------------------------------------
-void runtime_t::acquire(object_t* const obj)
-{
+void runtime_t::acquire(object_t* const obj) {
     assert(obj != 0);
 	// -
     system::AtomicIncrement(&obj->references);
 }
 //-------------------------------------------------------------------------------------------------
-object_t* runtime_t::createActor(base_t* const impl, const int options)
-{
+object_t* runtime_t::createActor(base_t* const impl, const int options) {
 	assert(impl != 0);
 
     // Флаг соблюдения предусловий
@@ -193,8 +183,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options)
     return 0;
 }
 //-------------------------------------------------------------------------------------------------
-void runtime_t::destroyObject(object_t* const obj)
-{
+void runtime_t::destroyObject(object_t* const obj) {
     assert(obj != 0);
 
     // -
@@ -233,8 +222,7 @@ void runtime_t::destroyObject(object_t* const obj)
 //-------------------------------------------------------------------------------------------------
 // Desc:
 //-------------------------------------------------------------------------------------------------
-long runtime_t::release(object_t* const obj)
-{
+long runtime_t::release(object_t* const obj) {
     assert(obj != 0);
     assert(obj->references > 0);
     // -
@@ -278,8 +266,7 @@ long runtime_t::release(object_t* const obj)
 //-------------------------------------------------------------------------------------------------
 // Desc:
 //-------------------------------------------------------------------------------------------------
-void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type)
-{
+void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type) {
     bool    undelivered = true;
 
     // 1. Создать пакет
@@ -316,8 +303,7 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
 //-------------------------------------------------------------------------------------------------
 // Desc:
 //-------------------------------------------------------------------------------------------------
-void runtime_t::shutdown()
-{
+void runtime_t::shutdown() {
     // 1. Инициировать процедуру удаления для всех оставшихся объектов
     {
         Exclusive   lock(m_cs.actors);
@@ -358,8 +344,7 @@ void runtime_t::shutdown()
 //-------------------------------------------------------------------------------------------------
 // Desc: Начать выполнение
 //-------------------------------------------------------------------------------------------------
-void runtime_t::startup()
-{
+void runtime_t::startup() {
     assert(m_active    == false);
     assert(m_scheduler == 0);
 
@@ -374,8 +359,7 @@ void runtime_t::startup()
     m_scheduler = new system::thread_t(MakeDelegate(this, &runtime_t::execute), 0);
 }
 //-------------------------------------------------------------------------------------------------
-TYPEID	runtime_t::typeIdentifier(const char* const type_name)
-{
+TYPEID	runtime_t::typeIdentifier(const char* const type_name) {
 	// -
 	std::string		name(type_name);
 
@@ -412,8 +396,7 @@ TYPEID	runtime_t::typeIdentifier(const char* const type_name)
 //-------------------------------------------------------------------------------------------------
 // Desc:
 //-------------------------------------------------------------------------------------------------
-void runtime_t::cleaner()
-{
+void runtime_t::cleaner() {
     while (m_active) {        
         // 
         // 1. Извлечение потоков, отмеченых для удаления
@@ -442,8 +425,7 @@ void runtime_t::cleaner()
 }
 
 //-------------------------------------------------------------------------------------------------
-package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, const TYPEID type)
-{
+package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, const TYPEID type) {
     assert(target != 0);
 
 	// 1. Создать экземпляр пакета
@@ -460,8 +442,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
 	return result;
 }
 //-------------------------------------------------------------------------------------------------
-worker_t* runtime_t::createWorker()
-{
+worker_t* runtime_t::createWorker() {
     if (system::AtomicIncrement(&m_workers.count) > 0)
         m_evnoworkers.reset();
     // -
@@ -482,8 +463,7 @@ worker_t* runtime_t::createWorker()
 //-------------------------------------------------------------------------------------------------
 // Desc: Деструткор для пользовательских объектов (актеров)
 //-------------------------------------------------------------------------------------------------
-void runtime_t::destruct_actor(object_t* const actor)
-{
+void runtime_t::destruct_actor(object_t* const actor) {
 	assert(actor != 0);
     assert(actor->impl == 0);
     assert(actor->references == 0);
@@ -505,8 +485,7 @@ void runtime_t::destruct_actor(object_t* const actor)
 	}
 }
 //-------------------------------------------------------------------------------------------------
-object_t* runtime_t::determineSender(system::thread_t* const current)
-{
+object_t* runtime_t::determineSender(system::thread_t* const current) {
     if (current) {
 	    if (worker_t* const thread = (worker_t*)current->param())
 		    return thread->invoking();
@@ -514,8 +493,7 @@ object_t* runtime_t::determineSender(system::thread_t* const current)
 	return 0;
 }
 //-------------------------------------------------------------------------------------------------
-void runtime_t::execute()
-{
+void runtime_t::execute() {
     // -
     u_int   newWorkerTimeout = 2;
     int     lastCleanupTime  = clock();
@@ -587,8 +565,7 @@ void runtime_t::execute()
     }
 }
 //-------------------------------------------------------------------------------------------------
-void runtime_t::pushDelete(object_t* const obj)
-{
+void runtime_t::pushDelete(object_t* const obj) {
     assert(obj != 0);
     // -
     m_deleted.push(obj);
@@ -596,8 +573,7 @@ void runtime_t::pushDelete(object_t* const obj)
     m_evclean.signaled();
 }
 //-------------------------------------------------------------------------------------------------
-void runtime_t::pushIdle(worker_t* const worker)
-{
+void runtime_t::pushIdle(worker_t* const worker) {
     assert(worker != 0);
     // -
     m_workers.idle.push(worker);
@@ -617,8 +593,7 @@ static long counter = 0;
 //-------------------------------------------------------------------------------------------------
 // Desc: Инициализация
 //-------------------------------------------------------------------------------------------------
-void initialize()
-{
+void initialize() {
     if (counter == 0)
         runtime.startup();
     // -
@@ -628,8 +603,7 @@ void initialize()
 //-------------------------------------------------------------------------------------------------
 // 
 //-------------------------------------------------------------------------------------------------
-void finalize()
-{
+void finalize() {
     if (counter > 0) {
         system::AtomicDecrement(&counter);
         // -

@@ -2,14 +2,11 @@
 #include "../multiprog.h"
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
-namespace core
-{
+namespace core {
 
 using fastdelegate::FastDelegate;
 using fastdelegate::MakeDelegate;
@@ -28,8 +25,7 @@ worker_t::worker_t(const Slots slots) :
 	m_system = new multiprog::system::thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-------------------------------------------------------------------------------------------------
-worker_t::~worker_t()
-{   
+worker_t::~worker_t() {   
     // 1.
     m_active = false;
     // 2.
@@ -43,8 +39,7 @@ worker_t::~worker_t()
 //-------------------------------------------------------------------------------------------------
 // Desc: Поместить сообщение в очередь
 //-------------------------------------------------------------------------------------------------
-void worker_t::assign(object_t* const obj, const clock_t slice)
-{
+void worker_t::assign(object_t* const obj, const clock_t slice) {
     // 1. Назнгачить новый объект потоку
     m_object = obj;
     m_start  = clock();
@@ -54,19 +49,16 @@ void worker_t::assign(object_t* const obj, const clock_t slice)
         m_event.signaled();
 }
 //-------------------------------------------------------------------------------------------------
-object_t* worker_t::invoking() const
-{
+object_t* worker_t::invoking() const {
     return m_invoking;
 }
 //-------------------------------------------------------------------------------------------------
-void worker_t::wakeup()
-{
+void worker_t::wakeup() {
     m_event.signaled();
 }
 
 //-------------------------------------------------------------------------------------------------
-void worker_t::doHandle(package_t *const package)
-{
+void worker_t::doHandle(package_t *const package) {
     object_t* const obj  = package->target;
     i_handler* handler   = 0;
     base_t*	  const impl = obj->impl;
@@ -97,8 +89,7 @@ void worker_t::doHandle(package_t *const package)
 //-------------------------------------------------------------------------------------------------
 // Desc:
 //-------------------------------------------------------------------------------------------------
-void worker_t::execute()
-{
+void worker_t::execute() {
 	while (m_active) {
         //
         // 1. Если данному потоку назначен объект, то необходимо 

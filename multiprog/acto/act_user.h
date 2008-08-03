@@ -2,8 +2,8 @@
 //                                     The act_o Library                                         //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                    //
+// Copyright © 2007 - 2008                                                                       //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
 //     Code covered by the MIT License.                                                          //
@@ -17,11 +17,9 @@
 #define __multiprogs__act_user_h__
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                                    ИНТЕРФЕЙС БИБЛИОТЕКИ                                       //
@@ -37,8 +35,7 @@ const int aoExclusive = 1;
 
 
 // Desc: Базовый класс для всех интерфейсных объектов
-class object_t
-{
+class object_t {
 	// -
 	friend inline core::object_t* dereference(object_t& object);
 	// -
@@ -71,8 +68,7 @@ protected:
 // Desc: Класс предназначен для создания пользовательских
 //       экземпляров актеров. 
 template <typename ActorT>
-class instance_t : public object_t
-{
+class instance_t : public object_t {
 public:
 	// Стандартная инициализация
 	instance_t();
@@ -87,8 +83,7 @@ public:
 
 
 // Desc: Пользовательский объект (актер)
-class actor_t : public object_t
-{
+class actor_t : public object_t {
 public:
 	actor_t();
 	// -
@@ -120,8 +115,7 @@ public:
 
 
 // Desc: Базовый класс для реализации пользовательских объектов (актеров)
-class implementation_t : public core::base_t
-{
+class implementation_t : public core::base_t {
 	template <typename ActorT> friend class instance_t;
 
 protected:

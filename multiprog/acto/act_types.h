@@ -2,8 +2,8 @@
 //                                     The act_o Library                                         //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                    //
+// Copyright © 2007 - 2008                                                                       //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
 //     Code covered by the MIT License.                                                          //
@@ -18,11 +18,9 @@
 #define __multiprogs__act_types_h__
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace acto
-{
+namespace acto {
 
 #if defined ( _MSC_VER ) 
 
@@ -56,8 +54,7 @@ typedef long        TYPEID;
 class actor_t;
 
 
-namespace core
-{
+namespace core {
 	class base_t;
 
 	class worker_t;

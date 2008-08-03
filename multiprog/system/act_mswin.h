@@ -2,7 +2,7 @@
 //                                     The act_o Library                                         //
 //                                                                                               //
 //-----------------------------------------------------------------------------------------------//
-// Copyright © 2007                                                                              //
+// Copyright © 2007 - 2008                                                                       //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
 // ----------------------------------------------------------------------------------------------//
 // License:                                                                                      //
@@ -18,17 +18,14 @@
 #define __multiprog__sys_mswin_h__
 
 
-namespace multiprog
-{
+namespace multiprog {
 
-namespace system
-{
+namespace system {
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Системный поток.
-class thread_t
-{
+class thread_t {
 public:
 	// Тип системного идентификатора для потокаы
 	typedef	DWORD	identifier_type;
@@ -41,13 +38,11 @@ public:
 	~thread_t();
 
 public:
-	void join()
-	{
+	void join() {
 		::WaitForSingleObject( m_handle, INFINITE );
 	}
 
-	void join(const unsigned int msec)
-	{
+	void join(const unsigned int msec) {
 		::WaitForSingleObject( m_handle, msec );
 	}
 
@@ -90,34 +85,27 @@ enum WaitResult {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Событие. 
-class event_t
-{
+class event_t {
 public:
-	event_t()
-	{
+	event_t() {
 		m_handle = ::CreateEvent(0, TRUE, TRUE, 0);
 	}
 
-	~event_t()
-	{
+	~event_t() {
 		::CloseHandle( m_handle );
 	}
 
 public:
-	void reset()
-	{
+	void reset() {
 		::ResetEvent(m_handle);
 	}
 
-	void signaled()
-	{
+	void signaled() {
 		::SetEvent(m_handle);
 	}
 
-	WaitResult wait()
-	{
-		switch (::WaitForSingleObject(m_handle, INFINITE))
-        {
+	WaitResult wait() {
+		switch (::WaitForSingleObject(m_handle, INFINITE)) {
         case WAIT_OBJECT_0 :
             return wrSignaled;
         case WAIT_TIMEOUT :
@@ -126,10 +114,8 @@ public:
         return wrError;
 	}
 
-    WaitResult wait(const unsigned int msec)
-    {
-        switch (::WaitForSingleObject(m_handle, msec))
-        {
+    WaitResult wait(const unsigned int msec) {
+        switch (::WaitForSingleObject(m_handle, msec)) {
         case WAIT_OBJECT_0 :
             return wrSignaled;
         case WAIT_TIMEOUT :
@@ -145,28 +131,23 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Критическая секция.
-class section_t
-{
+class section_t {
 public:
-	section_t()
-	{
+	section_t() {
 		::InitializeCriticalSection( &m_section );
 	}
 
-	~section_t()
-	{
+	~section_t() {
 		::DeleteCriticalSection( &m_section );
 	}
 
 public:
 	// Захватить мютекс
-	void acquire()
-	{
+	void acquire() {
 		::EnterCriticalSection( &m_section );
 	}
 	// Освободить мютекс
-	void release()
-	{
+	void release() {
 		::LeaveCriticalSection( &m_section );
 	}
 
@@ -177,8 +158,7 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
-class semaphore_t
-{
+class semaphore_t {
 public:
 	semaphore_t() :
 		m_handle( 0 )
@@ -186,19 +166,16 @@ public:
 		m_handle = ::CreateSemaphore(0, 0, MAXLONG, 0);
 	}
 
-	~semaphore_t()
-	{
+	~semaphore_t() {
 		::CloseHandle( m_handle );
 	}
 
 public:
-	void release(int count)
-	{
+	void release(int count) {
 		::ReleaseSemaphore(m_handle, count, 0);
 	}
 
-	void wait()
-	{
+	void wait() {
 		::WaitForSingleObject(m_handle, INFINITE);
 	}
 
@@ -209,8 +186,7 @@ private:
 
 
 
-class MutexLocker
-{
+class MutexLocker {
 public:
 	MutexLocker(section_t& mutex) :
 		m_mutex( mutex )
@@ -218,8 +194,7 @@ public:
 		m_mutex.acquire();
 	}
 
-	~MutexLocker()
-	{
+	~MutexLocker() {
 		m_mutex.release();
 	}
 
@@ -242,8 +217,7 @@ void finalize();
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Desc: Количетсов физически процессоров (ядер) в системе
-inline unsigned int NumberOfProcessors()
-{
+inline unsigned int NumberOfProcessors() {
 	SYSTEM_INFO		si;
 	// -
 	::GetSystemInfo( &si );
@@ -252,40 +226,33 @@ inline unsigned int NumberOfProcessors()
 }
 
 // Desc:
-inline void Sleep(unsigned int milliseconds)
-{
+inline void Sleep(unsigned int milliseconds) {
 	::Sleep( milliseconds );
 }
 
-inline void yield()
-{
+inline void yield() {
     ::SwitchToThread();
 }
 
 
-inline void* AtomicCompareExchangePointer(volatile PVOID* dest, void* exchange, void* comperand)
-{
+inline void* AtomicCompareExchangePointer(volatile PVOID* dest, void* exchange, void* comperand) {
     return InterlockedCompareExchangePointer(dest, exchange, comperand);
 }
 
-inline long AtomicCompareExchange(long volatile* dest, long exchange, long comperand)
-{
+inline long AtomicCompareExchange(long volatile* dest, long exchange, long comperand) {
     return InterlockedCompareExchange(dest, exchange, comperand);
 }
 
-inline long AtomicDecrement(long volatile* addend)
-{
+inline long AtomicDecrement(long volatile* addend) {
     return InterlockedDecrement(addend);
 }
 
 template <typename T>
-inline T* AtomicExchange(T* volatile* target, T* const value)
-{
+inline T* AtomicExchange(T* volatile* target, T* const value) {
     return static_cast< T* >(InterlockedExchangePointer((volatile PVOID*)target, value));
 }
 
-inline long AtomicIncrement(long volatile* addend)
-{
+inline long AtomicIncrement(long volatile* addend) {
     return InterlockedIncrement(addend);
 }
 
