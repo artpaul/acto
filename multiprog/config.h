@@ -19,9 +19,12 @@
 
 #pragma once
 
-// Реализация для Windows
-#define MSWINDOWS	1
-
+#if defined _WIN32 || _WIN64
+    // Реализация для Windows
+#   define MSWINDOWS	1
+#else
+#   error "Undefined target platform"
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 //               НАСТРОЙКА БИБЛИОТЕКИ ПОД ТЕКУЩЙИ КОМПИЛЯТОР                 //
@@ -29,6 +32,10 @@
 
 // Используется компилятор Microsoft, либо совместимый
 #if defined( _MSC_VER )
+
+#   if !defined _MT
+#       error "Multithreaded mode not defined. Use /MD or /MT compiler options."
+#   endif
 
     //  Если текущий режим - отладочный
 #	if defined ( _DEBUG )

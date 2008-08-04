@@ -14,7 +14,7 @@
 //     Обертка над API операционной системы MS Windows.                                          //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if !defined ( __multiprog__sys_mswin_h__ )
+#if !defined __multiprog__sys_mswin_h__
 #define __multiprog__sys_mswin_h__
 
 

@@ -14,17 +14,16 @@ using fastdelegate::MakeDelegate;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 worker_t::worker_t(const Slots slots) :
-	m_active  ( true ),
-    m_invoking( 0 ),
-    m_object  ( 0 ),
-    m_slots   ( slots ),
-    m_start   ( 0 ),
-	m_system  ( 0 )
+	m_active  (true),
+    m_object  (0),
+    m_slots   (slots),
+    m_start   (0),
+	m_system  (0)
 {
     // -
 	m_system = new multiprog::system::thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 worker_t::~worker_t() {   
     // 1.
     m_active = false;
@@ -36,9 +35,9 @@ worker_t::~worker_t() {
 	delete m_system;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Desc: Поместить сообщение в очередь
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void worker_t::assign(object_t* const obj, const clock_t slice) {
     // 1. Назнгачить новый объект потоку
     m_object = obj;
@@ -48,48 +47,17 @@ void worker_t::assign(object_t* const obj, const clock_t slice) {
     if (m_object)
         m_event.signaled();
 }
-//-------------------------------------------------------------------------------------------------
-object_t* worker_t::invoking() const {
-    return m_invoking;
-}
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void worker_t::wakeup() {
     m_event.signaled();
 }
 
-//-------------------------------------------------------------------------------------------------
-void worker_t::doHandle(package_t *const package) {
-    object_t* const obj  = package->target;
-    i_handler* handler   = 0;
-    base_t*	  const impl = obj->impl;
-
-    // 1. Найти обработчик соответствующий данному сообщению
-    for (Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); i++) {
-        if (package->type == (*i)->type) {
-            handler = (*i)->handler;
-	        break;
-        }
-    }
-    // 2. Если соответствующий обработчик найден, то вызвать его
-    try {
-        if (handler) {
-            // TN: Данный параметр читает только функция determine_sender,
-            //     которая всегда выполняется в контексте этого потока.
-            m_invoking = obj;
-            // -
-	        handler->invoke(package->sender, package->data);
-            // -
-            m_invoking = 0;
-        }
-    }
-    catch (...) {
-        // -
-    }
-}
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Desc:
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void worker_t::execute() {
+    core::initializeThread(true);
+    // -
 	while (m_active) {
         //
         // 1. Если данному потоку назначен объект, то необходимо 
@@ -99,7 +67,7 @@ void worker_t::execute() {
             // -
             if (package_t* const package = obj->queue.pop()) {
                 // Обработать сообщение
-			    doHandle(package);
+                m_slots.handle(package);
                 // -
                 delete package;
 
@@ -175,6 +143,8 @@ void worker_t::execute() {
         m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
         m_event.reset();
 	}
+    // -
+    core::finalizeThread();
 }
 
 }; // namespace core

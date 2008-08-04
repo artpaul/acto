@@ -99,8 +99,7 @@ public:
 
 // Desc: Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских). 
 class ACTO_API base_t {
-	// -
-	friend class worker_t;
+    friend void doHandle(package_t *const package);
 
 public:
 	struct msg_destroy : public msg_t {
@@ -146,11 +145,6 @@ public:
 struct ACTO_API object_t {
 	// Критическая секция для доступа к полям
     system::section_t   cs;
-    // Флаги состояния текущего объекта
-    bool                deleting;
-    bool                freeing;
-    bool                scheduled;
-    bool                unimpl;
 
 	// Реализация объекта
 	base_t*				impl;
@@ -162,6 +156,13 @@ struct ACTO_API object_t {
 	volatile long		references;
 	// Поток, в котором должен выполнятся объект
 	worker_t* const     thread;
+
+    // Флаги состояния текущего объекта
+    bool                binded;
+    bool                deleting;
+    bool                freeing;
+    bool                scheduled;
+    bool                unimpl;
 
 public:
 	object_t(worker_t* const thread_);
@@ -280,7 +281,7 @@ private:
     // Деструткор для пользовательских объектов (актеров)
     void        destruct_actor(object_t* const actor);
     // Определить отправителя сообщения
-    object_t*   determineSender(system::thread_t* const current);
+    object_t*   determineSender();
     // Цикл выполнения планировщика
 	void		execute();
     // -
@@ -329,16 +330,33 @@ public:
 };
 
 
+/* Контекс потока */
+struct thread_context_t {
+    // Список актеров ассоциированных 
+    // только с текущим потоком
+    std::set< object_t* >   actors;
+    // Счетчик инициализаций
+    int                     counter;
+    // -
+    bool                    is_core;
+    // Текущий активный объект в данном потоке
+    object_t*               sender;
+};
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Системный поток
 class worker_t : public structs::item_t< worker_t > {
+public:
     typedef fastdelegate::FastDelegate< void (object_t* const) >    PushDelete;
     typedef fastdelegate::FastDelegate< void (worker_t* const) >    PushIdle;
+    typedef fastdelegate::FastDelegate< void (package_t *const package) >    HandlePackage;
 
 public:
     struct Slots {
-        PushDelete  deleted;
-        PushIdle    idle;
+        PushDelete      deleted;
+        HandlePackage   handle;
+        PushIdle        idle;
     };
 
 public:
@@ -347,16 +365,11 @@ public:
 
 public:
 	// Поместить сообщение в очередь
-	void        assign(object_t* const obj, const clock_t slice);
-    // Текущий объект, обрабатывающий сообщение
-    object_t*   invoking() const;
+	void assign(object_t* const obj, const clock_t slice);
     // -
-    void        wakeup();
+    void wakeup();
 
 private:
-    // -
-    void doHandle(package_t* const);
-	// -
 	void execute();
 
 private:
@@ -366,8 +379,6 @@ private:
     system::event_t     m_event;
     // -
     object_t* volatile  m_object;
-    // Текущий объект, обрабатывающий сообщение
-	object_t*           m_invoking;
     // -
     clock_t             m_start;
     clock_t             m_time;
@@ -386,10 +397,19 @@ extern runtime_t	runtime;
 
 // Инициализация
 void initialize();
+void initializeThread(const bool isInternal);
 
 // -
 void finalize();
 
+void finalizeThread();
+
+// -
+inline bool isCoreThread() {
+    return (system::thread_t::current() != 0);
+}
+
+void processBindedActors();
 
 }; // namespace core
 

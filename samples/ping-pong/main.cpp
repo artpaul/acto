@@ -40,8 +40,7 @@ using namespace multiprog;
 
 
 // Начать игру
-struct msg_start : public acto::msg_t
-{
+struct msg_start : public acto::msg_t {
 	// Кол-во мячей в игре
 	int				balls;
 	acto::actor_t	console;
@@ -52,20 +51,17 @@ public:
 
 
 // Завершить игру
-struct msg_finish : public acto::msg_t
-{
+struct msg_finish : public acto::msg_t {
 };
 
 
 // Послать мяч
-struct msg_ball : public acto::msg_t
-{
+struct msg_ball : public acto::msg_t {
 };
 
 
 // Вывести текст на консоль
-struct msg_out  : public acto::msg_t
-{
+struct msg_out  : public acto::msg_t {
 	std::string		text;
 
 public:
@@ -83,11 +79,9 @@ public:
 //       Инкапсулирует системную консоль для того, чтобы небыло
 //       необходимости использовать примитивы синхронизации при
 //       выводе из разных потоков.
-class Console : public acto::implementation_t
-{
+class Console : public acto::implementation_t {
 public:
-	Console() 
-	{
+	Console() {
 		// Метод Handler связывает конкретную процедуру с библиотекой 
 		// для обработки сообщения указанного типа.
 		Handler< msg_out >( &Console::do_out );
@@ -108,26 +102,22 @@ public:
 	}
 
 private:
-	void do_out(acto::actor_t& sender, const msg_out& msg)
-	{
+	void do_out(acto::actor_t& sender, const msg_out& msg) {
 		std::cout << msg.text << std::endl;
 	}
 };
 
 
 // Desc: Отбивает мяч
-class Player : public acto::implementation_t
-{
+class Player : public acto::implementation_t {
 public:
-	Player() : implementation_t()
-	{
+	Player() : implementation_t() {
 		Handler< msg_ball >( &Player::do_ball );
 	}
 
 private:
 	//-------------------------------------------------------------------------
-	void do_ball(acto::actor_t& sender, const msg_ball& msg)
-	{
+	void do_ball(acto::actor_t& sender, const msg_ball& msg) {
 		// Отправить мяч обратно
 		sender.send( msg_ball() );
 	}
@@ -135,8 +125,7 @@ private:
 
 
 // Desc: Мяч отскакивает одному из игроков
-class Wall : public acto::implementation_t
-{
+class Wall : public acto::implementation_t {
 public:
 	Wall() :
 		m_counter ( 0 ),
@@ -148,26 +137,19 @@ public:
 
 		// Инициализация игроков
 		for (int i = 0; i < PLAYERS; i++)
-		{
 			m_players[i] = acto::instance_t< Player >();
-		}
 	}
 
-	~Wall()
-	{
+	~Wall() {
 		// Необходимо явно вызвать функцию удаления для каждого созданного объекта
 		for (int i = 0; i < PLAYERS; i++)
-		{
-			acto::destroy( m_players[i] );
-		}
+			acto::destroy(m_players[i]);
 	}
 
 private:
 	//-------------------------------------------------------------------------
-	void do_ball(acto::actor_t& sender, const msg_ball& msg)
-	{
-		if ( !m_finished )
-		{
+	void do_ball(acto::actor_t& sender, const msg_ball& msg) {
+		if (!m_finished) {
 			// Увеличить счетчик отскоков от стены
 			m_counter++;
 			// Послать случайно выбранному игроку
@@ -175,8 +157,7 @@ private:
 		}
 	}
 	//-------------------------------------------------------------------------
-	void do_finish(acto::actor_t& sender, const msg_finish& msg)
-	{
+	void do_finish(acto::actor_t& sender, const msg_finish& msg) {
 		m_finished = true;
 		// -
 		char	buffer[255];
@@ -187,15 +168,12 @@ private:
 		m_console.send( msg_out( std::string(buffer) ) );
 	}
 	//-------------------------------------------------------------------------
-	void do_start(acto::actor_t& sender, const msg_start& msg)
-	{
+	void do_start(acto::actor_t& sender, const msg_start& msg) {
 		m_console = msg.console;
 
 		// Послать мячи в игру
 		for (int i = 0; i < msg.balls; i++)
-		{
-			m_players[ (rand() % PLAYERS) ].send( msg_ball() );
-		}
+			m_players[ (rand() % PLAYERS) ].send(msg_ball());
 	}
 
 private:
@@ -211,15 +189,13 @@ private:
 
 
 //-------------------------------------------------------------------------------------------------
-int main()
-{
+int main() {
 	std::cout << "Balls    : " << BALLS    << std::endl;
 	std::cout << "Duration : " << DURATION << std::endl;
 	std::cout << "Players  : " << PLAYERS  << std::endl;
 	std::cout << std::endl;
 
-    for (unsigned int i = 1; i < 4; i++)
-    {
+    for (unsigned int i = 1; i < 4; i++) {
         std::cout << "--- " << i << " : start acto ---" << std::endl;
         // Инициализировать библиотеку.
         // Данную функцию необходимо вызывать обязательно, так как иначе 
@@ -230,29 +206,31 @@ int main()
 	        // Создать консоль.
 	        // Все актеры должны создаваться с использованием шаблона act_o::instance_t<>. 
 	        // Использование оператора new недопустимо.
-	        acto::actor_t		console = acto::instance_t< Console >();
+	        acto::actor_t		console = acto::instance_t< Console >(acto::aoBindToThread);
 
-            for(unsigned int j = 0; j < 3; j++)
-	        {
+            for(unsigned int j = 0; j < 3; j++) {
 		        // Создать стену.
 		        // Опция "act_o::aoExclusive" создает для объекта отдельный поток,
 		        // в котором будут выполнятся все обработчики этого объекта
-		        acto::actor_t		wall = acto::instance_t< Wall >();
+                acto::actor_t wall = acto::instance_t< Wall >();
 
 		        // -
-		        console.send( msg_out( "send start" ) );
+		        console.send(msg_out( "send start" ));
 
 		        // Начать игру: инициализировать объект, запустить мячи
-		        wall.send( msg_start( BALLS, console ) );
+		        wall.send(msg_start(BALLS, console));
 
 		        // Игра продолжается некоторое время в независимых потоках
 		        system::Sleep(DURATION);
 
 		        // Остановить игру
-		        wall.send( msg_finish() );
+		        wall.send(msg_finish());
 
 		        // Уничтожить объект
-		        acto::destroy( wall );
+		        acto::destroy(wall);
+
+                // Обработать сообщения для консоли
+                acto::process_messages();
 	        }
             system::Sleep(1000);
         }

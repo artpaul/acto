@@ -31,7 +31,7 @@
 #	ifdef MULTI_EXPORT
 #		define ACTO_API		__declspec( dllexport )
 	#elif MULTI_IMPORT
-#		define ACTO_API		__declspec( dllexport ) 
+#		define ACTO_API		__declspec( dllimport ) 
 #	else
 #		define ACTO_API
 #	endif
