@@ -28,15 +28,15 @@ namespace core {
 class worker_t;
 
 
-// Desc: 
+// Desc:
 struct HandlerItem {
-	// Обработчик
-	i_handler*		handler;
-	// Тип обработчика
-	const TYPEID	type;
+    // Обработчик
+    i_handler*          handler;
+    // Тип обработчика
+    const TYPEID        type;
 
 public:
-	HandlerItem(const TYPEID type_) : type( type_ ), handler( 0 ) { } 
+	HandlerItem(const TYPEID type_) : type( type_ ), handler( 0 ) { }
 };
 
 
@@ -51,7 +51,7 @@ struct LinkItem {
 };
 
 
-// Desc: 
+// Desc:
 template <typename T>
 class type_box_t {
 public:
@@ -97,7 +97,7 @@ public:
 };
 
 
-// Desc: Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских). 
+// Desc: Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских).
 class ACTO_API base_t {
     friend void doHandle(package_t *const package);
 
@@ -202,7 +202,7 @@ public:
 	virtual void invoke(object_t* const sender, msg_t* const msg);
 
 private:
-	// Делегат, хранящий указатель на 
+	// Делегат, хранящий указатель на
 	// метод конкретного объекта.
 	const delegate_t	m_delegate;
 };
@@ -231,7 +231,7 @@ class runtime_t {
 	// -
     typedef structs::stack_t< worker_t >	WorkerStack;
 
-    // 
+    //
     struct workers_t {
         // Текущее кол-во потоков
         volatile long   count;
@@ -246,7 +246,7 @@ class runtime_t {
 
     };
 
-    // Максимальное кол-во рабочих потоков в системе 
+    // Максимальное кол-во рабочих потоков в системе
 	static const unsigned int MAX_WORKERS = 512;
 
 public:
@@ -262,12 +262,12 @@ public:
     void        destroyObject(object_t* const object);
     // -
     long        release(object_t* const obj);
-    // Послать сообщение указанному объекту 
+    // Послать сообщение указанному объекту
     void		send(object_t* const target, msg_t* const msg, const TYPEID type);
     // Завершить выполнение
     void        shutdown();
     // Начать выполнение
-    void        startup();    
+    void        startup();
     // -
     TYPEID      typeIdentifier(const char* const type_name);
 
@@ -302,7 +302,7 @@ private:
     // -
     system::event_t     m_event;
     system::event_t     m_evworker;
-    
+
     // -
     system::event_t     m_evnoactors;
     system::event_t     m_evnoworkers;
@@ -332,7 +332,7 @@ public:
 
 /* Контекс потока */
 struct thread_context_t {
-    // Список актеров ассоциированных 
+    // Список актеров ассоциированных
     // только с текущим потоком
     std::set< object_t* >   actors;
     // Счетчик инициализаций

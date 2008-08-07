@@ -12,7 +12,7 @@ using fastdelegate::MakeDelegate;
 
 
 // -
-timer_t		timer;
+timer_t     timer;
 
 
 namespace impl {
@@ -42,13 +42,13 @@ public:
 	 TimerActor();
 	~TimerActor();
 
-private:		
+private:
 	/* Обработчики сообщений */
 
 	void do_cancel(acto::actor_t& sender, const msg_cancel& msg);
 	void do_delete(acto::actor_t& sender, const msg_delete& msg);
 	void do_setup (acto::actor_t& sender, const msg_setup&  msg);
-	
+
 	// Удалить событие для уазанного актера
 	void delete_event(const acto::actor_t& actor);
 
@@ -92,7 +92,7 @@ TimerActor::TimerActor() {
 	Handler< msg_cancel >( &TimerActor::do_cancel );
 	Handler< msg_delete >( &TimerActor::do_delete );
 	Handler< msg_setup  >( &TimerActor::do_setup  );
-	
+
 	// -
 	m_timers = ::CreateTimerQueue();
 }
@@ -121,17 +121,17 @@ void TimerActor::do_setup (acto::actor_t& sender, const TimerActor::msg_setup& m
 	// -
 //	core::set_notify( 0, acto::dereference(actor), MakeDelegate(this, &timer_t::do_delete) );
 	// Установить системный таймер
-	if ( 0 != ::CreateTimerQueueTimer( &p_event->timer, 
+	if ( 0 != ::CreateTimerQueueTimer( &p_event->timer,
 		                               // Очередь таймеров
-									   m_timers, 
+									   m_timers,
 									   // -
-									   &TimerActor::TimerProc, 
+									   &TimerActor::TimerProc,
 									   // Параметр для процедуры
-									   p_event, 
+									   p_event,
 									   // Период первого вызова
-									   msg.time, 
+									   msg.time,
 									   // Повторы
-									   (msg.once ? 0 : msg.time), 
+									   (msg.once ? 0 : msg.time),
 									   // Флаги
 									   0 ) )
 	{
@@ -149,7 +149,7 @@ void TimerActor::delete_event(const acto::actor_t& actor) {
 	for (Events::iterator i = m_events.begin(); i != m_events.end(); i++) {
 		if ((*i)->actor == actor) {
 			// 1. Удалить системный таймер
-			// 
+			//
 			// NOTE: Так как последний параметр INVALID_HANDLE_VALUE, то
 			//       функция возвратит управление только тогда, когда завершится
 			//       выполнение соответствующей TimerProc.
@@ -241,7 +241,7 @@ void timer_t::setup(acto::actor_t& actor, const int time, const bool once) {
     // Инициализация актера
     if (!m_actor.assigned())
         m_actor = acto::instance_t< impl::TimerActor >( aoExclusive );
-    
+
     // -
 	if (actor.assigned()) {
 		impl::TimerActor::msg_setup	msg;

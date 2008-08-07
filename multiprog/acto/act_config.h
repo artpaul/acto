@@ -27,14 +27,14 @@
 // Используется компилятор Microsoft, либо совместимый
 #if defined( _MSC_VER )
 
-	// Директивы экспорта для сборки DLL
-#	ifdef MULTI_EXPORT
-#		define ACTO_API		__declspec( dllexport )
-	#elif MULTI_IMPORT
-#		define ACTO_API		__declspec( dllimport ) 
-#	else
-#		define ACTO_API
-#	endif
+    // Директивы экспорта для сборки DLL
+#   ifdef MULTI_EXPORT
+#       define ACTO_API     __declspec( dllexport )
+    #elif MULTI_IMPORT
+#       define ACTO_API     __declspec( dllimport )
+#   else
+#       define ACTO_API
+#   endif
 
 #endif
 

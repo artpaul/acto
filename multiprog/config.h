@@ -21,7 +21,7 @@
 
 #if defined _WIN32 || _WIN64
     // Реализация для Windows
-#   define MSWINDOWS	1
+#   define MSWINDOWS    1
 #else
 #   error "Undefined target platform"
 #endif
@@ -38,20 +38,20 @@
 #   endif
 
     //  Если текущий режим - отладочный
-#	if defined ( _DEBUG )
-#		if !defined ( DEBUG )
-#			define DEBUG	1
-#		endif
-#	endif
+#   if defined ( _DEBUG )
+#       if !defined ( DEBUG )
+#           define DEBUG    1
+#       endif
+#   endif
 
-	// Директивы экспорта для сборки DLL
-#	ifdef MULTI_EXPORT
-#		define MULTI_API		__declspec( dllexport )
-	#elif MULTI_IMPORT
-#		define MULTI_API		__declspec( dllexport ) 
-#	else
-#		define MULTI_API
-#	endif
+// Директивы экспорта для сборки DLL
+#   ifdef MULTI_EXPORT
+#       define MULTI_API        __declspec( dllexport )
+    #elif MULTI_IMPORT
+#       define MULTI_API        __declspec( dllimport )
+#   else
+#       define MULTI_API
+#   endif
 
 #endif
 
@@ -62,11 +62,11 @@
 
 #if defined ( MSWINDOWS )
 #   if !defined ( _WIN32_WINNT )
-        // Целевая платформа Windows 2000 или выше	
-#	    define _WIN32_WINNT		0x0500
+        // Целевая платформа Windows 2000 или выше
+#       define _WIN32_WINNT     0x0500
 #   endif
-	// -
-#	include <windows.h>
+    // -
+#   include <windows.h>
 
 #   define TLS_VARIABLE     __declspec (thread)
 

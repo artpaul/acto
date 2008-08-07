@@ -22,26 +22,26 @@ namespace multiprog {
 
 namespace acto {
 
-#if defined ( _MSC_VER ) 
+#if defined ( _MSC_VER )
 
-	/* Целые со знаком */
-	typedef	__int8				int8;
-	typedef	__int16				int16;
-	typedef	__int32				int32;
-	typedef	__int64				int64;
+    /* Целые со знаком */
+    typedef __int8              int8;
+    typedef __int16             int16;
+    typedef __int32             int32;
+    typedef __int64             int64;
 
-	/* Беззнаковые целые */
-	typedef unsigned __int8		uint8;
-	typedef unsigned __int16	uint16;
-	typedef unsigned __int32	uint32;
-	typedef unsigned __int64	uint64;
+    /* Беззнаковые целые */
+    typedef unsigned __int8     uint8;
+    typedef unsigned __int16    uint16;
+    typedef unsigned __int32    uint32;
+    typedef unsigned __int64    uint64;
 #else
-	// -
+    // -
 #endif
 
 
 // Тип уникального идентификатор для объектов
-//typedef int64		OID;
+//typedef int64       OID;
 typedef long        TYPEID;
 
 
@@ -55,18 +55,13 @@ class actor_t;
 
 
 namespace core {
-	class base_t;
+    class base_t;
+    class worker_t;
 
-	class worker_t;
-
-
-	struct i_handler;
-
-	struct object_t;
-
-	struct msg_t;
-
-	struct package_t;
+    struct i_handler;
+    struct object_t;
+    struct msg_t;
+    struct package_t;
 
 }; // namespace core
 

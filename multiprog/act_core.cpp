@@ -15,7 +15,7 @@ using fastdelegate::MakeDelegate;
 // Экземпляр runtime'а
 runtime_t	runtime;
 
-// 
+//
 static TLS_VARIABLE thread_context_t* threadCtx = 0;
 
 
@@ -26,41 +26,41 @@ base_t::base_t() {
 }
 //-----------------------------------------------------------------------------
 base_t::~base_t() {
-	for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
-		// Удалить обработчик
-		if ((*i)->handler) delete (*i)->handler;
-		// Удалить элемент списка
-		delete (*i);
-	}
+    for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
+        // Удалить обработчик
+        if ((*i)->handler) delete (*i)->handler;
+        // Удалить элемент списка
+        delete (*i);
+    }
 }
 
 //-----------------------------------------------------------------------------
 void base_t::set_handler(i_handler* const handler, const TYPEID type) {
-	for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
-		if ( (*i)->type == type ) {
-			// 1. Удалить предыдущий обработчик
-			if ( (*i)->handler ) delete (*i)->handler;
-			// 2. Установить новый
-			(*i)->handler = handler;
-			// -
-			return;
-		}
-	}
-	// Запись для данного типа сообщения еще не существует
-	{
-		HandlerItem* const item = new HandlerItem(type);
-		// -
-		item->handler = handler;
-		// -
-		m_handlers.push_back(item);
-	}
+    for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
+        if ( (*i)->type == type ) {
+            // 1. Удалить предыдущий обработчик
+            if ( (*i)->handler ) delete (*i)->handler;
+            // 2. Установить новый
+            (*i)->handler = handler;
+            // -
+            return;
+        }
+    }
+    // Запись для данного типа сообщения еще не существует
+    {
+        HandlerItem* const item = new HandlerItem(type);
+        // -
+        item->handler = handler;
+        // -
+        m_handlers.push_back(item);
+    }
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 i_handler::i_handler(const TYPEID type_) :
-	m_type( type_ )
+    m_type(type_)
 {
 }
 
@@ -70,11 +70,11 @@ i_handler::i_handler(const TYPEID type_) :
 object_t::object_t(worker_t* const thread_) :
     deleting  (false),
     freeing   (false),
-	impl      (0), 
+    impl      (0),
     next      (0),
-	references(0),
+    references(0),
     scheduled (false),
-	thread    (thread_),
+    thread    (thread_),
     binded    (false),
     unimpl    (false)
 {
@@ -84,20 +84,20 @@ object_t::object_t(worker_t* const thread_) :
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 package_t::package_t(msg_t* const data_, const TYPEID type_) :
-	data  (data_),
+    data  (data_),
     sender(0),
-	type  (type_)
+    type  (type_)
 {
 }
 //-----------------------------------------------------------------------------
 package_t::~package_t() {
-	// Освободить ссылки на объекты
-	if (sender) 
+    // Освободить ссылки на объекты
+    if (sender)
         runtime.release(sender);
-	// -
+    // -
     runtime.release(target);
-	// Удалить данные сообщения
-	delete data;
+    // Удалить данные сообщения
+    delete data;
 }
 
 
@@ -107,15 +107,15 @@ package_t::~package_t() {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void doHandle(package_t *const package) {
-    object_t* const obj  = package->target;
-    i_handler* handler   = 0;
-    base_t*	  const impl = obj->impl;
+    object_t* const obj = package->target;
+    i_handler* handler  = 0;
+    base_t* const impl  = obj->impl;
 
     // 1. Найти обработчик соответствующий данному сообщению
     for (Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); i++) {
         if (package->type == (*i)->type) {
             handler = (*i)->handler;
-	        break;
+            break;
         }
     }
     // 2. Если соответствующий обработчик найден, то вызвать его
@@ -125,7 +125,7 @@ static void doHandle(package_t *const package) {
             //     которая всегда выполняется в контексте этого потока.
             threadCtx->sender = obj;
             // -
-	        handler->invoke(package->sender, package->data);
+            handler->invoke(package->sender, package->data);
             // -
             threadCtx->sender = 0;
         }
@@ -152,7 +152,7 @@ runtime_t::~runtime_t() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-//                            PUBLIC METHODS                                 // 
+//                            PUBLIC METHODS                                 //
 ///////////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------------
@@ -160,50 +160,50 @@ runtime_t::~runtime_t() {
 //-----------------------------------------------------------------------------
 void runtime_t::acquire(object_t* const obj) {
     assert(obj != 0);
-	// -
+    // -
     system::AtomicIncrement(&obj->references);
 }
 //-----------------------------------------------------------------------------
 object_t* runtime_t::createActor(base_t* const impl, const int options) {
-	assert(impl != 0);
+    assert(impl != 0);
 
     // Флаг соблюдения предусловий
-	bool	    preconditions = false;
+    bool        preconditions = false;
     // Зарезервированный поток
     worker_t*   worker        = 0;
-	
+
     // !!! aoExclusive aoBindToThread - не могут быть вместе
 
-	// Создать для актера индивидуальный поток
-	if (options & acto::aoExclusive)
-		worker = createWorker();
+    // Создать для актера индивидуальный поток
+    if (options & acto::aoExclusive)
+        worker = createWorker();
 
     // 2. Проверка истинности предусловий
-	preconditions = true &&
-		// Поток зарзервирован
-		(options & acto::aoExclusive) ? (worker != 0) : (worker == 0);
+    preconditions = true &&
+    // Поток зарзервирован
+        (options & acto::aoExclusive) ? (worker != 0) : (worker == 0);
 
     // 3. Создание актера
     if (preconditions) {
         try {
-	        // -
-	        object_t* const result = new core::object_t(worker);
-	        // -
+            // -
+            object_t* const result = new core::object_t(worker);
+            // -
             result->impl       = impl;
             result->references = 1;
             result->scheduled  = (worker != 0) ? true : false;
-	        // Зарегистрировать объект в системе
+            // Зарегистрировать объект в системе
             if (options & acto::aoBindToThread) {
                 result->binded = true;
                 // -
                 threadCtx->actors.insert(result);
             }
             else {
-		        Exclusive	lock(m_cs.actors);
-		        // -
-		        m_actors.insert(result);
+                Exclusive  lock(m_cs.actors);
+                // -
+                m_actors.insert(result);
                 m_evnoactors.reset();
-	        }
+            }
             // -
             if (worker) {
                 system::AtomicIncrement(&m_workers.reserved);
@@ -211,7 +211,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
                 worker->assign(result, 0);
             }
             // -
-	        return result;
+            return result;
         }
         catch (...) {
             // Поставить в очередь на удаление
@@ -227,13 +227,13 @@ void runtime_t::destroyObject(object_t* const obj) {
 
     // -
     bool deleting = false;
-	// -
+    // -
     {
         Exclusive	lock(obj->cs);
-	    // Если объект уже удаляется, то делать более ничего не надо.
-	    if (!obj->deleting) {
+        // Если объект уже удаляется, то делать более ничего не надо.
+        if (!obj->deleting) {
             // Запретить более посылать сообщения объекту
-            obj->deleting = true; 
+            obj->deleting = true;
             // Если объект не обрабатывается, то его можно начать разбирать
             if (!obj->scheduled) {
                 if (obj->impl) {
@@ -252,9 +252,9 @@ void runtime_t::destroyObject(object_t* const obj) {
                 // поток, так как у эксклюзивных объектов всегда установлен флаг scheduled
                 if (obj->thread)
                     obj->thread->wakeup();
-	    }
+        }
     }
-    // Объект полностью разобран и не имеет ссылок - удалить его 
+    // Объект полностью разобран и не имеет ссылок - удалить его
     if (deleting)
         pushDelete(obj);
 }
@@ -309,15 +309,15 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
     bool    undelivered = true;
 
     // 1. Создать пакет
-	core::package_t* const package = createPackage(target, msg, type);
+    core::package_t* const package = createPackage(target, msg, type);
     // 2.
     {
         // Эксклюзивный доступ
-	    Exclusive	lock(target->cs);
+        Exclusive   lock(target->cs);
 
         // Если объект отмечен для удалдения,
-	    // то ему более нельзя посылать сообщения
-	    if (!target->deleting) {
+        // то ему более нельзя посылать сообщения
+        if (!target->deleting) {
             // 1. Поставить сообщение в очередь объекта
             target->queue.push(package);
             // 2. Подобрать для него необходимый поток
@@ -398,46 +398,46 @@ void runtime_t::startup() {
     m_scheduler = new system::thread_t(MakeDelegate(this, &runtime_t::execute), 0);
 }
 //-----------------------------------------------------------------------------
-TYPEID	runtime_t::typeIdentifier(const char* const type_name) {
-	// -
-	std::string		name(type_name);
+TYPEID runtime_t::typeIdentifier(const char* const type_name) {
+    // -
+    std::string name(type_name);
 
-	// -
-	{
-		// Эксклюзивный доступ
-		Exclusive	lock(m_cs.types);
-		// Найти этот тип
-		Types::const_iterator i = m_types.find(name);
-		// -
-		if (i != m_types.end())
-			return (*i).second;
-	}
+    // -
+    {
+        // Эксклюзивный доступ
+        Exclusive   lock(m_cs.types);
+        // Найти этот тип
+        Types::const_iterator i = m_types.find(name);
+        // -
+        if (i != m_types.end())
+            return (*i).second;
+    }
 
-	// Зарегистрировать тип
-	{
-		// Идентификатор типа
+    // Зарегистрировать тип
+    {
+        // Идентификатор типа
         const TYPEID id = system::AtomicIncrement(&m_counter);
 
-		// Эксклюзивный доступ
-		Exclusive	lock(m_cs.types);
-		// -
-		m_types[name] = id;
-		// -
-		return id;
-	}
+        // Эксклюзивный доступ
+        Exclusive   lock(m_cs.types);
+        // -
+        m_types[name] = id;
+        // -
+        return id;
+    }
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//                            INTERNAL METHODS                               // 
+//                            INTERNAL METHODS                               //
 ///////////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------------
 // Desc:
 //-----------------------------------------------------------------------------
 void runtime_t::cleaner() {
-    while (m_active) {        
-        // 
+    while (m_active) {
+        //
         // 1. Извлечение потоков, отмеченых для удаления
         //
         structs::localstack_t< worker_t >   queue(m_workers.deleted.extract());
@@ -455,9 +455,9 @@ void runtime_t::cleaner() {
         // Удлаить заголовки объектов
         while (object_t* const item = objects.pop())
             destruct_actor(item);
-        // 
+        //
         // 3.
-        // 
+        //
         m_evclean.wait(10 * 1000);
         m_evclean.reset();
     }
@@ -467,18 +467,18 @@ void runtime_t::cleaner() {
 package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, const TYPEID type) {
     assert(target != 0);
 
-	// 1. Создать экземпляр пакета
-	package_t* const result = new package_t(data, type);
-	// 2.
+    // 1. Создать экземпляр пакета
+    package_t* const result = new package_t(data, type);
+    // 2.
     result->sender = determineSender();
-	result->target = target;
-	// 3.
+    result->target = target;
+    // 3.
     acquire(result->target);
     // -
     if (result->sender)
         acquire(result->sender);
-	// -
-	return result;
+    // -
+    return result;
 }
 //-----------------------------------------------------------------------------
 worker_t* runtime_t::createWorker() {
@@ -504,7 +504,7 @@ worker_t* runtime_t::createWorker() {
 // Desc: Деструткор для пользовательских объектов (актеров)
 //-----------------------------------------------------------------------------
 void runtime_t::destruct_actor(object_t* const actor) {
-	assert(actor != 0);
+    assert(actor != 0);
     assert(actor->impl == 0);
     assert(actor->references == 0);
 
@@ -512,23 +512,23 @@ void runtime_t::destruct_actor(object_t* const actor) {
     if (actor->thread != 0)
         system::AtomicDecrement(&m_workers.reserved);
 
-	// Удалить регистрацию объекта
+    // Удалить регистрацию объекта
     if (!actor->binded) {
-		Exclusive	lock(m_cs.actors);
+        Exclusive   lock(m_cs.actors);
         // -
-		m_actors.erase(actor);
+        m_actors.erase(actor);
         // -
-	    delete actor;
+        delete actor;
         // -
         if (m_actors.empty())
             m_evnoactors.signaled();
-	}
-    else 
+    }
+    else
         delete actor;
 }
 //-----------------------------------------------------------------------------
 object_t* runtime_t::determineSender() {
-	return threadCtx->sender;
+    return threadCtx->sender;
 }
 //-----------------------------------------------------------------------------
 void runtime_t::execute() {
@@ -539,7 +539,7 @@ void runtime_t::execute() {
     while (m_active) {
         while(!m_queue.empty()) {
             // Прежде чем извлекать объект из очереди, необходимо проверить,
-            // что есть вычислительные ресурсы для его обработки              
+            // что есть вычислительные ресурсы для его обработки
             worker_t*   worker = m_workers.idle.pop();
             // -
             if (!worker) {
@@ -626,7 +626,7 @@ void runtime_t::pushIdle(worker_t* const worker) {
 //                       ИНТЕРФЕЙСНЫЕ МЕТОДЫ ЯДРА                            //
 ///////////////////////////////////////////////////////////////////////////////
 
-static long counter = 0; 
+static long counter = 0;
 
 //-----------------------------------------------------------------------------
 // Desc: Инициализация библиотеки.
@@ -645,7 +645,7 @@ void initializeThread(const bool isInternal) {
     if (!threadCtx) {
         threadCtx = new thread_context_t();
         threadCtx->counter = 1;
-        threadCtx->sender  = 0; 
+        threadCtx->sender  = 0;
         threadCtx->is_core = isInternal;
     }
     else
@@ -653,7 +653,7 @@ void initializeThread(const bool isInternal) {
 }
 
 //-----------------------------------------------------------------------------
-// 
+//
 //-----------------------------------------------------------------------------
 void finalize() {
     if (counter > 0) {
@@ -668,7 +668,7 @@ void finalize() {
 
 static void processActorMessages(object_t* const actor) {
     package_t* package;
-    
+
     do {
         package = 0;
         {
@@ -707,7 +707,7 @@ void processBindedActors() {
     if (threadCtx) {
         std::set<object_t*>::iterator   i;
         // -
-        for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) 
+        for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i)
             processActorMessages((*i));
     }
 }

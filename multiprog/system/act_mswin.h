@@ -27,24 +27,24 @@ namespace system {
 // Desc: Системный поток.
 class thread_t {
 public:
-	// Тип системного идентификатора для потокаы
-	typedef	DWORD	identifier_type;
+    // Тип системного идентификатора для потокаы
+    typedef DWORD   identifier_type;
 
-	// -
-	typedef fastdelegate::FastDelegate< void () >	proc_t;
-
-public:
-	 thread_t(const proc_t& proc, void* const param = 0);
-	~thread_t();
+    // -
+    typedef fastdelegate::FastDelegate< void () >   proc_t;
 
 public:
-	void join() {
-		::WaitForSingleObject( m_handle, INFINITE );
-	}
+     thread_t(const proc_t& proc, void* const param = 0);
+    ~thread_t();
 
-	void join(const unsigned int msec) {
-		::WaitForSingleObject( m_handle, msec );
-	}
+public:
+    void join() {
+        ::WaitForSingleObject( m_handle, INFINITE );
+    }
+
+    void join(const unsigned int msec) {
+        ::WaitForSingleObject( m_handle, msec );
+    }
 
     // Пользовательские данные, связанные с текущим потоком
     void* param() const;
@@ -54,19 +54,19 @@ public:
     static thread_t*  current();
 
 private:
-	static DWORD WINAPI thread_proc(LPVOID lpParameter);
+    static DWORD WINAPI thread_proc(LPVOID lpParameter);
 
     TLS_VARIABLE static thread_t*  instance;
 
 public:
-	// Дескриптор потока
-	HANDLE		m_handle;
-	// Идентификатор потока
-	DWORD		m_id;
-	// -
+    // Дескриптор потока
+    HANDLE      m_handle;
+    // Идентификатор потока
+    DWORD       m_id;
+    // -
     void* const m_param;
     // -
-	proc_t		m_proc;
+    proc_t      m_proc;
 };
 
 
@@ -84,35 +84,35 @@ enum WaitResult {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Desc: Событие. 
+// Desc: Событие.
 class event_t {
 public:
-	event_t() {
-		m_handle = ::CreateEvent(0, TRUE, TRUE, 0);
-	}
+    event_t() {
+        m_handle = ::CreateEvent(0, TRUE, TRUE, 0);
+    }
 
-	~event_t() {
-		::CloseHandle( m_handle );
-	}
+    ~event_t() {
+        ::CloseHandle( m_handle );
+    }
 
 public:
-	void reset() {
-		::ResetEvent(m_handle);
-	}
+    void reset() {
+        ::ResetEvent(m_handle);
+    }
 
-	void signaled() {
-		::SetEvent(m_handle);
-	}
+    void signaled() {
+        ::SetEvent(m_handle);
+    }
 
-	WaitResult wait() {
-		switch (::WaitForSingleObject(m_handle, INFINITE)) {
+    WaitResult wait() {
+        switch (::WaitForSingleObject(m_handle, INFINITE)) {
         case WAIT_OBJECT_0 :
             return wrSignaled;
         case WAIT_TIMEOUT :
             return wrTimeout;
         }
         return wrError;
-	}
+    }
 
     WaitResult wait(const unsigned int msec) {
         switch (::WaitForSingleObject(m_handle, msec)) {
@@ -125,7 +125,7 @@ public:
     }
 
 private:
-	HANDLE		m_handle;
+    HANDLE  m_handle;
 };
 
 
@@ -133,26 +133,26 @@ private:
 // Desc: Критическая секция.
 class section_t {
 public:
-	section_t() {
-		::InitializeCriticalSection( &m_section );
-	}
+    section_t() {
+        ::InitializeCriticalSection(&m_section);
+    }
 
-	~section_t() {
-		::DeleteCriticalSection( &m_section );
-	}
+    ~section_t() {
+        ::DeleteCriticalSection(&m_section);
+    }
 
 public:
-	// Захватить мютекс
-	void acquire() {
-		::EnterCriticalSection( &m_section );
-	}
-	// Освободить мютекс
-	void release() {
-		::LeaveCriticalSection( &m_section );
-	}
+    // Захватить мютекс
+    void acquire() {
+        ::EnterCriticalSection(&m_section);
+    }
+    // Освободить мютекс
+    void release() {
+        ::LeaveCriticalSection(&m_section);
+    }
 
 private:
-	CRITICAL_SECTION	m_section;
+    CRITICAL_SECTION    m_section;
 };
 
 
@@ -160,46 +160,45 @@ private:
 // Desc:
 class semaphore_t {
 public:
-	semaphore_t() :
-		m_handle( 0 )
-	{
-		m_handle = ::CreateSemaphore(0, 0, MAXLONG, 0);
-	}
+    semaphore_t() :
+        m_handle( 0 )
+    {
+        m_handle = ::CreateSemaphore(0, 0, MAXLONG, 0);
+    }
 
-	~semaphore_t() {
-		::CloseHandle( m_handle );
-	}
+    ~semaphore_t() {
+        ::CloseHandle( m_handle );
+    }
 
 public:
-	void release(int count) {
-		::ReleaseSemaphore(m_handle, count, 0);
-	}
+    void release(int count) {
+        ::ReleaseSemaphore(m_handle, count, 0);
+    }
 
-	void wait() {
-		::WaitForSingleObject(m_handle, INFINITE);
-	}
+    void wait() {
+        ::WaitForSingleObject(m_handle, INFINITE);
+    }
 
 private:
-	// Дескриптор семафора
-	HANDLE		m_handle;
+    // Дескриптор семафора
+    HANDLE  m_handle;
 };
-
 
 
 class MutexLocker {
 public:
-	MutexLocker(section_t& mutex) :
-		m_mutex( mutex )
-	{
-		m_mutex.acquire();
-	}
+    MutexLocker(section_t& mutex) :
+        m_mutex( mutex )
+    {
+        m_mutex.acquire();
+    }
 
-	~MutexLocker() {
-		m_mutex.release();
-	}
+    ~MutexLocker() {
+        m_mutex.release();
+    }
 
 private:
-	section_t&	m_mutex;
+    section_t&  m_mutex;
 };
 
 
@@ -218,16 +217,18 @@ void finalize();
 
 // Desc: Количетсов физически процессоров (ядер) в системе
 inline unsigned int NumberOfProcessors() {
-	SYSTEM_INFO		si;
-	// -
-	::GetSystemInfo( &si );
-	// -
-	return si.dwNumberOfProcessors;
+    SYSTEM_INFO     si;
+    // -
+    ::GetSystemInfo( &si );
+    // -
+    return si.dwNumberOfProcessors;
+    // For linux:
+    // int NUM_PROCS = sysconf(_SC_NPROCESSORS_CONF);
 }
 
 // Desc:
 inline void Sleep(unsigned int milliseconds) {
-	::Sleep( milliseconds );
+    ::Sleep( milliseconds );
 }
 
 inline void yield() {
