@@ -2,8 +2,7 @@
 // -
 #include "multiprog.h"
 
-
-namespace multiprog {
+namespace acto {
 
 namespace system {
 
@@ -83,4 +82,5 @@ void finalize() {
 
 }; // namespace system
 
-}; // namespace multiprog
+} // namespace acto
+

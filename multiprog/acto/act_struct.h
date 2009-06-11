@@ -1,18 +1,19 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                     The acto Library                                          //
-//                                                                                               //
-//-----------------------------------------------------------------------------------------------//
-// Copyright © 2007 - 2008                                                                       //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
-// ----------------------------------------------------------------------------------------------//
-// License:                                                                                      //
-//     Code covered by the MIT License.                                                          //
-//     The authors make no representations about the suitability of this software                //
-//     for any purpose. It is provided "as is" without express or implied warranty.              //
-//-----------------------------------------------------------------------------------------------//
-// File: act_struct.h                                                                            //
-//     Специальные классы структур, специально адаптированные под задачи библиотеки.             //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+//---------------------------------------------------------------------------//
+// File: act_struct.h                                                        //
+//     Специальные классы структур, специально адаптированные                //
+//     под задачи библиотеки.                                                //
+///////////////////////////////////////////////////////////////////////////////
 
 #if !defined ( __multiprog__act_struct_h__ )
 #define __multiprog__act_struct_h__
@@ -20,9 +21,26 @@
 
 // Структуры, специально адаптированные под задачи библиотеки
 
-namespace multiprog {
-
 namespace acto {
+
+/** */
+template <typename T>
+class shared_ptr {
+    T*  m_ptr;
+
+public:
+    explicit shared_ptr(T* const) : m_ptr(ptr) {
+    }
+
+    ~shared_ptr() {
+    }
+
+public:
+    T* operator -> () {
+        return m_ptr;
+    }
+};
+
 
 namespace core {
 
@@ -119,7 +137,7 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
-//    Используемый алгоритм будет корректно работать, если только 
+//    Используемый алгоритм будет корректно работать, если только
 //    единственный поток извлекает объекты из стека и удаляет их.
 template <typename T>
 class stack_t {
@@ -127,7 +145,7 @@ public:
     typedef T       node_t;
 
 public:
-    stack_t() : 
+    stack_t() :
         m_head( 0 )
     {
     }
@@ -190,7 +208,7 @@ public:
     typedef T       node_t;
 
 public:
-    localstack_t() : 
+    localstack_t() :
         m_head( 0 )
     {
     }
@@ -199,7 +217,7 @@ public:
         assert(m_head == 0);
     }
 
-    localstack_t(sequence_t<T> seq) : 
+    localstack_t(sequence_t<T> seq) :
         m_head( seq.extract() )
     {
     }
@@ -242,8 +260,6 @@ private:
 }; // namespace core
 
 }; // namespace acto
-
-}; // namespace multiprog
 
 
 #endif // __multiprog__act_struct_h__

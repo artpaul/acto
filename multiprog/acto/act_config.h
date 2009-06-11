@@ -1,18 +1,18 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                     The act_o Library                                         //
-//                                                                                               //
-//-----------------------------------------------------------------------------------------------//
-// Copyright © 2007 - 2008                                                                       //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
-// ----------------------------------------------------------------------------------------------//
-// License:                                                                                      //
-//     Code covered by the MIT License.                                                          //
-//     The authors make no representations about the suitability of this software                //
-//     for any purpose. It is provided "as is" without express or implied warranty.              //
-//-----------------------------------------------------------------------------------------------//
-// File: act_config.h                                                                            //
-//     Конфигурационный файл для библиотеки act-o.                                               //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+//---------------------------------------------------------------------------//
+// File: act_config.h                                                        //
+//     Конфигурационный файл для библиотеки act-o.                           //
+///////////////////////////////////////////////////////////////////////////////
 
 #if !defined ( __multiprog__act_config_h__ )
 #define __multiprog__act_config_h__

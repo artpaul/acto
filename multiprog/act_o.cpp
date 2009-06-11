@@ -2,8 +2,6 @@
 #include "multiprog.h"
 
 
-namespace multiprog {
-
 namespace acto {
 
 static volatile unsigned int	startup_counter = 0;
@@ -157,5 +155,3 @@ bool actor_t::operator != (const actor_t& rhs) const {
 
 
 }; // namespace acto
-
-}; // namespace multiprog

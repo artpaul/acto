@@ -1,27 +1,26 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                     The act_o Library                                         //
-//                                                                                               //
-//-----------------------------------------------------------------------------------------------//
-// Copyright © 2007 - 2008                                                                       //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
-// ----------------------------------------------------------------------------------------------//
-// License:                                                                                      //
-//     Code covered by the MIT License.                                                          //
-//     The authors make no representations about the suitability of this software                //
-//     for any purpose. It is provided "as is" without express or implied warranty.              //
-//-----------------------------------------------------------------------------------------------//
-// File: sys_mswin.h                                                                             //
-//     Обертка над API операционной системы MS Windows.                                          //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+//---------------------------------------------------------------------------//
+// File: sys_mswin.h                                                         //
+//     Обертка над API операционной системы MS Windows.                      //
+///////////////////////////////////////////////////////////////////////////////
 
 #if !defined __multiprog__sys_mswin_h__
 #define __multiprog__sys_mswin_h__
 
 
-namespace multiprog {
+namespace acto {
 
 namespace system {
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Системный поток.
@@ -32,6 +31,16 @@ public:
 
     // -
     typedef fastdelegate::FastDelegate< void () >   proc_t;
+
+public:
+    // Дескриптор потока
+    HANDLE      m_handle;
+    // Идентификатор потока
+    DWORD       m_id;
+    // -
+    void* const m_param;
+    // -
+    proc_t      m_proc;
 
 public:
      thread_t(const proc_t& proc, void* const param = 0);
@@ -57,16 +66,6 @@ private:
     static DWORD WINAPI thread_proc(LPVOID lpParameter);
 
     TLS_VARIABLE static thread_t*  instance;
-
-public:
-    // Дескриптор потока
-    HANDLE      m_handle;
-    // Идентификатор потока
-    DWORD       m_id;
-    // -
-    void* const m_param;
-    // -
-    proc_t      m_proc;
 };
 
 
@@ -79,7 +78,7 @@ enum WaitResult {
     wrError,
     // -
     wrSignaled,
-    // Приевишен установленный период ожидания
+    // Превышен установленный период ожидания
     wrTimeout
 };
 
@@ -211,9 +210,9 @@ void initialize();
 void finalize();
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                               //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 
 // Desc: Количетсов физически процессоров (ядер) в системе
 inline unsigned int NumberOfProcessors() {
@@ -260,6 +259,6 @@ inline long AtomicIncrement(long volatile* addend) {
 
 }; // namespace system
 
-}; // namespace multiprog
+}; // namespace acto
 
 #endif // __multiprog__sys_mswin_h__

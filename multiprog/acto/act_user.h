@@ -1,23 +1,21 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                     The act_o Library                                         //
-//                                                                                               //
-//-----------------------------------------------------------------------------------------------//
-// Copyright © 2007 - 2008                                                                       //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
-// ----------------------------------------------------------------------------------------------//
-// License:                                                                                      //
-//     Code covered by the MIT License.                                                          //
-//     The authors make no representations about the suitability of this software                //
-//     for any purpose. It is provided "as is" without express or implied warranty.              //
-//-----------------------------------------------------------------------------------------------//
-// File: act_user.h                                                                              //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+//---------------------------------------------------------------------------//
+// File: act_user.h                                                          //
+///////////////////////////////////////////////////////////////////////////////
 
 #if !defined __multiprogs__act_user_h__
 #define __multiprogs__act_user_h__
 
-
-namespace multiprog {
 
 namespace acto {
 
@@ -37,7 +35,9 @@ const int aoExclusive    = 0x01;
 const int aoBindToThread = 0x02;
 
 
-// Desc: Базовый класс для всех интерфейсных объектов
+/**
+ * Базовый класс для всех интерфейсных объектов
+ */
 class object_t {
     // -
     friend inline core::object_t* dereference(object_t& object);
@@ -68,8 +68,9 @@ protected:
 
 
 
-// Desc: Класс предназначен для создания пользовательских
-//       экземпляров актеров.
+/**
+ * Класс предназначен для создания пользовательских экземпляров актеров.
+ */
 template <typename ActorT>
 class instance_t : public object_t {
 public:
@@ -117,7 +118,9 @@ public:
 
 
 
-// Desc: Базовый класс для реализации пользовательских объектов (актеров)
+/**
+ * Базовый класс для реализации пользовательских объектов (актеров)
+ */
 class implementation_t : public core::base_t {
     template <typename ActorT> friend class instance_t;
 
@@ -128,6 +131,16 @@ protected:
     actor_t     self;
 };
 
+
+template <typename Msg>
+inline shared_ptr<Msg> message() {
+    return shared_ptr<Msg>(new Msg());
+}
+
+template <typename Msg, typename P1>
+inline shared_ptr<Msg> message(P1 p1) {
+    return shared_ptr<Msg>(new Msg(p1));
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
@@ -153,10 +166,6 @@ ACTO_API void shutdown();
 // Инициализировать библиотеку
 ACTO_API void startup();
 
-
 }; // namespace acto
-
-}; // namespace multiprog
-
 
 #endif // __multiprogs__act_user_h__

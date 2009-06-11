@@ -1,24 +1,21 @@
-﻿///////////////////////////////////////////////////////////////////////////////////////////////////
-//                                     The act_o Library                                         //
-//                                                                                               //
-//-----------------------------------------------------------------------------------------------//
-// Copyright © 2007 - 2008                                                                       //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                                                   //
-// ----------------------------------------------------------------------------------------------//
-// License:                                                                                      //
-//     Code covered by the MIT License.                                                          //
-//     The authors make no representations about the suitability of this software                //
-//     for any purpose. It is provided "as is" without express or implied warranty.              //
-//-----------------------------------------------------------------------------------------------//
-// File: act_types.h                                                                             //
-//     Общие типы для всей библиотеки.                                                           //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+//---------------------------------------------------------------------------//
+// File: act_types.h                                                         //
+//     Общие типы для всей библиотеки.                                       //
+///////////////////////////////////////////////////////////////////////////////
 
 #if !defined ( __multiprogs__act_types_h__ )
 #define __multiprogs__act_types_h__
-
-
-namespace multiprog {
 
 namespace acto {
 
@@ -66,7 +63,5 @@ namespace core {
 }; // namespace core
 
 }; // namespace acto
-
-}; // namespace multiprog
 
 #endif // __multiprogs__act_types_h__

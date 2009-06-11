@@ -2,8 +2,6 @@
 #include "multiprog.h"
 
 
-namespace multiprog {
-
 namespace acto {
 
 namespace services {
@@ -258,5 +256,3 @@ void timer_t::setup(acto::actor_t& actor, const int time, const bool once) {
 }; // namespace services
 
 }; // namespace acto
-
-}; // namespace multiprog

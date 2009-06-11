@@ -1,9 +1,6 @@
 ﻿
 #include "../multiprog.h"
 
-
-namespace multiprog {
-
 namespace acto {
 
 namespace core {
@@ -21,7 +18,7 @@ worker_t::worker_t(const Slots slots) :
 	m_system  (0)
 {
     // -
-	m_system = new multiprog::system::thread_t(MakeDelegate(this, &worker_t::execute), this);
+	m_system = new system::thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-----------------------------------------------------------------------------
 worker_t::~worker_t() {   
@@ -150,5 +147,3 @@ void worker_t::execute() {
 }; // namespace core
 
 }; // namespace acto
-
-}; // namespace multiprog

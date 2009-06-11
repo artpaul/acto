@@ -2,8 +2,6 @@
 #include "multiprog.h"
 
 
-namespace multiprog {
-
 namespace acto {
 
 namespace core {
@@ -715,5 +713,3 @@ void processBindedActors() {
 }; // namespace core
 
 }; // namespace acto
-
-}; // namespace multiprog
