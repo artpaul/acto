@@ -19,8 +19,6 @@
 
 #include <vector>
 
-#include <config.h>
-
 #include <system/delegates.h>
 #include <acto/act_types.h>
 

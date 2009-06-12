@@ -1,6 +1,5 @@
 ﻿
-// -
-#include "act_mswin.h"
+#include <acto.h>
 
 namespace acto {
 

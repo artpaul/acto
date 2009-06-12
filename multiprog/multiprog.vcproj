@@ -312,23 +312,11 @@
 				RelativePath=".\acto.h"
 				>
 			</File>
-			<File
-				RelativePath=".\config.h"
-				>
-			</File>
 			<Filter
 				Name="acto"
 				>
 				<File
-					RelativePath=".\acto\act_config.h"
-					>
-				</File>
-				<File
 					RelativePath=".\core\act_core.h"
-					>
-				</File>
-				<File
-					RelativePath=".\acto\act_o.h"
 					>
 				</File>
 				<File

@@ -17,11 +17,6 @@
 #if !defined __multiprog__sys_mswin_h__
 #define __multiprog__sys_mswin_h__
 
-#include <windows.h>
-
-#include <config.h>
-
-#include "delegates.h"
 
 namespace acto {
 
@@ -31,7 +26,7 @@ namespace system {
 // Desc: Системный поток.
 class thread_t {
 public:
-    // Тип системного идентификатора для потокаы
+    // Тип системного идентификатора для потока
     typedef DWORD   identifier_type;
 
     // -

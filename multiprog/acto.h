@@ -19,8 +19,79 @@
 
 #pragma once
 
-// Первым идет конфигурационный заголовок
-#include "config.h"
+#if defined _WIN32 || _WIN64
+    // Реализация для Windows
+#   define MSWINDOWS    1
+#else
+#   error "Undefined target platform"
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+//               НАСТРОЙКА БИБЛИОТЕКИ ПОД ТЕКУЩЙИ КОМПИЛЯТОР                 //
+///////////////////////////////////////////////////////////////////////////////
+
+// Используется компилятор Microsoft, либо совместимый
+#if defined( _MSC_VER )
+
+#   if !defined _MT
+#       error "Multithreaded mode not defined. Use /MD or /MT compiler options."
+#   endif
+
+    //  Если текущий режим - отладочный
+#   if defined ( _DEBUG )
+#       if !defined ( DEBUG )
+#           define DEBUG    1
+#       endif
+#   endif
+
+// Директивы экспорта для сборки DLL
+#   ifdef MULTI_EXPORT
+#       define ACTO_API         __declspec( dllexport )
+    #elif MULTI_IMPORT
+#       define ACTO_API         __declspec( dllimport )
+#   else
+#       define ACTO_API
+#   endif
+
+#endif
+
+
+///////////////////////////////////////////////////////////////////////////////
+//               НАСТРОЙКА БИБЛИОТЕКИ ПОД ЦЕЛЕВУЮ ПЛАТФОРМУ                  //
+///////////////////////////////////////////////////////////////////////////////
+
+#if defined ( MSWINDOWS )
+#   if !defined ( _WIN32_WINNT )
+        // Целевая платформа Windows 2000 или выше
+#       define _WIN32_WINNT     0x0500
+#   endif
+    // -
+#   include <windows.h>
+
+#   define TLS_VARIABLE     __declspec (thread)
+
+#elif
+#   define TLS_VARIABLE
+#endif
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+#include <algorithm>
+#include <cassert>
+#include <ctime>
+#include <deque>
+#include <exception>
+#include <list>
+#include <map>
+#include <new>
+#include <queue>
+#include <set>
+#include <string>
+#include <vector>
+
 
 // Реализация делегатов
 #include "system/delegates.h"
@@ -30,9 +101,6 @@
 #	include "system/act_mswin.h"
 #endif
 
-
-// Первым идет конфигурационный заголовок
-#include "acto/act_config.h"
 
 // Общие типы для библиотеки
 #include "acto/act_types.h"
