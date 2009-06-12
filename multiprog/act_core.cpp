@@ -265,8 +265,7 @@ long runtime_t::release(object_t* const obj) {
     // -
     bool       deleting = false;
     const long result   = system::AtomicDecrement(&obj->references);
-    // Уменьшить счетчик ссылок
-    // -
+
     if (result == 0) {
         // TN: Если ссылок на объект более нет, то только один поток имеет
         //     доступ к объекту - тот, кто осовбодил последнюю ссылку.
@@ -286,7 +285,7 @@ long runtime_t::release(object_t* const obj) {
                 assert(obj->impl != 0);
                 // -
                 obj->unimpl = true;
-                delete obj->impl, obj->impl = 0;
+                delete obj->impl, obj->impl = NULL;
                 obj->unimpl = false;
                 // -
                 obj->freeing = true;
@@ -304,7 +303,7 @@ long runtime_t::release(object_t* const obj) {
 // Desc:
 //-----------------------------------------------------------------------------
 void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type) {
-    bool    undelivered = true;
+    bool undelivered = true;
 
     // 1. Создать пакет
     core::package_t* const package = createPackage(target, msg, type);
@@ -466,7 +465,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
     assert(target != 0);
 
     // 1. Создать экземпляр пакета
-    package_t* const result = new package_t(data, type);
+    package_t* const result = allocator_t::allocate< package_t >(data, type); //new package_t(data, type);
     // 2.
     result->sender = determineSender();
     result->target = target;

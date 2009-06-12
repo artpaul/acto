@@ -18,29 +18,11 @@
 #if !defined ( __multiprog__act_struct_h__ )
 #define __multiprog__act_struct_h__
 
+#include <generic/ptr.h>
 
 // Структуры, специально адаптированные под задачи библиотеки
 
 namespace acto {
-
-/** */
-template <typename T>
-class shared_ptr {
-    T*  m_ptr;
-
-public:
-    explicit shared_ptr(T* const) : m_ptr(ptr) {
-    }
-
-    ~shared_ptr() {
-    }
-
-public:
-    T* operator -> () {
-        return m_ptr;
-    }
-};
-
 
 namespace core {
 

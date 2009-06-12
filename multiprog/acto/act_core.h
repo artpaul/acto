@@ -48,6 +48,24 @@ struct LinkItem {
     Notifier    entry;
 };
 
+/** */
+class allocator_t {
+public:
+    template <typename T>
+    static inline T* allocate() {
+        return new T();
+    }
+
+    template <typename T, typename P1>
+    static inline T* allocate(P1 p1) {
+        return new T(p1);
+    }
+
+    template <typename T, typename P1, typename P2>
+    static inline T* allocate(P1 p1, P2 p2) {
+        return new T(p1, p2);
+    }
+};
 
 // Desc:
 template <typename T>
@@ -277,6 +295,24 @@ private:
     // Типы сообщений
     Types               m_types;
 
+private:
+    // Цикл выполнения планировщика
+    void        cleaner();
+    // -
+    package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
+    // -
+    worker_t*   createWorker();
+    // Деструткор для пользовательских объектов (актеров)
+    void        destruct_actor(object_t* const actor);
+    // Определить отправителя сообщения
+    object_t*   determineSender();
+    // Цикл выполнения планировщика
+    void        execute();
+    // -
+    void        pushDelete(object_t* const obj);
+    // -
+    void        pushIdle(worker_t* const worker);
+
 public:
 /* Общие для всех потоков данные */
    // Очередь объектов, которым пришли сообщения
@@ -306,24 +342,6 @@ public:
     void        startup();
     // -
     TYPEID      typeIdentifier(const char* const type_name);
-
-private:
-    // Цикл выполнения планировщика
-    void        cleaner();
-    // -
-    package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
-    // -
-    worker_t*   createWorker();
-    // Деструткор для пользовательских объектов (актеров)
-    void        destruct_actor(object_t* const actor);
-    // Определить отправителя сообщения
-    object_t*   determineSender();
-    // Цикл выполнения планировщика
-    void        execute();
-    // -
-    void        pushDelete(object_t* const obj);
-    // -
-    void        pushIdle(worker_t* const worker);
 };
 
 
