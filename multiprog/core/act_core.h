@@ -17,6 +17,15 @@
 #if !defined ( __multiprogs__act_core_h__ )
 #define __multiprogs__act_core_h__
 
+#include <vector>
+
+#include <config.h>
+
+#include <system/delegates.h>
+#include <acto/act_types.h>
+
+#include "act_struct.h"
+
 
 namespace acto {
 

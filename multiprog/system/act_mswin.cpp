@@ -1,6 +1,6 @@
 ﻿
 // -
-#include "multiprog.h"
+#include "act_mswin.h"
 
 namespace acto {
 

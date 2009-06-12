@@ -1,5 +1,5 @@
 ﻿
-#include "../multiprog.h"
+#include <acto.h>
 
 namespace acto {
 

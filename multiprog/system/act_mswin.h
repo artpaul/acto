@@ -17,6 +17,11 @@
 #if !defined __multiprog__sys_mswin_h__
 #define __multiprog__sys_mswin_h__
 
+#include <windows.h>
+
+#include <config.h>
+
+#include "delegates.h"
 
 namespace acto {
 

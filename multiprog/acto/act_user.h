@@ -142,6 +142,14 @@ inline shared_ptr<Msg> message(P1 p1) {
     return shared_ptr<Msg>(new Msg(p1));
 }
 
+
+// Desc:
+struct msg_destroy : public msg_t { };
+
+// Desc:
+struct msg_time : public msg_t { };
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////

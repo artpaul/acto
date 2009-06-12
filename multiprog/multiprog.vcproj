@@ -309,11 +309,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\config.h"
+				RelativePath=".\acto.h"
 				>
 			</File>
 			<File
-				RelativePath=".\multiprog.h"
+				RelativePath=".\config.h"
 				>
 			</File>
 			<Filter
@@ -341,10 +341,6 @@
 				</File>
 				<File
 					RelativePath=".\acto\act_user.h"
-					>
-				</File>
-				<File
-					RelativePath=".\acto\messages.inl"
 					>
 				</File>
 				<File
