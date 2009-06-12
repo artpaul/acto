@@ -283,23 +283,23 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\act_core.cpp"
+				RelativePath=".\core\act_core.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\act_mswin.cpp"
+				RelativePath=".\system\act_mswin.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\act_o.cpp"
+				RelativePath=".\acto\act_o.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\act_services.cpp"
+				RelativePath=".\extension\act_services.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\acto\worker.cpp"
+				RelativePath=".\core\worker.cpp"
 				>
 			</File>
 		</Filter>
@@ -324,7 +324,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\acto\act_core.h"
+					RelativePath=".\core\act_core.h"
 					>
 				</File>
 				<File
@@ -332,11 +332,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\acto\act_services.h"
-					>
-				</File>
-				<File
-					RelativePath=".\acto\act_struct.h"
+					RelativePath=".\core\act_struct.h"
 					>
 				</File>
 				<File

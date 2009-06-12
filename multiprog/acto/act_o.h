@@ -21,20 +21,20 @@
 #pragma once
 
 // Первым идет конфигурационный заголовок
-#include "act_config.h"
+#include <acto/act_config.h>
 
 // Общие типы для библиотеки
-#include "act_types.h"
+#include <acto/act_types.h>
 
 // -
-#include "act_struct.h"
+#include <core/act_struct.h>
 // Ядро библиотеки
-#include "act_core.h"
+#include <core/act_core.h>
 
 // Интерфейс библиотеки (пользовательский уровень)
-#include "act_user.h"
+#include <acto/act_user.h>
 // Дополнительные сервисы (пользовательский уровень)
-#include "act_services.h"
+#include <extension/act_services.h>
 
 // Подключить предопределенные типы сообщений
 #include "messages.inl"
