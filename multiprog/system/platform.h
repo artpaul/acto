@@ -51,6 +51,8 @@
 #       define ACTO_API
 #   endif
 
+#else
+#   define ACTO_API
 #endif
 
 
@@ -59,6 +61,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #if defined ( ACTO_WIN )
+
+#   if !defined (_MSC_VER)
+#       error "Unknown windows compiler"
+#   endif
+
 #   if !defined ( _WIN32_WINNT )
         // Целевая платформа Windows XP или выше
 #       define _WIN32_WINNT     0x0501
@@ -68,34 +75,42 @@
 
 #   define TLS_VARIABLE     __declspec (thread)
 
-#elif
+    /* Целые со знаком */
+    typedef __int8              int8;
+    typedef __int16             int16;
+    typedef __int32             int32;
+    typedef __int64             int64;
+
+    /* Беззнаковые целые */
+    typedef unsigned __int8     uint8;
+    typedef unsigned __int16    uint16;
+    typedef unsigned __int32    uint32;
+    typedef unsigned __int64    uint64;
+
+#   include "act_mswin.h"
+
+#elif defined (ACTO_LINUX)
+
 #   define TLS_VARIABLE
-#endif
 
+#   include <stdint.h>
 
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
+    /* Целые со знаком */
+    typedef int8_t              int8;
+    typedef int16_t             int16;
+    typedef int32_t             int32;
+    typedef int64_t             int64;
 
-#ifdef ACTO_WIN
+    /* Беззнаковые целые */
+    typedef uint8_t             uint8;
+    typedef uint16_t            uint16;
+    typedef uint32_t            uint32;
+    typedef uint64_t            uint64;
 
-#if !defined (_MSC_VER)
-#   error "Unknown windows compiler"
-#endif
+#   include "linux.h"
 
-/* Целые со знаком */
-typedef __int8              int8;
-typedef __int16             int16;
-typedef __int32             int32;
-typedef __int64             int64;
-
-/* Беззнаковые целые */
-typedef unsigned __int8     uint8;
-typedef unsigned __int16    uint16;
-typedef unsigned __int32    uint32;
-typedef unsigned __int64    uint64;
-
-#	include "act_mswin.h"
+#else
+#   define TLS_VARIABLE
 #endif
 
 #endif // actosystem_platform_h

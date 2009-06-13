@@ -17,7 +17,7 @@
 #if !defined ( __multiprogs__act_core_h__ )
 #define __multiprogs__act_core_h__
 
-#include <typeinfo.h>
+#include <typeinfo>
 
 #include <cassert>
 #include <algorithm>
@@ -123,7 +123,7 @@ public:
     i_handler(const TYPEID type_);
 
 public:
-    virtual void invoke(object_t* const sender, msg_t* const msg) = 0;
+    virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
 };
 
 
@@ -177,10 +177,18 @@ public:
     typedef fastdelegate::FastDelegate< void (acto::actor_t&, const MsgT&) >    delegate_t;
 
 public:
-    handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_);
+    handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_)
+        : i_handler ( type_ )
+        , m_delegate( delegate_ )
+    {
+    }
 
     // Вызвать обработчик
-    virtual void invoke(object_t* const sender, msg_t* const msg);
+    virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        acto::actor_t   actor(sender);
+
+        m_delegate(actor, *static_cast< const MsgT* const >(msg));
+    }
 
 private:
     // Делегат, хранящий указатель на
@@ -339,42 +347,25 @@ void processBindedActors();
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 template < typename MsgT, typename ClassName >
-	inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
-		// Тип сообщения
-		type_box_t< MsgT >		        a_type     = type_box_t< MsgT >();
-		// Метод, обрабатывающий сообщение
-		handler_t< MsgT >::delegate_t	a_delegate = fastdelegate::MakeDelegate(this, func);
-		// Обрабочик
-		handler_t< MsgT >* const		handler    = new handler_t< MsgT >(a_delegate, a_type);
+    inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
+        // Тип сообщения
+        type_box_t< MsgT >                       a_type     = type_box_t< MsgT >();
+        // Метод, обрабатывающий сообщение
+        typename handler_t< MsgT >::delegate_t   a_delegate = fastdelegate::MakeDelegate(this, func);
+        // Обрабочик
+        handler_t< MsgT >* const                 handler    = new handler_t< MsgT >(a_delegate, a_type);
 
-		// Установить обработчик
-		set_handler(handler, a_type);
-	}
+        // Установить обработчик
+        set_handler(handler, a_type);
+    }
 //-------------------------------------------------------------------------------------------------
 template < typename MsgT >
-	inline void base_t::Handler() {
+    inline void base_t::Handler() {
         // Тип сообщения
-		type_box_t< MsgT >	a_type = type_box_t< MsgT >();
-		// Сбросить обработчик указанного типа
-		set_handler(0, a_type);
-	}
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------------------------
-template <typename MsgT>
-	handler_t< MsgT >::handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_) :
-		i_handler ( type_ ),
-		// -
-		m_delegate( delegate_ )
-	{
-	}
-//-------------------------------------------------------------------------------------------------
-template <typename MsgT>
-	void handler_t< MsgT >::invoke(object_t* const sender, msg_t* const msg) {
-		m_delegate(acto::actor_t(sender), *static_cast< MsgT* const >(msg));
-	}
-
+        type_box_t< MsgT >	a_type = type_box_t< MsgT >();
+        // Сбросить обработчик указанного типа
+        set_handler(0, a_type);
+    }
 
 }; // namespace core
 

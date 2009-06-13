@@ -1,4 +1,3 @@
-﻿
 #include <system/platform.h>
 
 #include "act_core.h"
@@ -13,7 +12,7 @@ using fastdelegate::MakeDelegate;
 
 
 // Экземпляр runtime'а
-runtime_t	runtime;
+runtime_t   runtime;
 
 //
 static TLS_VARIABLE thread_context_t* threadCtx = 0;
@@ -106,7 +105,7 @@ package_t::~package_t() {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-static void doHandle(package_t *const package) {
+void doHandle(package_t *const package) {
     object_t* const obj = package->target;
     i_handler* handler  = 0;
     base_t* const impl  = obj->impl;
@@ -524,7 +523,7 @@ void runtime_t::execute() {
                     // -
                     worker = m_workers.idle.pop();
                     // -
-                    if (!worker && (result == wrTimeout)) {
+                    if (!worker && (result == WR_TIMEOUT)) {
                         // -
                         newWorkerTimeout += 2;
                         // -
@@ -552,7 +551,7 @@ void runtime_t::execute() {
         }
 
 		// -
-        if (m_terminating || (m_event.wait(10 * 1000) == wrTimeout)) {
+        if (m_terminating || (m_event.wait(10 * 1000) == WR_TIMEOUT)) {
             m_workers.deleted.push(m_workers.idle.extract());
             m_evclean.signaled();
             // -

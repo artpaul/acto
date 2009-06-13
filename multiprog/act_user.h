@@ -238,12 +238,12 @@ template <typename MsgT>
     void actor_t::send(const message_class_t< MsgT >& msg_class) const {
         if (m_object) {
             MsgT* const         msg = msg_class.create();
-            const core::TYPEID  id  = msg->metainfo ? msg->metainfo->id : core::type_box_t< MsgT >();
-            
+            const core::TYPEID  id  = msg->tid ? msg->tid : core::type_box_t< MsgT >();
+
             // Отправить сообщение
             return core::runtime.send(m_object, msg, id);
         }
-    }    
+    }
 //-------------------------------------------------------------------------------------------------
 template <typename MsgT, typename P1>
     void actor_t::send(P1 p1) const {

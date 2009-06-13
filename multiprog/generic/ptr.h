@@ -10,7 +10,7 @@ class shared_ptr {
     T*  m_ptr;
 
 public:
-    explicit shared_ptr(T* const) : m_ptr(ptr) {
+    explicit shared_ptr(T* const ptr) : m_ptr(ptr) {
     }
 
     ~shared_ptr() {

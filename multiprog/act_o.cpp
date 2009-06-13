@@ -1,4 +1,4 @@
-﻿
+
 #include <acto.h>
 
 
@@ -13,7 +13,7 @@ static volatile unsigned int	startup_counter = 0;
 ACTO_API void destroy(object_t& object) {
     core::object_t* const obj = object.m_object;
     // -
-    if (AtomicCompareExchangePointer((volatile PVOID*)&object.m_object, (void*)0, obj) != 0) {
+    if (AtomicCompareExchangePointer((volatile void**)&object.m_object, (void*)0, obj) != 0) {
         // Освободить ссылку на объект и удалить его
         if (core::runtime.release(obj) > 0)
             core::runtime.destroyObject(obj);

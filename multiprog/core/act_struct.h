@@ -115,7 +115,7 @@ public:
             top = m_head;
             if (top == 0)
                 return 0;
-            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, 0, top) == top)
+            if (AtomicCompareExchangePointer((volatile void**)&m_head, 0, top) == top)
                 return top;
         }
     }
@@ -126,7 +126,7 @@ public:
         while (true) {
             top = m_head;
             node->next = top;
-            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, node, top) == top)
+            if (AtomicCompareExchangePointer((volatile void**)&m_head, node, top) == top)
                 return;
         }
     }
@@ -145,7 +145,7 @@ public:
             if (top == 0)
                 return 0;
             next = top->next;
-            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, next, top) == top)
+            if (AtomicCompareExchangePointer((volatile void**)&m_head, next, top) == top)
                 return top;
         }
     }

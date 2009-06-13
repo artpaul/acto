@@ -17,25 +17,42 @@
 #if !defined ( __multiprog__act_services_h__ )
 #define __multiprog__act_services_h__
 
+#include <system/platform.h>
+
 namespace acto {
 
 // Дополнительные сервисы
 namespace services {
+
+
+
+#if !defined (ACTO_WIN)
+
+// -
+inline void finalize() {
+    ;
+}
+
+// -
+inline void initialize() {
+    ;
+}
+
+#else
 
 // -
 void finalize();
 // -
 void initialize();
 
-
 // Desc: Базовый класс для всех служб
 class ACTO_API service_t {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Desc: 
-//    Обеспечивает посылку уведомлений актерам через 
-//    заданные промежутки времени. 
+// Desc:
+//    Обеспечивает посылку уведомлений актерам через
+//    заданные промежутки времени.
 class ACTO_API timer_t : public service_t {
     friend void finalize();
 
@@ -59,6 +76,7 @@ private:
 // Сервис таймера
 extern timer_t  timer;
 
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                        РЕАЛИЗАЦИЯ ВСТРАИВАЕМЫХ И ШАБЛОННЫХ МЕТОДОВ                            //

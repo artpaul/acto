@@ -14,19 +14,12 @@ namespace core {
 // Идентификатор типов
 typedef long    TYPEID;
 
-
-/** Метаинформация о сообщении */
-struct msg_info_t {
-    TYPEID      id;
-};
-
-
 /** Базовый тип для сообщений */
 struct ACTO_API msg_t {
-    const msg_info_t* const metainfo;
+    TYPEID    tid;
 
 public:
-    msg_t() : metainfo(NULL) { }
+    msg_t() : tid(0) { }
     virtual ~msg_t() { }
 };
 
@@ -90,17 +83,17 @@ private:
 /** */
 template <typename MsgT>
 class message_class_t {
-    msg_info_t  m_info;
+    TYPEID  m_tid;
 
 public:
     message_class_t() {
-        m_info.id = type_box_t< MsgT >();
+        m_tid = type_box_t< MsgT >();
     }
 
     MsgT* create() const {
         MsgT* const result = new MsgT();
 
-        const_cast<const msg_info_t*>(result->metainfo) = &m_info;
+        result->tid = m_tid;
 
         return result;
     }
@@ -112,7 +105,7 @@ public:
 //-----------------------------------------------------------------------------
 template <typename T>
 	type_box_t< T >::type_box_t() :
-		m_id( message_map_t::instance()->get_typeid(typeid(T).raw_name()) )
+		m_id( message_map_t::instance()->get_typeid(typeid(T).name()) )
 	{
 	}
 //-----------------------------------------------------------------------------

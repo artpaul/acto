@@ -1,10 +1,11 @@
-﻿
-#include <acto.h>
 
+#include <acto.h>
 
 namespace acto {
 
 namespace services {
+
+#ifdef ACTO_WIN
 
 using fastdelegate::MakeDelegate;
 
@@ -211,7 +212,6 @@ void initialize() {
     // -
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 timer_t::timer_t() {
@@ -252,6 +252,7 @@ void timer_t::setup(acto::actor_t& actor, const int time, const bool once) {
 	}
 }
 
+#endif
 
 }; // namespace services
 

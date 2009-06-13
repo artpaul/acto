@@ -1,4 +1,4 @@
-﻿
+
 #include "act_core.h"
 #include "worker.h"
 
@@ -22,7 +22,7 @@ worker_t::worker_t(const Slots slots) :
 	m_system = new thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-----------------------------------------------------------------------------
-worker_t::~worker_t() {   
+worker_t::~worker_t() {
     // 1.
     m_active = false;
     // 2.
@@ -58,7 +58,7 @@ void worker_t::execute() {
     // -
 	while (m_active) {
         //
-        // 1. Если данному потоку назначен объект, то необходимо 
+        // 1. Если данному потоку назначен объект, то необходимо
         //    обрабатывать сообщения, ему поступившие
         //
         while (object_t* const obj = m_object) {
@@ -69,7 +69,7 @@ void worker_t::execute() {
                 // -
                 delete package;
 
-                // Проверить истечение лимита времени 
+                // Проверить истечение лимита времени
                 // обработки для данного объекта
                 if (!m_object->thread) {
                     if ((clock() - m_start) > m_time) {
@@ -86,16 +86,16 @@ void worker_t::execute() {
                     Exclusive	lock(obj->cs);
                     // -
                     if (obj->queue.empty()) {
-                        // Если это динамический объект 
+                        // Если это динамический объект
                         if (obj->thread == 0) {
-                            // -                         
+                            // -
                             obj->scheduled = false;
                             m_object = 0;
                         }
                         else { // Если это эксклюзивный объект
                             assert(obj->thread == this);
                             // -
-                            if (obj->deleting) { 
+                            if (obj->deleting) {
                                 // -
                                 obj->scheduled = false;
                                 m_object = 0;
@@ -135,9 +135,9 @@ void worker_t::execute() {
                     m_slots.idle(this);
             }
         }
-        // 
+        //
         // 2. Ждать, пока не появится новое задание для данного потока
-        // 
+        //
         m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
         m_event.reset();
 	}
