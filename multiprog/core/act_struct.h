@@ -18,7 +18,7 @@
 #if !defined ( __multiprog__act_struct_h__ )
 #define __multiprog__act_struct_h__
 
-//#include <system/act_mswin.h>
+#include <system/act_mswin.h>
 #include <generic/ptr.h>
 
 // Структуры, специально адаптированные под задачи библиотеки
@@ -63,7 +63,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
-template <typename T, typename Guard = system::section_t>
+template <typename T, typename Guard = section_t>
 class queue_t {
 public:
     typedef T       node_t;
@@ -75,7 +75,7 @@ public:
     }
 
     void push(node_t* const node) {
-        system::MutexLocker lock(m_cs);
+        MutexLocker lock(m_cs);
         // -
         if (tail) {
             tail->next = node;
@@ -90,7 +90,7 @@ public:
     }
 
     node_t* pop() {
-        system::MutexLocker lock(m_cs);
+        MutexLocker lock(m_cs);
         // -
         node_t* const result = head;
         // -
@@ -144,7 +144,7 @@ public:
             top = m_head;
             if (top == 0)
                 return 0;
-            if (system::AtomicCompareExchangePointer((volatile PVOID*)&m_head, 0, top) == top)
+            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, 0, top) == top)
                 return top;
         }
     }
@@ -155,7 +155,7 @@ public:
         while (true) {
             top = m_head;
             node->next = top;
-            if (system::AtomicCompareExchangePointer((volatile PVOID*)&m_head, node, top) == top)
+            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, node, top) == top)
                 return;
         }
     }
@@ -174,7 +174,7 @@ public:
             if (top == 0)
                 return 0;
             next = top->next;
-            if (system::AtomicCompareExchangePointer((volatile PVOID*)&m_head, next, top) == top)
+            if (AtomicCompareExchangePointer((volatile PVOID*)&m_head, next, top) == top)
                 return top;
         }
     }

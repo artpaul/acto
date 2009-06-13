@@ -18,7 +18,7 @@ worker_t::worker_t(const Slots slots) :
 	m_system  (0)
 {
     // -
-	m_system = new system::thread_t(MakeDelegate(this, &worker_t::execute), this);
+	m_system = new thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-----------------------------------------------------------------------------
 worker_t::~worker_t() {   

@@ -174,6 +174,84 @@ ACTO_API void shutdown();
 // Инициализировать библиотеку
 ACTO_API void startup();
 
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
+// Desc:
+inline core::object_t* dereference(object_t& object) {
+    return object.m_object;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    instance_t< ActorT >::instance_t() : object_t() {
+        // 1.
+        ActorT* const value = new ActorT();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        m_object = core::runtime.createActor(value, 0);
+        // -
+        value->self = actor_t(m_object);
+    }
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    instance_t< ActorT >::instance_t(actor_t& context) : object_t() {
+        // 1.
+        ActorT* const value = new ActorT();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        m_object = core::runtime.createActor(value, 0);
+        // -
+        value->context = context;
+        value->self    = actor_t(m_object);
+    }
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    instance_t< ActorT >::instance_t(const int options) : object_t() {
+        // 1.
+        ActorT* const value = new ActorT();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        m_object = core::runtime.createActor(value, options);
+        // -
+        value->self = actor_t(m_object);
+    }
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    instance_t< ActorT >::instance_t(actor_t& context, const int options) {
+        // 1.
+        ActorT* const value = new ActorT();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        m_object = core::runtime.createActor(value, options);
+        // -
+        value->context = context;
+        value->self    = actor_t(m_object);
+    }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    actor_t::actor_t(const instance_t< ActorT >& inst) : object_t( inst ) {
+        // -
+    }
+
+//-------------------------------------------------------------------------------------------------
+template <typename MsgT>
+    void actor_t::send(const MsgT& msg) const {
+        if (m_object)
+            // Отправить сообщение
+            return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
+    }
+//-------------------------------------------------------------------------------------------------
+template <typename ActorT>
+    actor_t& actor_t::operator = (const instance_t< ActorT >& inst) {
+        object_t::assign(inst);
+        return *this;
+    }
+
 }; // namespace acto
 
 #endif // __multiprogs__act_user_h__

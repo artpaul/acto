@@ -1,9 +1,9 @@
 ﻿
-#include <acto.h>
+#include "act_mswin.h"
 
 namespace acto {
 
-namespace system {
+namespace core {
 
 namespace impl {
 
@@ -66,7 +66,7 @@ DWORD WINAPI thread_t::thread_proc(LPVOID lpParameter) {
 
 
 //-------------------------------------------------------------------------------------------------
-void initialize() {
+void sys_initialize() {
     // -
     if (impl::references == 0) {
     }
@@ -75,11 +75,11 @@ void initialize() {
 }
 
 //-------------------------------------------------------------------------------------------------
-void finalize() {
+void sys_finalize() {
     // -
 }
 
-}; // namespace system
+}; // namespace core
 
 } // namespace acto
 

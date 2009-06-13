@@ -324,15 +324,7 @@
 					>
 				</File>
 				<File
-					RelativePath=".\acto\act_types.h"
-					>
-				</File>
-				<File
 					RelativePath=".\acto\act_user.h"
-					>
-				</File>
-				<File
-					RelativePath=".\acto\methods.inl"
 					>
 				</File>
 			</Filter>
@@ -345,6 +337,10 @@
 				</File>
 				<File
 					RelativePath=".\system\delegates.h"
+					>
+				</File>
+				<File
+					RelativePath=".\system\platform.h"
 					>
 				</File>
 			</Filter>

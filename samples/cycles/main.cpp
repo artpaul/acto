@@ -168,7 +168,7 @@ int main()
         // ќставноваить выполнение и собрать статистику
         analizer.send(msg_stop());
         // -
-        acto::system::Sleep(2 * 1000);
+        acto::core::Sleep(2 * 1000);
         // -
         acto::destroy(analizer);
     }

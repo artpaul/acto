@@ -219,7 +219,7 @@ int main() {
                 wall.send(msg_start(BALLS, console));
 
                 // Игра продолжается некоторое время в независимых потоках
-                acto::system::Sleep(DURATION);
+                acto::core::Sleep(DURATION);
 
                 // Остановить игру
                 wall.send(msg_finish());
@@ -230,7 +230,7 @@ int main() {
                 // Обработать сообщения для консоли
                 acto::process_messages();
             }
-            acto::system::Sleep(1000);
+            acto::core::Sleep(1000);
         }
         // По зовершении работы библиотеки необходимо вызвать эту функцию,
         // чтобы освободить все занимаемые ресурсы.

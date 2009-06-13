@@ -25,7 +25,7 @@
 
 namespace acto {
 
-namespace system {
+namespace core {
 
 class thread_t;
 class event_t;
@@ -122,7 +122,7 @@ inline void yield() {
 }
 
 
-} // namespace system
+} // namespace core
 
 } // namespace acto
 

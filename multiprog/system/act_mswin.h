@@ -17,10 +17,12 @@
 #if !defined __multiprog__sys_mswin_h__
 #define __multiprog__sys_mswin_h__
 
+#include <system/platform.h>
+#include <system/delegates.h>
 
 namespace acto {
 
-namespace system {
+namespace core {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Системный поток.
@@ -204,10 +206,10 @@ private:
 
 
 // Инициализация пространства имен
-void initialize();
+void sys_initialize();
 
 // Завершение использования
-void finalize();
+void sys_finalize();
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -257,7 +259,7 @@ inline long AtomicIncrement(long volatile* addend) {
 }
 
 
-}; // namespace system
+}; // namespace core
 
 }; // namespace acto
 

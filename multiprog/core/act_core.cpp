@@ -142,7 +142,7 @@ runtime_t::runtime_t() :
     m_scheduler  (0),
     m_terminating(false)
 {
-    m_processors = system::NumberOfProcessors();
+    m_processors = NumberOfProcessors();
 }
 //-----------------------------------------------------------------------------
 runtime_t::~runtime_t() {
@@ -159,7 +159,7 @@ runtime_t::~runtime_t() {
 void runtime_t::acquire(object_t* const obj) {
     assert(obj != 0);
     // -
-    system::AtomicIncrement(&obj->references);
+    AtomicIncrement(&obj->references);
 }
 //-----------------------------------------------------------------------------
 object_t* runtime_t::createActor(base_t* const impl, const int options) {
@@ -204,7 +204,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
             }
             // -
             if (worker) {
-                system::AtomicIncrement(&m_workers.reserved);
+                AtomicIncrement(&m_workers.reserved);
                 // -
                 worker->assign(result, 0);
             }
@@ -264,7 +264,7 @@ long runtime_t::release(object_t* const obj) {
     assert(obj->references > 0);
     // -
     bool       deleting = false;
-    const long result   = system::AtomicDecrement(&obj->references);
+    const long result   = AtomicDecrement(&obj->references);
 
     if (result == 0) {
         // TN: Если ссылок на объект более нет, то только один поток имеет
@@ -391,8 +391,8 @@ void runtime_t::startup() {
     m_evnoactors.signaled();
     m_evnoworkers.signaled();
     // 3.
-    m_cleaner   = new system::thread_t(MakeDelegate(this, &runtime_t::cleaner), 0);
-    m_scheduler = new system::thread_t(MakeDelegate(this, &runtime_t::execute), 0);
+    m_cleaner   = new thread_t(MakeDelegate(this, &runtime_t::cleaner), 0);
+    m_scheduler = new thread_t(MakeDelegate(this, &runtime_t::execute), 0);
 }
 //-----------------------------------------------------------------------------
 TYPEID runtime_t::typeIdentifier(const char* const type_name) {
@@ -413,7 +413,7 @@ TYPEID runtime_t::typeIdentifier(const char* const type_name) {
     // Зарегистрировать тип
     {
         // Идентификатор типа
-        const TYPEID id = system::AtomicIncrement(&m_counter);
+        const TYPEID id = AtomicIncrement(&m_counter);
 
         // Эксклюзивный доступ
         Exclusive   lock(m_cs.types);
@@ -442,7 +442,7 @@ void runtime_t::cleaner() {
         while (worker_t* const item = queue.pop()) {
             delete item;
             // Уведомить, что удалены все вычислительные потоки
-            if (system::AtomicDecrement(&m_workers.count) == 0)
+            if (AtomicDecrement(&m_workers.count) == 0)
                 m_evnoworkers.signaled();
         }
         //
@@ -479,7 +479,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
 }
 //-----------------------------------------------------------------------------
 worker_t* runtime_t::createWorker() {
-    if (system::AtomicIncrement(&m_workers.count) > 0)
+    if (AtomicIncrement(&m_workers.count) > 0)
         m_evnoworkers.reset();
     // -
     try {
@@ -492,7 +492,7 @@ worker_t* runtime_t::createWorker() {
         return new core::worker_t(slots);
     }
     catch (...) {
-        if (system::AtomicDecrement(&m_workers.count) == 0)
+        if (AtomicDecrement(&m_workers.count) == 0)
             m_evnoworkers.signaled();
         return 0;
     }
@@ -507,7 +507,7 @@ void runtime_t::destruct_actor(object_t* const actor) {
 
     // -
     if (actor->thread != 0)
-        system::AtomicDecrement(&m_workers.reserved);
+        AtomicDecrement(&m_workers.reserved);
 
     // Удалить регистрацию объекта
     if (!actor->binded) {
@@ -548,11 +548,11 @@ void runtime_t::execute() {
                     // Подождать некоторое время осовобождения какого-нибудь потока
                     m_evworker.reset();
                     // -
-                    const system::WaitResult result = m_evworker.wait(newWorkerTimeout * 1000);
+                    const WaitResult result = m_evworker.wait(newWorkerTimeout * 1000);
                     // -
                     worker = m_workers.idle.pop();
                     // -
-                    if (!worker && (result == system::wrTimeout)) {
+                    if (!worker && (result == wrTimeout)) {
                         // -
                         newWorkerTimeout += 2;
                         // -
@@ -576,15 +576,15 @@ void runtime_t::execute() {
                 else
                     m_workers.idle.push(worker);
             }
-            system::yield();
+            yield();
         }
 
 		// -
-        if (m_terminating || (m_event.wait(10 * 1000) == system::wrTimeout)) {
+        if (m_terminating || (m_event.wait(10 * 1000) == wrTimeout)) {
             m_workers.deleted.push(m_workers.idle.extract());
             m_evclean.signaled();
             // -
-            system::yield();
+            yield();
         }
         else {
             if ((clock() - lastCleanupTime) > (10 * CLOCKS_PER_SEC)) {
@@ -634,7 +634,7 @@ void initialize() {
         runtime.startup();
     }
     // -
-    system::AtomicIncrement(&counter);
+    AtomicIncrement(&counter);
 }
 
 void initializeThread(const bool isInternal) {
@@ -654,7 +654,7 @@ void initializeThread(const bool isInternal) {
 //-----------------------------------------------------------------------------
 void finalize() {
     if (counter > 0) {
-        system::AtomicDecrement(&counter);
+        AtomicDecrement(&counter);
         // -
         if (counter == 0) {
             finalizeThread();

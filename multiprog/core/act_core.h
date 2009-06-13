@@ -20,17 +20,26 @@
 #include <vector>
 
 #include <system/delegates.h>
-#include <acto/act_types.h>
 
 #include "act_struct.h"
 
 
 namespace acto {
 
+// -
+class actor_t;
+
+// Идентификатор типов
+typedef long    TYPEID;
+
+
 namespace core {
 
 // -
-class worker_t;
+class  worker_t;
+struct i_handler;
+struct object_t;
+struct package_t;
 
 
 // Desc:
@@ -109,7 +118,7 @@ typedef std::vector< HandlerItem* >         Handlers;
 // Тип очереди сообщений
 typedef structs::queue_t< package_t >       MessageQueue;
 // -
-typedef system::MutexLocker                 Exclusive;
+typedef MutexLocker                         Exclusive;
 
 
 
@@ -168,7 +177,7 @@ public:
 // Desc: Объект
 struct ACTO_API object_t {
     // Критическая секция для доступа к полям
-    system::section_t   cs;
+    section_t           cs;
 
     // Реализация объекта
     base_t*             impl;
@@ -237,9 +246,9 @@ public:
 class runtime_t {
     struct resources_t {
         // Для контейнера заголовков актеров
-        system::section_t       actors;
+        section_t       actors;
         // Для контейнера типов
-        system::section_t       types;
+        section_t       types;
     };
 
     // Тип множества актеров
@@ -279,16 +288,16 @@ private:
     // Количество физических процессоров (ядер) в системе
     long                m_processors;
     // Экземпляр GC потока
-    system::thread_t*   m_cleaner;
+    thread_t*           m_cleaner;
     // Экземпляр системного потока
-    system::thread_t*   m_scheduler;
+    thread_t*           m_scheduler;
     // -
-    system::event_t     m_event;
-    system::event_t     m_evworker;
+    event_t             m_event;
+    event_t             m_evworker;
 
     // -
-    system::event_t     m_evnoactors;
-    system::event_t     m_evnoworkers;
+    event_t             m_evnoactors;
+    event_t             m_evnoworkers;
 
     HeaderStack         m_deleted;
 
@@ -325,8 +334,8 @@ public:
    // Очередь объектов, которым пришли сообщения
     structs::queue_t< object_t > m_queue;
     // Параметры потоков
-    workers_t           m_workers;
-    system::event_t     m_evclean;
+    workers_t   m_workers;
+    event_t     m_evclean;
 
 public:
     runtime_t();
@@ -398,7 +407,7 @@ private:
     // Флаг активности потока
     volatile bool       m_active;
     // -
-    system::event_t     m_event;
+    event_t             m_event;
     // -
     object_t* volatile  m_object;
     // -
@@ -407,7 +416,7 @@ private:
     // -
     const Slots         m_slots;
     // Экземпляр системного потока
-    system::thread_t*   m_system;
+    thread_t*           m_system;
 };
 
 extern runtime_t	runtime;
@@ -428,10 +437,78 @@ void finalizeThread();
 
 // -
 inline bool isCoreThread() {
-    return (system::thread_t::current() != 0);
+    return (thread_t::current() != 0);
 }
 
 void processBindedActors();
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+template <typename T>
+	type_box_t< T >::type_box_t() :
+		m_id( core::runtime.typeIdentifier( typeid(T).raw_name() ) )
+	{
+	}
+//-------------------------------------------------------------------------------------------------
+template <typename T>
+	type_box_t< T >::type_box_t(const type_box_t& rhs) :
+		m_id( rhs.m_id )
+	{
+	}
+//-------------------------------------------------------------------------------------------------
+template <typename T>
+	bool type_box_t< T >::operator == (const value_type& rhs) const {
+		return (m_id == rhs);
+	}
+//-------------------------------------------------------------------------------------------------
+template <typename T>
+template <typename U>
+	bool type_box_t< T >::operator == (const type_box_t< U >& rhs) const {
+		return (m_id == rhs.m_id);
+	}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+template < typename MsgT, typename ClassName >
+	inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
+		// Тип сообщения
+		type_box_t< MsgT >		        a_type     = type_box_t< MsgT >();
+		// Метод, обрабатывающий сообщение
+		handler_t< MsgT >::delegate_t	a_delegate = fastdelegate::MakeDelegate(this, func);
+		// Обрабочик
+		handler_t< MsgT >* const		handler    = new handler_t< MsgT >(a_delegate, a_type);
+
+		// Установить обработчик
+		set_handler(handler, a_type);
+	}
+//-------------------------------------------------------------------------------------------------
+template < typename MsgT >
+	inline void base_t::Handler() {
+        // Тип сообщения
+		type_box_t< MsgT >	a_type = type_box_t< MsgT >();
+		// Сбросить обработчик указанного типа
+		set_handler(0, a_type);
+	}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------------------------
+template <typename MsgT>
+	handler_t< MsgT >::handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_) :
+		i_handler ( type_ ),
+		// -
+		m_delegate( delegate_ )
+	{
+	}
+//-------------------------------------------------------------------------------------------------
+template <typename MsgT>
+	void handler_t< MsgT >::invoke(object_t* const sender, msg_t* const msg) {
+		m_delegate(acto::actor_t(sender), *static_cast< MsgT* const >(msg));
+	}
+
 
 }; // namespace core
 
