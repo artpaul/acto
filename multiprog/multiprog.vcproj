@@ -291,7 +291,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\acto\act_o.cpp"
+				RelativePath=".\act_o.cpp"
 				>
 			</File>
 			<File
@@ -309,25 +309,13 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\act_user.h"
+				>
+			</File>
+			<File
 				RelativePath=".\acto.h"
 				>
 			</File>
-			<Filter
-				Name="acto"
-				>
-				<File
-					RelativePath=".\core\act_core.h"
-					>
-				</File>
-				<File
-					RelativePath=".\core\act_struct.h"
-					>
-				</File>
-				<File
-					RelativePath=".\acto\act_user.h"
-					>
-				</File>
-			</Filter>
 			<Filter
 				Name="system"
 				>
@@ -349,6 +337,18 @@
 				>
 				<File
 					RelativePath=".\generic\ptr.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="core"
+				>
+				<File
+					RelativePath=".\core\act_core.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\act_struct.h"
 					>
 				</File>
 			</Filter>

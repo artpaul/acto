@@ -17,7 +17,18 @@
 #if !defined ( __multiprogs__act_core_h__ )
 #define __multiprogs__act_core_h__
 
+#include <typeinfo.h>
+
+#include <cassert>
+#include <ctime>
+#include <algorithm>
+#include <exception>
+#include <list>
+#include <map>
+#include <new>
 #include <vector>
+#include <set>
+#include <string>
 
 #include <system/delegates.h>
 
@@ -31,6 +42,19 @@ class actor_t;
 
 // Идентификатор типов
 typedef long    TYPEID;
+
+
+// Индивидуальный поток для актера
+const int aoExclusive    = 0x01;
+// Привязать актера к текущему системному потоку.
+// Не имеет эффекта, если используется в контексте потока,
+// созданного самой библиотекой.
+const int aoBindToThread = 0x02;
+
+
+// Включить в текущем потоке возможность взаимодействия
+// с ядром библиотеки acto
+ACTO_API void initialize_thread();
 
 
 namespace core {

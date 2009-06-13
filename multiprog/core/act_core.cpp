@@ -1,6 +1,7 @@
 ﻿
-#include <acto.h>
+#include <system/platform.h>
 
+#include "act_core.h"
 
 namespace acto {
 

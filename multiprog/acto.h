@@ -19,37 +19,17 @@
 
 #pragma once
 
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-#include <algorithm>
-#include <cassert>
-#include <ctime>
-#include <deque>
-#include <exception>
-#include <list>
-#include <map>
-#include <new>
-#include <queue>
-#include <set>
-#include <string>
-#include <vector>
-
-
 // Реализация делегатов
 #include "system/delegates.h"
 
 // Обертка над API операционных систем
 #include "system/platform.h"
 
-// -
-#include "core/act_struct.h"
 // Ядро библиотеки
 #include "core/act_core.h"
 
 // Интерфейс библиотеки (пользовательский уровень)
-#include "acto/act_user.h"
+#include "act_user.h"
 // Дополнительные сервисы (пользовательский уровень)
 #include "extension/act_services.h"
 
