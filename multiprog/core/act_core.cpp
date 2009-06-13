@@ -2,6 +2,7 @@
 #include <system/platform.h>
 
 #include "act_core.h"
+#include "worker.h"
 
 namespace acto {
 
@@ -70,13 +71,13 @@ object_t::object_t(worker_t* const thread_) :
     deleting  (false),
     freeing   (false),
     impl      (0),
-    next      (0),
     references(0),
     scheduled (false),
     thread    (thread_),
     binded    (false),
     unimpl    (false)
 {
+    next = NULL;
 }
 
 
@@ -138,7 +139,6 @@ static void doHandle(package_t *const package) {
 //-----------------------------------------------------------------------------
 runtime_t::runtime_t() :
     m_active     (false),
-    m_counter    (50000),
     m_processors (1),
     m_scheduler  (0),
     m_terminating(false)
@@ -394,35 +394,6 @@ void runtime_t::startup() {
     // 3.
     m_cleaner   = new thread_t(MakeDelegate(this, &runtime_t::cleaner), 0);
     m_scheduler = new thread_t(MakeDelegate(this, &runtime_t::execute), 0);
-}
-//-----------------------------------------------------------------------------
-TYPEID runtime_t::typeIdentifier(const char* const type_name) {
-    // -
-    std::string name(type_name);
-
-    // -
-    {
-        // Эксклюзивный доступ
-        Exclusive   lock(m_cs.types);
-        // Найти этот тип
-        Types::const_iterator i = m_types.find(name);
-        // -
-        if (i != m_types.end())
-            return (*i).second;
-    }
-
-    // Зарегистрировать тип
-    {
-        // Идентификатор типа
-        const TYPEID id = AtomicIncrement(&m_counter);
-
-        // Эксклюзивный доступ
-        Exclusive   lock(m_cs.types);
-        // -
-        m_types[name] = id;
-        // -
-        return id;
-    }
 }
 
 

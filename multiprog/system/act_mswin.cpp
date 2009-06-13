@@ -5,14 +5,6 @@ namespace acto {
 
 namespace core {
 
-namespace impl {
-
-// Количество инициализация данного пространства
-static long     references = 0;
-
-}; // namespace impl
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -62,21 +54,6 @@ DWORD WINAPI thread_t::thread_proc(LPVOID lpParameter) {
         }
     }
     ::ExitThread( 0 );
-}
-
-
-//-------------------------------------------------------------------------------------------------
-void sys_initialize() {
-    // -
-    if (impl::references == 0) {
-    }
-    // -
-    impl::references++;
-}
-
-//-------------------------------------------------------------------------------------------------
-void sys_finalize() {
-    // -
 }
 
 }; // namespace core

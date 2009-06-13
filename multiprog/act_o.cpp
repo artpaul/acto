@@ -46,9 +46,6 @@ ACTO_API void shutdown() {
             services::finalize();
             // -
             core::finalize();
-
-            // Системный уровень
-            core::sys_finalize();
         }
     }
 }
@@ -58,9 +55,6 @@ ACTO_API void shutdown() {
 //-----------------------------------------------------------------------------
 ACTO_API void startup() {
     if (startup_counter == 0) {
-        // Инициализация системного уровня
-        core::sys_initialize();
-
         // Инициализировать ядро
         core::initialize();
 

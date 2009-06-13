@@ -25,7 +25,7 @@ namespace acto {
 
 
 using core::msg_t;
-
+using core::message_class_t;
 
 /**
  * Базовый класс для всех интерфейсных объектов
@@ -95,6 +95,13 @@ public:
     template <typename MsgT>
         void send(const MsgT& msg) const;
 
+    template <typename MsgT>
+        void send(const message_class_t< MsgT >& msg) const;
+
+    // Послать сообщение объекту
+    template <typename MsgT, typename P1>
+        void send(P1 p1) const;
+
 /* Операторы */
 public:
     actor_t& operator = (const actor_t& rhs);
@@ -122,17 +129,6 @@ protected:
     // Ссылка на самого себя
     actor_t     self;
 };
-
-
-template <typename Msg>
-inline shared_ptr<Msg> message() {
-    return shared_ptr<Msg>(new Msg());
-}
-
-template <typename Msg, typename P1>
-inline shared_ptr<Msg> message(P1 p1) {
-    return shared_ptr<Msg>(new Msg(p1));
-}
 
 
 // Desc:
@@ -236,6 +232,24 @@ template <typename MsgT>
         if (m_object)
             // Отправить сообщение
             return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
+    }
+//-------------------------------------------------------------------------------------------------
+template <typename MsgT>
+    void actor_t::send(const message_class_t< MsgT >& msg_class) const {
+        if (m_object) {
+            MsgT* const         msg = msg_class.create();
+            const core::TYPEID  id  = msg->metainfo ? msg->metainfo->id : core::type_box_t< MsgT >();
+            
+            // Отправить сообщение
+            return core::runtime.send(m_object, msg, id);
+        }
+    }    
+//-------------------------------------------------------------------------------------------------
+template <typename MsgT, typename P1>
+    void actor_t::send(P1 p1) const {
+        if (m_object)
+            // Отправить сообщение
+            return core::runtime.send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
     }
 //-------------------------------------------------------------------------------------------------
 template <typename ActorT>

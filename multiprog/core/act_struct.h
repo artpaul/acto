@@ -19,6 +19,7 @@
 #define __multiprog__act_struct_h__
 
 #include <generic/ptr.h>
+#include <generic/sequence.h>
 
 #include <system/platform.h>
 
@@ -30,38 +31,6 @@ namespace acto {
 namespace core {
 
 namespace structs {
-
-// Desc: Элемент списка
-template <typename T>
-struct item_t {
-    T*      next;
-};
-
-template <typename T>
-struct sequence_t {
-    T*      head;
-
-public:
-    sequence_t(T* const item) : head(item) { }
-
-    T* extract() {
-        T* const result = head;
-        head = 0;
-        return result;
-    }
-
-    T* pop() {
-        T* const result = head;
-        // -
-        if (result) {
-            head         = result->next;
-            result->next = 0;
-        }
-        // -
-        return result;
-    }
-};
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:

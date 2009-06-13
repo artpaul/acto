@@ -299,6 +299,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\core\message.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\core\worker.cpp"
 				>
 			</File>
@@ -336,7 +340,15 @@
 				Name="generic"
 				>
 				<File
+					RelativePath=".\generic\intrlist.h"
+					>
+				</File>
+				<File
 					RelativePath=".\generic\ptr.h"
+					>
+				</File>
+				<File
+					RelativePath=".\generic\sequence.h"
 					>
 				</File>
 			</Filter>
@@ -349,6 +361,18 @@
 				</File>
 				<File
 					RelativePath=".\core\act_struct.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\alloc.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\message.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\worker.h"
 					>
 				</File>
 			</Filter>

@@ -31,9 +31,8 @@ static const size_t LISTENERS  = 30;
 ///////////////////////////////////////////////////////////////////////////////
 
 // -
-struct msg_complete : public acto::msg_t
-{
-    size_t          cycles;
+struct msg_complete : public acto::msg_t {
+    size_t  cycles;
 };
 
 // -
@@ -44,6 +43,9 @@ struct msg_start : public acto::msg_t { };
 
 // -
 struct msg_stop  : public acto::msg_t { };
+
+
+acto::message_class_t< msg_loop >   msg_loop_class;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,7 +74,7 @@ public:
         if (m_active) {
             m_counter++;
             // Продолжить цикл
-            self.send(msg_loop());
+            self.send(msg_loop_class);
         }
     }
     //-------------------------------------------------------------------------
@@ -80,7 +82,7 @@ public:
     {
         m_active  = true;
         // Начать цикл
-        self.send(msg_loop());
+        self.send(msg_loop_class);
     }
     //-------------------------------------------------------------------------
     void doStop(acto::actor_t& sender, const msg_stop& msg)
@@ -159,12 +161,11 @@ int main()
         acto::actor_t   analizer = acto::instance_t< Analizer >(acto::aoExclusive);
         // -
         std::cout << "Statistic is being collected." << std::endl;
-        std::cout << "Please wait some seconds and when press a key." << std::endl;
+        std::cout << "Please wait some seconds..." << std::endl;
         // Запустить выполнение примера
         analizer.send(msg_start());
         // -
-        std::cout << ":key" << std::endl;
-        _getch();
+        acto::core::Sleep(5 * 1000);
         // Оставноваить выполнение и собрать статистику
         analizer.send(msg_stop());
         // -

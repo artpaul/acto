@@ -24,11 +24,11 @@
 
 
 // Кол-во мячей в игре
-static const int BALLS    = 1  * 1000;
+static const int BALLS    = 20  * 1000;
 // Продолжительность игры
 static const int DURATION = 2  * 1000;
 // Кол-во игроков в игре
-static const int PLAYERS  = 10 * 1000;
+static const int PLAYERS  = 300 * 1000;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,6 +65,8 @@ public:
     msg_out(const std::string text_) : text( text_ ) { }
 };
 
+
+acto::message_class_t< msg_ball >   msg_ball_class;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -110,7 +112,7 @@ class Player : public acto::implementation_t {
 private:
     void do_ball(acto::actor_t& sender, const msg_ball& msg) {
         // Отправить мяч обратно
-        sender.send( msg_ball() );
+        sender.send( msg_ball_class );
     }
 
 public:
@@ -159,7 +161,7 @@ private:
             // Увеличить счетчик отскоков от стены
             m_counter++;
             // Послать случайно выбранному игроку
-            m_players[ (rand() % PLAYERS) ].send( msg_ball() );
+            m_players[ (rand() % PLAYERS) ].send( msg_ball_class );
         }
     }
     //-------------------------------------------------------------------------
@@ -171,7 +173,7 @@ private:
         sprintf(buffer, "Counter : %d", m_counter);
 
         // Отправить сообщение на консоль
-        m_console.send( msg_out( std::string(buffer) ) );
+        m_console.send< msg_out >(std::string(buffer));
     }
     //-------------------------------------------------------------------------
     void do_start(acto::actor_t& sender, const msg_start& msg) {
@@ -211,9 +213,8 @@ int main() {
                 acto::actor_t wall = acto::instance_t< Wall >();
 
                 // -
-                // console.send(acto::message<msg_out>("send start"));
-                // console.send<msg_out>("send start");
-                console.send(msg_out( "send start" ));
+                //console.send(msg_out( "send start" ));
+                console.send< msg_out >("send start");
 
                 // Начать игру: инициализировать объект, запустить мячи
                 wall.send(msg_start(BALLS, console));

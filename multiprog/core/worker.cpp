@@ -1,5 +1,6 @@
 ﻿
 #include "act_core.h"
+#include "worker.h"
 
 namespace acto {
 
