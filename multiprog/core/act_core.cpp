@@ -159,7 +159,7 @@ runtime_t::~runtime_t() {
 void runtime_t::acquire(object_t* const obj) {
     assert(obj != 0);
     // -
-    AtomicIncrement(&obj->references);
+    atomic_increment(&obj->references);
 }
 //-----------------------------------------------------------------------------
 object_t* runtime_t::createActor(base_t* const impl, const int options) {
@@ -204,7 +204,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
             }
             // -
             if (worker) {
-                AtomicIncrement(&m_workers.reserved);
+                atomic_increment(&m_workers.reserved);
                 // -
                 worker->assign(result, 0);
             }
@@ -264,7 +264,7 @@ long runtime_t::release(object_t* const obj) {
     assert(obj->references > 0);
     // -
     bool       deleting = false;
-    const long result   = AtomicDecrement(&obj->references);
+    const long result   = atomic_decrement(&obj->references);
 
     if (result == 0) {
         // TN: Если ссылок на объект более нет, то только один поток имеет
@@ -413,7 +413,7 @@ void runtime_t::cleaner() {
         while (worker_t* const item = queue.pop()) {
             delete item;
             // Уведомить, что удалены все вычислительные потоки
-            if (AtomicDecrement(&m_workers.count) == 0)
+            if (atomic_decrement(&m_workers.count) == 0)
                 m_evnoworkers.signaled();
         }
         //
@@ -450,7 +450,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
 }
 //-----------------------------------------------------------------------------
 worker_t* runtime_t::createWorker() {
-    if (AtomicIncrement(&m_workers.count) > 0)
+    if (atomic_increment(&m_workers.count) > 0)
         m_evnoworkers.reset();
     // -
     try {
@@ -463,7 +463,7 @@ worker_t* runtime_t::createWorker() {
         return new core::worker_t(slots);
     }
     catch (...) {
-        if (AtomicDecrement(&m_workers.count) == 0)
+        if (atomic_decrement(&m_workers.count) == 0)
             m_evnoworkers.signaled();
         return 0;
     }
@@ -478,7 +478,7 @@ void runtime_t::destruct_actor(object_t* const actor) {
 
     // -
     if (actor->thread != 0)
-        AtomicDecrement(&m_workers.reserved);
+        atomic_decrement(&m_workers.reserved);
 
     // Удалить регистрацию объекта
     if (!actor->binded) {
@@ -605,7 +605,7 @@ void initialize() {
         runtime.startup();
     }
     // -
-    AtomicIncrement(&counter);
+    atomic_increment(&counter);
 }
 
 void initializeThread(const bool isInternal) {
@@ -625,7 +625,7 @@ void initializeThread(const bool isInternal) {
 //-----------------------------------------------------------------------------
 void finalize() {
     if (counter > 0) {
-        AtomicDecrement(&counter);
+        atomic_decrement(&counter);
         // -
         if (counter == 0) {
             finalizeThread();

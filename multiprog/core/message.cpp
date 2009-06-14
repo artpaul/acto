@@ -31,7 +31,7 @@ TYPEID  message_map_t::get_typeid(const char* const type_name) {
     // Зарегистрировать тип
     {
         // Идентификатор типа
-        const TYPEID id = AtomicIncrement(&m_counter);
+        const TYPEID id = atomic_increment(&m_counter);
 
         // Эксклюзивный доступ
         MutexLocker lock(m_cs);

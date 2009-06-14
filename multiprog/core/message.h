@@ -6,6 +6,9 @@
 #include <string>
 
 #include <system/platform.h>
+#include <system/atomic.h>
+
+
 
 namespace acto {
 
@@ -22,7 +25,6 @@ public:
     msg_t() : tid(0) { }
     virtual ~msg_t() { }
 };
-
 
 /** */
 class message_map_t {

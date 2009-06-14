@@ -158,7 +158,7 @@ private:
     CRITICAL_SECTION    m_section;
 };
 
-
+/*
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
 class semaphore_t {
@@ -186,7 +186,7 @@ private:
     // Дескриптор семафора
     HANDLE  m_handle;
 };
-
+*/
 
 class MutexLocker {
 public:
@@ -217,8 +217,6 @@ inline unsigned int NumberOfProcessors() {
     ::GetSystemInfo( &si );
     // -
     return si.dwNumberOfProcessors;
-    // For linux:
-    // int NUM_PROCS = sysconf(_SC_NPROCESSORS_CONF);
 }
 
 // Desc:
@@ -229,29 +227,6 @@ inline void Sleep(unsigned int milliseconds) {
 inline void yield() {
     ::SwitchToThread();
 }
-
-
-inline void* AtomicCompareExchangePointer(volatile void** dest, void* exchange, void* comperand) {
-    return InterlockedCompareExchangePointer((volatile PVOID*)dest, exchange, comperand);
-}
-
-inline long AtomicCompareExchange(long volatile* dest, long exchange, long comperand) {
-    return InterlockedCompareExchange(dest, exchange, comperand);
-}
-
-inline long AtomicDecrement(long volatile* addend) {
-    return InterlockedDecrement(addend);
-}
-
-template <typename T>
-inline T* AtomicExchange(T* volatile* target, T* const value) {
-    return static_cast< T* >(InterlockedExchangePointer((volatile void**)target, value));
-}
-
-inline long AtomicIncrement(long volatile* addend) {
-    return InterlockedIncrement(addend);
-}
-
 
 }; // namespace core
 

@@ -328,6 +328,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\system\atomic.h"
+					>
+				</File>
+				<File
 					RelativePath=".\system\delegates.h"
 					>
 				</File>

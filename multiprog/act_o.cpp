@@ -11,9 +11,7 @@ static volatile unsigned int	startup_counter = 0;
 // Desc:
 //-----------------------------------------------------------------------------
 ACTO_API void destroy(object_t& object) {
-    core::object_t* const obj = object.m_object;
-    // -
-    if (AtomicCompareExchangePointer((volatile void**)&object.m_object, (void*)0, obj) != 0) {
+    if (core::object_t* const obj = (core::object_t*)atomic_swap((atomic_t*)&object.m_object, NULL)) {
         // Освободить ссылку на объект и удалить его
         if (core::runtime.release(obj) > 0)
             core::runtime.destroyObject(obj);

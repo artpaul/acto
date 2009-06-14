@@ -55,7 +55,7 @@ protected:
     bool same(const object_t& rhs) const;
 
 protected:
-    core::object_t*     m_object;
+    core::object_t* volatile    m_object;
 };
 
 

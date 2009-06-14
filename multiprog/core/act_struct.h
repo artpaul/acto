@@ -111,11 +111,11 @@ public:
     sequence_t<T> extract() {
         node_t*     top;
 
-        while(true) {
+        while (true) {
             top = m_head;
             if (top == 0)
                 return 0;
-            if (AtomicCompareExchangePointer((volatile void**)&m_head, 0, top) == top)
+            if (atomic_compare_and_swap((atomic_t*)&m_head, 0, (long)top))
                 return top;
         }
     }
@@ -126,7 +126,7 @@ public:
         while (true) {
             top = m_head;
             node->next = top;
-            if (AtomicCompareExchangePointer((volatile void**)&m_head, node, top) == top)
+            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)node, (long)top))
                 return;
         }
     }
@@ -145,7 +145,7 @@ public:
             if (top == 0)
                 return 0;
             next = top->next;
-            if (AtomicCompareExchangePointer((volatile void**)&m_head, next, top) == top)
+            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)next, (long)top))
                 return top;
         }
     }

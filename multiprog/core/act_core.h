@@ -219,11 +219,11 @@ class runtime_t {
     //
     struct workers_t {
         // Текущее кол-во потоков
-        volatile long   count;
+        atomic_t        count;
         // Текущее кол-во удаляемых потоков
-        volatile long   deleting;
+        atomic_t        deleting;
         // Текущее кол-во эксклюзивных потоков
-        volatile long   reserved;
+        atomic_t        reserved;
         // Удаленные потоки
         WorkerStack     deleted;
         // Свободные потоки
