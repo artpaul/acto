@@ -4,9 +4,9 @@
 #include "platform.h"
 #include "thread.h"
 
-#ifdef ACTO_WIN
+#if defined (ACTO_WIN)
 #   include <windows.h>
-#elif ACTO_UNIX
+#elif defined (ACTO_UNIX)
 #   include <pthread.h>
 #endif
 
@@ -15,7 +15,7 @@ namespace acto {
 
 namespace core {
 
-#ifdef ACTO_WIN 
+#if defined (ACTO_WIN)
 
 /** Системный поток в Windows */
 class thread_t::impl {
@@ -26,7 +26,7 @@ class thread_t::impl {
     // -
     proc_t      m_proc;
 
-    TLS_VARIABLE static impl*  instance;
+    static TLS_VARIABLE impl*  instance;
 
 private:
     static DWORD WINAPI thread_proc(void* param) {
@@ -44,7 +44,7 @@ private:
     }
 
 public:
-    impl(const proc_t& proc) 
+    impl(const proc_t& proc)
         : m_handle(0)
         , m_id    (0)
         , m_proc  (proc)
@@ -72,7 +72,7 @@ public:
     }
 };
 
-#elif ACTO_UNIX
+#elif defined (ACTO_UNIX)
 
 /** Системный поток в Unix */
 class thread_t::impl {
@@ -81,7 +81,7 @@ class thread_t::impl {
     // -
     proc_t      m_proc;
 
-    TLS_VARIABLE static impl*  instance;
+    static TLS_VARIABLE impl*  instance;
 
 private:
     static void* thread_proc(void* param) {
@@ -99,7 +99,7 @@ private:
     }
 
 public:
-    impl(const proc_t& proc) 
+    impl(const proc_t& proc)
         : m_handle(0)
         , m_proc(proc)
     {
@@ -125,7 +125,7 @@ public:
 #endif
 
 /// -
-thread_t::impl*  thread_t::impl::instance = NULL;
+TLS_VARIABLE thread_t::impl*  thread_t::impl::instance = NULL;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,7 +140,7 @@ thread_t::thread_t(const proc_t& proc, void* const param) :
     // -
 }
 //-----------------------------------------------------------------------------
-thread_t::~thread_t() { 
+thread_t::~thread_t() {
     // must be defined for delete m_pimpl
 }
 //-----------------------------------------------------------------------------

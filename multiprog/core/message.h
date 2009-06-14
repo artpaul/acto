@@ -4,10 +4,14 @@
 
 #include <map>
 #include <string>
+#include <typeinfo>
 
 #include <system/platform.h>
 #include <system/atomic.h>
 
+#ifdef ACTO_LINUX
+#   include <system/linux.h>
+#endif
 
 
 namespace acto {

@@ -19,17 +19,11 @@
 
 #include <unistd.h>
 #include <sched.h>
-#include <pthread.h>
-
-#include <typeinfo>
-
-#include "delegates.h"
 
 namespace acto {
 
 namespace core {
 
-class thread_t;
 class event_t;
 
 
@@ -111,8 +105,6 @@ private:
 // Desc: Количетсов физически процессоров (ядер) в системе
 inline unsigned int NumberOfProcessors() {
     return sysconf(_SC_NPROCESSORS_CONF);
-    // For linux:
-    // int NUM_PROCS =
 }
 
 // Desc:
