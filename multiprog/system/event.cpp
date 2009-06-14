@@ -7,6 +7,7 @@
 #elif defined (ACTO_UNIX)
 #   include <pthread.h>
 #   include <time.h>
+#   include <errno.h>
 #endif
 
 
@@ -14,7 +15,7 @@ namespace acto {
 
 namespace core {
 
-#if defined (ACTO_WIN) 
+#if defined (ACTO_WIN)
 
 /** */
 class event_t::impl {
@@ -62,7 +63,7 @@ public:
 #elif defined (ACTO_UNIX)
 
 /** */
-class impl {
+class event_t::impl {
     pthread_mutex_t m_mutex;
     pthread_cond_t  m_cond;
     bool            m_triggered;
@@ -99,7 +100,7 @@ public:
         pthread_mutex_lock(&m_mutex);
         while (!m_triggered && result != WR_ERROR) {
             const int rval = pthread_cond_wait(&m_cond, &m_mutex);
-            
+
             if (rval != 0)
                 result = WR_ERROR;
         }
@@ -118,8 +119,8 @@ public:
 
         pthread_mutex_lock(&m_mutex);
         while (!m_triggered && (result != WR_TIMEOUT && result != WR_ERROR)) {
-            const int rval = pthread_cond_timedwait(&m_cond, &m_mutex, &time); 
-            
+            const int rval = pthread_cond_timedwait(&m_cond, &m_mutex, &time);
+
             if (rval == ETIMEDOUT)
                 result = WR_TIMEOUT;
             else if (rval != 0)
@@ -136,7 +137,7 @@ public:
 
 //-----------------------------------------------------------------------------
 event_t::event_t()
-    : m_pimpl(new impl()) 
+    : m_pimpl(new impl())
 {
 }
 //-----------------------------------------------------------------------------

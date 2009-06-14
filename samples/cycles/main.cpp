@@ -16,12 +16,14 @@
 
 #include <iostream>
 #include <vector>
-#include <conio.h>
 
 // Для использование библиотеки достаточно подключить
-// только один этот файл 
+// только один этот файл
 #include <acto.h>
 
+#ifdef ACTO_WIN
+#   include <conio.h>
+#endif
 
 // Кол-во игроков в игре
 static const size_t LISTENERS  = 30;
@@ -101,7 +103,7 @@ private:
 };
 
 
-// Desc: 
+// Desc:
 //    Управляющий объект. Инициализирует "слушателей"
 //    и собирает статистику их работы.
 class Analizer : public acto::implementation_t
@@ -175,9 +177,12 @@ int main()
     }
     // Освободить ресурсы
     acto::shutdown();
-    
+
     std::cout << ":end" << std::endl;
+
+#ifdef ACTO_WIN
     _getch();
-    // -
+#endif
+
     return 0;
 }

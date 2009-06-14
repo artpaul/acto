@@ -1,8 +1,8 @@
 
-ADD_EXECUTABLE (ping-pong
+ADD_EXECUTABLE (cycles
     main.cpp)
 
-TARGET_LINK_LIBRARIES (ping-pong
+TARGET_LINK_LIBRARIES (cycles
     acto-lib
     acto-ext
     acto-core
