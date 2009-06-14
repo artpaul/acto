@@ -38,6 +38,9 @@
 #include "alloc.h"
 #include "message.h"
 
+#ifdef ACTO_LINUX
+#   include <system/linux.h>
+#endif
 
 namespace acto {
 

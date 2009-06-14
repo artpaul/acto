@@ -89,6 +89,9 @@
 
 #   include "act_mswin.h"
 
+namespace acto {
+
+namespace core {
     /// Количетсов физически процессоров (ядер) в системе
     inline unsigned int NumberOfProcessors() {
         SYSTEM_INFO     si;
@@ -105,6 +108,9 @@
     inline void yield() {
         ::SwitchToThread();
     }
+}
+
+}
 
 #elif defined (ACTO_LINUX)
 
@@ -126,6 +132,9 @@
     typedef uint32_t            uint32;
     typedef uint64_t            uint64;
 
+namespace acto {
+
+namespace core {
     /// Количетсов физически процессоров (ядер) в системе
     inline unsigned int NumberOfProcessors() {
         return sysconf(_SC_NPROCESSORS_CONF);
@@ -138,6 +147,9 @@
     inline void yield() {
         sched_yield();
     }
+}
+
+}
 
 #else
 #   define TLS_VARIABLE
