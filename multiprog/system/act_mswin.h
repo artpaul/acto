@@ -110,21 +110,21 @@ public:
     WaitResult wait() {
         switch (::WaitForSingleObject(m_handle, INFINITE)) {
         case WAIT_OBJECT_0 :
-            return wrSignaled;
+            return WR_SIGNALED;
         case WAIT_TIMEOUT :
-            return wrTimeout;
+            return WR_TIMEOUT;
         }
-        return wrError;
+        return WR_ERROR;
     }
 
     WaitResult wait(const unsigned int msec) {
         switch (::WaitForSingleObject(m_handle, msec)) {
         case WAIT_OBJECT_0 :
-            return wrSignaled;
+            return WR_SIGNALED;
         case WAIT_TIMEOUT :
-            return wrTimeout;
+            return WR_TIMEOUT;
         }
-        return wrError;
+        return WR_ERROR;
     }
 
 private:
@@ -231,8 +231,8 @@ inline void yield() {
 }
 
 
-inline void* AtomicCompareExchangePointer(volatile PVOID* dest, void* exchange, void* comperand) {
-    return InterlockedCompareExchangePointer(dest, exchange, comperand);
+inline void* AtomicCompareExchangePointer(volatile void** dest, void* exchange, void* comperand) {
+    return InterlockedCompareExchangePointer((volatile PVOID*)dest, exchange, comperand);
 }
 
 inline long AtomicCompareExchange(long volatile* dest, long exchange, long comperand) {
@@ -245,7 +245,7 @@ inline long AtomicDecrement(long volatile* addend) {
 
 template <typename T>
 inline T* AtomicExchange(T* volatile* target, T* const value) {
-    return static_cast< T* >(InterlockedExchangePointer((volatile PVOID*)target, value));
+    return static_cast< T* >(InterlockedExchangePointer((volatile void**)target, value));
 }
 
 inline long AtomicIncrement(long volatile* addend) {
