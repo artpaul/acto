@@ -5,7 +5,7 @@
 #include <ctime>
 
 #include <generic/intrlist.h>
-#include <system/delegates.h>
+#include <generic/delegates.h>
 
 #include "act_struct.h"
 

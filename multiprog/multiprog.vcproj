@@ -287,10 +287,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\system\act_mswin.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\act_o.cpp"
 				>
 			</File>
@@ -300,6 +296,10 @@
 			</File>
 			<File
 				RelativePath=".\core\message.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\system\thread.cpp"
 				>
 			</File>
 			<File
@@ -332,11 +332,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\system\delegates.h"
+					RelativePath=".\system\platform.h"
 					>
 				</File>
 				<File
-					RelativePath=".\system\platform.h"
+					RelativePath=".\system\thread.h"
 					>
 				</File>
 			</Filter>

@@ -18,57 +18,11 @@
 #define __multiprog__sys_mswin_h__
 
 #include <system/platform.h>
-#include <system/delegates.h>
+
 
 namespace acto {
 
 namespace core {
-
-///////////////////////////////////////////////////////////////////////////////
-// Desc: Системный поток.
-class thread_t {
-public:
-    // Тип системного идентификатора для потока
-    typedef DWORD   identifier_type;
-
-    // -
-    typedef fastdelegate::FastDelegate< void () >   proc_t;
-
-public:
-    // Дескриптор потока
-    HANDLE      m_handle;
-    // Идентификатор потока
-    DWORD       m_id;
-    // -
-    void* const m_param;
-    // -
-    proc_t      m_proc;
-
-public:
-     thread_t(const proc_t& proc, void* const param = 0);
-    ~thread_t();
-
-public:
-    void join() {
-        ::WaitForSingleObject( m_handle, INFINITE );
-    }
-
-    void join(const unsigned int msec) {
-        ::WaitForSingleObject( m_handle, msec );
-    }
-
-    // Пользовательские данные, связанные с текущим потоком
-    void* param() const;
-
-public:
-    // Текущий поток для вызываемого метода
-    static thread_t*  current();
-
-private:
-    static DWORD WINAPI thread_proc(LPVOID lpParameter);
-
-    TLS_VARIABLE static thread_t*  instance;
-};
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -158,35 +112,6 @@ private:
     CRITICAL_SECTION    m_section;
 };
 
-/*
-///////////////////////////////////////////////////////////////////////////////
-// Desc:
-class semaphore_t {
-public:
-    semaphore_t() :
-        m_handle( 0 )
-    {
-        m_handle = ::CreateSemaphore(0, 0, MAXLONG, 0);
-    }
-
-    ~semaphore_t() {
-        ::CloseHandle( m_handle );
-    }
-
-public:
-    void release(int count) {
-        ::ReleaseSemaphore(m_handle, count, 0);
-    }
-
-    void wait() {
-        ::WaitForSingleObject(m_handle, INFINITE);
-    }
-
-private:
-    // Дескриптор семафора
-    HANDLE  m_handle;
-};
-*/
 
 class MutexLocker {
 public:

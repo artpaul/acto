@@ -30,7 +30,9 @@
 #include <string>
 
 #include <generic/intrlist.h>
-#include <system/delegates.h>
+#include <generic/delegates.h>
+
+#include <system/thread.h>
 
 #include "act_struct.h"
 #include "alloc.h"
@@ -338,7 +340,7 @@ void finalizeThread();
 
 // -
 inline bool isCoreThread() {
-    return (thread_t::current() != 0);
+    return thread_t::is_core_thread();
 }
 
 void processBindedActors();

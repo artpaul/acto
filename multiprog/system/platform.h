@@ -91,7 +91,7 @@
 
 #elif defined (ACTO_LINUX)
 
-#   define TLS_VARIABLE
+#   define TLS_VARIABLE     __thread
 
 #   include <stdint.h>
 

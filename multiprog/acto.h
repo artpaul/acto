@@ -20,7 +20,7 @@
 #pragma once
 
 // Реализация делегатов
-#include "system/delegates.h"
+#include "generic/delegates.h"
 
 // Обертка над API операционных систем
 #include "system/platform.h"
