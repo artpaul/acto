@@ -9,9 +9,6 @@
 //     The authors make no representations about the suitability of this     //
 //     software for any purpose. It is provided "as is" without express or   //
 //     implied warranty.                                                     //
-//---------------------------------------------------------------------------//
-// File: act_core.h                                                          //
-//     Ядро библиотеки.                                                      //
 ///////////////////////////////////////////////////////////////////////////////
 
 #if !defined ( __multiprogs__act_core_h__ )
@@ -33,14 +30,11 @@
 #include <generic/delegates.h>
 
 #include <system/thread.h>
+#include <system/event.h>
 
 #include "act_struct.h"
 #include "alloc.h"
 #include "message.h"
-
-#ifdef ACTO_LINUX
-#   include <system/linux.h>
-#endif
 
 namespace acto {
 

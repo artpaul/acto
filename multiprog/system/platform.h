@@ -87,8 +87,6 @@
     typedef unsigned __int32    uint32;
     typedef unsigned __int64    uint64;
 
-#   include "act_mswin.h"
-
 namespace acto {
 
 namespace core {

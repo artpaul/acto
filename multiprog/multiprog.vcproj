@@ -295,6 +295,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\system\event.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\core\message.cpp"
 				>
 			</File>
@@ -333,6 +337,10 @@
 				</File>
 				<File
 					RelativePath=".\system\atomic.h"
+					>
+				</File>
+				<File
+					RelativePath=".\system\event.h"
 					>
 				</File>
 				<File

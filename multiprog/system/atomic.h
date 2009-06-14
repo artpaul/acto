@@ -98,16 +98,16 @@
             }
 
             inline long atomic_swap(atomic_t* const a, long b) {
-                register long rv = b;
+                register long ret = b;
 
                 __asm__ __volatile__ (
                     "lock\n\t"
                     "xchg %0, %1\n\t"
-                    : "+m" (*(a)) , "+q" (rv)
+                    : "+m" (*(a)) , "+q" (ret)
                     :
                     : "cc");
 
-                return rv;
+                return ret;
             }
 
         } // namespace acto
