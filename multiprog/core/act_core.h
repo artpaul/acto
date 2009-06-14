@@ -132,7 +132,7 @@ public:
 // Desc: Объект
 struct ACTO_API object_t : public intrusive_t< object_t > {
     // Критическая секция для доступа к полям
-    section_t           cs;
+    mutex_t             cs;
 
     // Реализация объекта
     base_t*             impl;
@@ -204,7 +204,7 @@ private:
 class runtime_t {
     struct resources_t {
         // Для контейнера заголовков актеров
-        section_t       actors;
+        mutex_t     actors;
     };
 
     // Тип множества актеров

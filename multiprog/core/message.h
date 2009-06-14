@@ -8,10 +8,7 @@
 
 #include <system/platform.h>
 #include <system/atomic.h>
-
-#ifdef ACTO_LINUX
-#   include <system/linux.h>
-#endif
+#include <system/mutex.h>
 
 
 namespace acto {
@@ -49,7 +46,7 @@ public:
 
 private:
     // Критическая секция для доступа к полям
-    section_t           m_cs;
+    mutex_t             m_cs;
     // Генератор идентификаторов
     volatile TYPEID     m_counter;
     // Типы сообщений

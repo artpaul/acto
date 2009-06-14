@@ -299,6 +299,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\system\mutex.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\system\thread.cpp"
 				>
 			</File>
@@ -329,6 +333,10 @@
 				</File>
 				<File
 					RelativePath=".\system\atomic.h"
+					>
+				</File>
+				<File
+					RelativePath=".\system\mutex.h"
 					>
 				</File>
 				<File

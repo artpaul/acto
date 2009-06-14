@@ -23,12 +23,8 @@
 
 #include <system/platform.h>
 #include <system/atomic.h>
+#include <system/mutex.h>
 
-#ifdef ACTO_LINUX
-#   include <system/linux.h>
-#endif
-
-// Структуры, специально адаптированные под задачи библиотеки
 
 namespace acto {
 
@@ -38,7 +34,7 @@ namespace structs {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:
-template <typename T, typename Guard = section_t>
+template <typename T, typename Guard = mutex_t>
 class queue_t {
 public:
     typedef T       node_t;

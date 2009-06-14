@@ -89,11 +89,30 @@
 
 #   include "act_mswin.h"
 
+    /// Количетсов физически процессоров (ядер) в системе
+    inline unsigned int NumberOfProcessors() {
+        SYSTEM_INFO     si;
+        // -
+        ::GetSystemInfo( &si );
+        // -
+        return si.dwNumberOfProcessors;
+    }
+
+    inline void Sleep(unsigned int milliseconds) {
+        ::Sleep( milliseconds );
+    }
+
+    inline void yield() {
+        ::SwitchToThread();
+    }
+
 #elif defined (ACTO_LINUX)
 
 #   define TLS_VARIABLE     __thread
 
 #   include <stdint.h>
+#   include <unistd.h>
+#   include <sched.h>
 
     /* Целые со знаком */
     typedef int8_t              int8;
@@ -106,6 +125,19 @@
     typedef uint16_t            uint16;
     typedef uint32_t            uint32;
     typedef uint64_t            uint64;
+
+    /// Количетсов физически процессоров (ядер) в системе
+    inline unsigned int NumberOfProcessors() {
+        return sysconf(_SC_NPROCESSORS_CONF);
+    }
+
+    inline void Sleep(unsigned int milliseconds) {
+        ::sleep(milliseconds / 1000);
+    }
+
+    inline void yield() {
+        sched_yield();
+    }
 
 #else
 #   define TLS_VARIABLE
