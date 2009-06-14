@@ -22,7 +22,7 @@
 #include <generic/sequence.h>
 
 #include <system/platform.h>
-
+#include <system/atomic.h>
 
 // Структуры, специально адаптированные под задачи библиотеки
 

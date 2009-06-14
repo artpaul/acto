@@ -25,11 +25,11 @@
 #endif
 
 // Кол-во мячей в игре
-static const int BALLS    = 10  * 1000;
+static const int BALLS    = 1  * 1000;
 // Продолжительность игры
 static const int DURATION = 2  * 1000;
 // Кол-во игроков в игре
-static const int PLAYERS  = 100 * 1000;
+static const int PLAYERS  = 10 * 1000;
 
 
 ///////////////////////////////////////////////////////////////////////////////
