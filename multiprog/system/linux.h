@@ -109,7 +109,7 @@ inline unsigned int NumberOfProcessors() {
 
 // Desc:
 inline void Sleep(unsigned int milliseconds) {
-    //::Sleep( milliseconds );
+    sleep(milliseconds / 1000);
 }
 
 inline void yield() {
