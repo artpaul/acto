@@ -9,6 +9,8 @@ namespace core {
 using fastdelegate::FastDelegate;
 using fastdelegate::MakeDelegate;
 
+extern void destroy_object_body(object_t* obj);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 worker_t::worker_t(const Slots slots) :
@@ -107,9 +109,7 @@ void worker_t::execute() {
                         if (obj->deleting) {
                             assert(!obj->scheduled);
                             // -
-                            obj->unimpl = true;
-                            delete obj->impl, obj->impl = 0;
-                            obj->unimpl = false;
+                            destroy_object_body(obj);
                             // -
                             if (!obj->freeing && (obj->references == 0)) {
                                 obj->freeing = true;

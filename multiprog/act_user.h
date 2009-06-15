@@ -33,7 +33,7 @@ using core::message_class_t;
 class object_t {
     // -
     friend inline core::object_t* dereference(object_t& object);
-    // -
+    friend void join(actor_t& obj);
     friend void destroy(object_t& object);
 
 public:
@@ -162,7 +162,7 @@ struct msg_time : public msg_t { };
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Уничтожить указанный объект
+/* Уничтожить указанный объект */
 ACTO_API void destroy(object_t& object);
 
 //
@@ -172,14 +172,17 @@ ACTO_API void finalize_thread();
 // с ядром библиотеки acto
 ACTO_API void initialize_thread();
 
+/* Дождаться завершения работы указанног актера */
+ACTO_API void join(actor_t& obj);
+
 // Обработать все сообщения для объектов,
 // привязанных к текущему системному потоку (опция aoBindToThread)
 ACTO_API void process_messages();
 
-// Завершить использование библиотеки
+/* Завершить использование библиотеки */
 ACTO_API void shutdown();
 
-// Инициализировать библиотеку
+/* Инициализировать библиотеку */
 ACTO_API void startup();
 
 

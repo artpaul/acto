@@ -10,7 +10,7 @@
     namespace acto {
         typedef volatile long   atomic_t;
 
-        inline long atomic_add(atomic_t* a, long b) { 
+        inline long atomic_add(atomic_t* a, long b) {
             return InterlockedExchangeAdd(a, b) + b;
         }
 
@@ -32,7 +32,7 @@
 
     } // namespace acto
 
-#elif defined(__GNUC__) 
+#elif defined(__GNUC__)
 #   if defined (__x86_64__) || defined(__ia64__)
 
         namespace acto {

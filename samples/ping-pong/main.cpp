@@ -156,7 +156,6 @@ public:
 
 private:
     //-------------------------------------------------------------------------
-    // do_ball(acto::actor_t& sender, acto::shared_ptr<msg_ball> msg)
     void do_ball(acto::actor_t& sender, const msg_ball& msg) {
         if (!m_finished) {
             // Увеличить счетчик отскоков от стены
@@ -172,9 +171,10 @@ private:
         char    buffer[255];
 
         sprintf(buffer, "Counter : %d", m_counter);
-
         // Отправить сообщение на консоль
         m_console.send< msg_out >(std::string(buffer));
+        // Завершить выполнение текущего актера
+        this->terminate();
     }
     //-------------------------------------------------------------------------
     void do_start(acto::actor_t& sender, const msg_start& msg) {
@@ -214,7 +214,6 @@ int main() {
                 acto::actor_t wall = acto::instance_t< Wall >();
 
                 // -
-                //console.send(msg_out( "send start" ));
                 console.send< msg_out >("send start");
 
                 // Начать игру: инициализировать объект, запустить мячи
@@ -226,8 +225,8 @@ int main() {
                 // Остановить игру
                 wall.send(msg_finish());
 
-                // Уничтожить объект
-                acto::destroy(wall);
+                // Дождаться завершения выполнения
+                acto::join(wall);
 
                 // Обработать сообщения для консоли
                 acto::process_messages();

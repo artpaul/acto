@@ -57,12 +57,11 @@ acto::message_class_t< msg_loop >   msg_loop_class;
 // Desc:
 //    Актер, который эмитирует некоторого абстрактного слушателя,
 //    который в цикле проверяет какие-то значения.
-class Listener : public acto::implementation_t
-{
+class Listener : public acto::implementation_t {
 public:
-    Listener() :
-        m_active(false),
-        m_counter(0)
+    Listener() 
+        : m_active(false)
+        , m_counter(0)
     {
         Handler< msg_loop  >(&Listener::doLoop);
         Handler< msg_start >(&Listener::doStart);
@@ -71,8 +70,7 @@ public:
 
 public:
     //-------------------------------------------------------------------------
-    void doLoop(acto::actor_t& sender, const msg_loop& msg)
-    {
+    void doLoop(acto::actor_t& sender, const msg_loop& msg) {
         if (m_active) {
             m_counter++;
             // Продолжить цикл
@@ -80,21 +78,21 @@ public:
         }
     }
     //-------------------------------------------------------------------------
-    void doStart(acto::actor_t& sender, const msg_start& msg)
-    {
+    void doStart(acto::actor_t& sender, const msg_start& msg) {
         m_active  = true;
         // Начать цикл
         self.send(msg_loop_class.create());
     }
     //-------------------------------------------------------------------------
-    void doStop(acto::actor_t& sender, const msg_stop& msg)
-    {
+    void doStop(acto::actor_t& sender, const msg_stop& msg) {
         m_active = false;
         // -
         msg_complete    rval;
         rval.cycles = m_counter;
         // Послать владельцу свою статистику выполнения
         context.send(rval);
+        // -
+        this->terminate();
     }
 
 private:
@@ -106,32 +104,27 @@ private:
 // Desc:
 //    Управляющий объект. Инициализирует "слушателей"
 //    и собирает статистику их работы.
-class Analizer : public acto::implementation_t
-{
+class Analizer : public acto::implementation_t {
 public:
-    Analizer()
-    {
+    Analizer() {
         Handler< msg_complete >(&Analizer::doComplete);
         // -
         Handler< msg_start >   (&Analizer::doStart);
         Handler< msg_stop  >   (&Analizer::doStop);
     }
 
-    ~Analizer()
-    {
+    ~Analizer() {
         for (size_t i = 0; i < m_listeners.size(); i++)
             acto::destroy(m_listeners[i]);
     }
 
 private:
     //-------------------------------------------------------------------------
-    void doComplete(acto::actor_t& sender, const msg_complete& msg)
-    {
+    void doComplete(acto::actor_t& sender, const msg_complete& msg) {
         std::cout << msg.cycles << std::endl;
     }
     //-------------------------------------------------------------------------
-    void doStart(acto::actor_t& sender, const msg_start& msg)
-    {
+    void doStart(acto::actor_t& sender, const msg_start& msg) {
         for (size_t i = 0; i < LISTENERS; i++) {
             // -
             acto::actor_t   actor = acto::instance_t< Listener >(self);
@@ -142,10 +135,13 @@ private:
         }
     }
     //-------------------------------------------------------------------------
-    void doStop(acto::actor_t& sender, const msg_stop& msg)
-    {
-        for (size_t i = 0; i < m_listeners.size(); i++)
+    void doStop(acto::actor_t& sender, const msg_stop& msg) {
+        for (size_t i = 0; i < m_listeners.size(); i++) {
             m_listeners[i].send(msg_stop());
+            // Ждать завершения работы агента
+            acto::join(m_listeners[i]);
+        }
+        this->terminate();
     }
 
 private:
@@ -154,8 +150,7 @@ private:
 
 
 //-----------------------------------------------------------------------------
-int main()
-{
+int main() {
     // Инициализировать библиотеку.
     acto::startup();
     {
@@ -171,9 +166,7 @@ int main()
         // Оставноваить выполнение и собрать статистику
         analizer.send(msg_stop());
         // -
-        acto::core::Sleep(2 * 1000);
-        // -
-        acto::destroy(analizer);
+        acto::join(analizer);
     }
     // Освободить ресурсы
     acto::shutdown();

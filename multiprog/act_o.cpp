@@ -26,6 +26,10 @@ ACTO_API void initialize_thread() {
     core::initializeThread(false);
 }
 //-----------------------------------------------------------------------------
+ACTO_API void join(actor_t& obj) {
+    core::runtime.join(obj.m_object);
+}
+//-----------------------------------------------------------------------------
 ACTO_API void process_messages() {
     // Если функция вызывается из потока, не созданного библиотекой...
     if (!core::isCoreThread())

@@ -49,11 +49,6 @@ const int aoExclusive    = 0x01;
 const int aoBindToThread = 0x02;
 
 
-// Включить в текущем потоке возможность взаимодействия
-// с ядром библиотеки acto
-ACTO_API void initialize_thread();
-
-
 namespace core {
 
 // -
@@ -83,12 +78,15 @@ typedef structs::queue_t< package_t >       MessageQueue;
 typedef MutexLocker                         Exclusive;
 
 
-// Desc: Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских).
+/**
+ * Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских).
+ */
 class ACTO_API base_t {
     friend void doHandle(package_t* const package);
 
     // Карта обработчиков сообщений для данного объекта
     Handlers        m_handlers;
+    bool            m_terminating;
 
 public:
     struct msg_destroy : public msg_t {
@@ -101,6 +99,9 @@ public:
     virtual ~base_t();
 
 protected:
+    /// Завершить собственную работу
+    void terminate();
+
     // Установка обработчика для сообщения данного типа
     template < typename MsgT, typename ClassName >
         inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) );
@@ -128,6 +129,10 @@ public:
 
 // Desc: Объект
 struct ACTO_API object_t : public intrusive_t< object_t > {
+    struct waiter_t : public intrusive_t< waiter_t > {
+        event_t*    event;
+    };
+
     // Критическая секция для доступа к полям
     mutex_t             cs;
 
@@ -135,6 +140,8 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     base_t*             impl;
     // Поток, в котором должен выполнятся объект
     worker_t* const     thread;
+    // Список сигналов для потоков, ожидающих уничтожения объекта
+    waiter_t*           waiters;
     // Очередь сообщений, поступивших данному объекту
     MessageQueue        queue;
     // Count of references to object
@@ -251,6 +258,8 @@ public:
     object_t*   createActor(base_t* const impl, const int options = 0);
     // Уничтожить объект
     void        destroyObject(object_t* const object);
+    // -
+    void        join(object_t* const obj);
     // -
     long        release(object_t* const obj);
     // Послать сообщение указанному объекту

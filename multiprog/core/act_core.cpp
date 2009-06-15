@@ -18,27 +18,64 @@ runtime_t   runtime;
 static TLS_VARIABLE thread_context_t* threadCtx = 0;
 
 
+//-----------------------------------------------------------------------------
+void destroy_object_body(object_t* obj) {
+    assert(!obj->unimpl && obj->impl);
+
+    // TN: Эта процедура всегда должна вызываться
+    //     внутри блокировки полей объекта
+
+    obj->unimpl = true;
+    delete obj->impl, obj->impl = NULL;
+    obj->unimpl = false;
+
+    if (obj->waiters) {
+        object_t::waiter_t* next = NULL;
+        object_t::waiter_t* it   = obj->waiters;
+
+        while (it) {
+            // TN: Необходимо читать значение следующего указателя
+            //     заранее, так как пробуждение ждущего потока
+            //     приведет к удалению текущего узла списка
+            next = it->next;
+            it->event->signaled();
+            it   = next;
+        }
+
+        obj->waiters = NULL;
+    }
+}
+
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-base_t::base_t() {
+base_t::base_t()
+    : m_terminating(false)
+{
     // -
 }
 //-----------------------------------------------------------------------------
 base_t::~base_t() {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
         // Удалить обработчик
-        if ((*i)->handler) delete (*i)->handler;
+        if ((*i)->handler)
+            delete (*i)->handler;
         // Удалить элемент списка
         delete (*i);
     }
 }
-
+//-----------------------------------------------------------------------------
+void base_t::terminate() {
+    this->m_terminating = true;
+}
 //-----------------------------------------------------------------------------
 void base_t::set_handler(i_handler* const handler, const TYPEID type) {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
-        if ( (*i)->type == type ) {
+        if ((*i)->type == type) {
             // 1. Удалить предыдущий обработчик
-            if ( (*i)->handler ) delete (*i)->handler;
+            if ((*i)->handler)
+                delete (*i)->handler;
             // 2. Установить новый
             (*i)->handler = handler;
             // -
@@ -58,23 +95,24 @@ void base_t::set_handler(i_handler* const handler, const TYPEID type) {
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-i_handler::i_handler(const TYPEID type_) :
-    m_type(type_)
+i_handler::i_handler(const TYPEID type_)
+    : m_type(type_)
 {
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-object_t::object_t(worker_t* const thread_) :
-    deleting  (false),
-    freeing   (false),
-    impl      (0),
-    references(0),
-    scheduled (false),
-    thread    (thread_),
-    binded    (false),
-    unimpl    (false)
+object_t::object_t(worker_t* const thread_)
+    : impl      (NULL)
+    , thread    (thread_)
+    , waiters   (NULL)
+    , references(0)
+    , binded    (false)
+    , deleting  (false)
+    , freeing   (false)
+    , scheduled (false)
+    , unimpl    (false)
 {
     next = NULL;
 }
@@ -105,13 +143,13 @@ package_t::~package_t() {
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-void doHandle(package_t *const package) {
+void doHandle(package_t* const package) {
     object_t* const obj = package->target;
     i_handler* handler  = 0;
     base_t* const impl  = obj->impl;
 
     // 1. Найти обработчик соответствующий данному сообщению
-    for (Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); i++) {
+    for (Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
         if (package->type == (*i)->type) {
             handler = (*i)->handler;
             break;
@@ -127,6 +165,9 @@ void doHandle(package_t *const package) {
             handler->invoke(package->sender, package->data);
             // -
             threadCtx->sender = 0;
+
+            if (impl->m_terminating)
+                runtime.destroyObject(obj);
         }
     }
     catch (...) {
@@ -146,7 +187,7 @@ runtime_t::runtime_t() :
 }
 //-----------------------------------------------------------------------------
 runtime_t::~runtime_t() {
-	// Удалить рабочие потоки
+    // Удалить рабочие потоки
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -227,18 +268,15 @@ void runtime_t::destroyObject(object_t* const obj) {
     bool deleting = false;
     // -
     {
-        Exclusive	lock(obj->cs);
+        Exclusive   lock(obj->cs);
         // Если объект уже удаляется, то делать более ничего не надо.
         if (!obj->deleting) {
             // Запретить более посылать сообщения объекту
             obj->deleting = true;
             // Если объект не обрабатывается, то его можно начать разбирать
             if (!obj->scheduled) {
-                if (obj->impl) {
-                    obj->unimpl = true;
-                    delete obj->impl, obj->impl = 0;
-                    obj->unimpl = false;
-                }
+                if (obj->impl)
+                    destroy_object_body(obj);
                 // -
                 if (!obj->freeing && (obj->references == 0)) {
                     obj->freeing = true;
@@ -257,7 +295,28 @@ void runtime_t::destroyObject(object_t* const obj) {
         pushDelete(obj);
 }
 //-----------------------------------------------------------------------------
-// Desc:
+void runtime_t::join(object_t* const obj) {
+    std::auto_ptr< object_t::waiter_t > node;
+    event_t event;
+
+    if (threadCtx->sender != obj) {
+        Exclusive   lock(obj->cs);
+
+        if (obj->impl) {
+            object_t::waiter_t* const ptr = new object_t::waiter_t();
+
+            node.reset(ptr);
+
+            ptr->event   = &event;
+            ptr->next    = obj->waiters;
+            obj->waiters = ptr;
+            event.reset();
+        }
+    }
+
+    if (node.get() != NULL)
+        event.wait();
+}
 //-----------------------------------------------------------------------------
 long runtime_t::release(object_t* const obj) {
     assert(obj != 0);
@@ -284,9 +343,7 @@ long runtime_t::release(object_t* const obj) {
             if (!obj->scheduled) {
                 assert(obj->impl != 0);
                 // -
-                obj->unimpl = true;
-                delete obj->impl, obj->impl = NULL;
-                obj->unimpl = false;
+                destroy_object_body(obj);
                 // -
                 obj->freeing = true;
                 deleting     = true;
@@ -601,7 +658,7 @@ static long counter = 0;
 //-----------------------------------------------------------------------------
 void initialize() {
     if (counter == 0) {
-        initialize_thread();
+        core::initializeThread(false);
         runtime.startup();
     }
     // -
