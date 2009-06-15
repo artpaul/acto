@@ -88,26 +88,46 @@ public:
     actor_t(const actor_t& rhs);
 
     template <typename ActorT>
-        actor_t(const instance_t< ActorT >& inst);
+        actor_t(const instance_t< ActorT >& inst) : object_t(inst)
+        {
+            // -
+        }
 
 public:
     // Послать сообщение объекту
     template <typename MsgT>
-        void send(const MsgT& msg) const;
+        void send(const MsgT& msg) const {
+            if (m_object)
+                return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
+        }
 
     template <typename MsgT>
-        void send(const message_class_t< MsgT >& msg) const;
+        void send(const core::msg_box_t< MsgT >& box) const {
+            if (m_object) {
+                MsgT* const         msg = *box;
+                const core::TYPEID  id  = msg->tid ? msg->tid : core::type_box_t< MsgT >();
+
+                // Отправить сообщение
+                return core::runtime.send(m_object, msg, id);
+            }
+        }
 
     // Послать сообщение объекту
     template <typename MsgT, typename P1>
-        void send(P1 p1) const;
+        void send(P1 p1) const {
+            if (m_object)
+                return core::runtime.send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
+        }
 
 /* Операторы */
 public:
     actor_t& operator = (const actor_t& rhs);
 
     template <typename ActorT>
-        actor_t& operator = (const instance_t< ActorT >& inst);
+        actor_t& operator = (const instance_t< ActorT >& inst) {
+            object_t::assign(inst);
+            return *this;
+        }
 
     // -
     bool operator == (const actor_t& rhs) const;
@@ -216,46 +236,6 @@ template <typename ActorT>
         // -
         value->context = context;
         value->self    = actor_t(m_object);
-    }
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------------------------
-template <typename ActorT>
-    actor_t::actor_t(const instance_t< ActorT >& inst) : object_t( inst ) {
-        // -
-    }
-
-//-------------------------------------------------------------------------------------------------
-template <typename MsgT>
-    void actor_t::send(const MsgT& msg) const {
-        if (m_object)
-            // Отправить сообщение
-            return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
-    }
-//-------------------------------------------------------------------------------------------------
-template <typename MsgT>
-    void actor_t::send(const message_class_t< MsgT >& msg_class) const {
-        if (m_object) {
-            MsgT* const         msg = msg_class.create();
-            const core::TYPEID  id  = msg->tid ? msg->tid : core::type_box_t< MsgT >();
-
-            // Отправить сообщение
-            return core::runtime.send(m_object, msg, id);
-        }
-    }
-//-------------------------------------------------------------------------------------------------
-template <typename MsgT, typename P1>
-    void actor_t::send(P1 p1) const {
-        if (m_object)
-            // Отправить сообщение
-            return core::runtime.send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
-    }
-//-------------------------------------------------------------------------------------------------
-template <typename ActorT>
-    actor_t& actor_t::operator = (const instance_t< ActorT >& inst) {
-        object_t::assign(inst);
-        return *this;
     }
 
 }; // namespace acto

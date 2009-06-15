@@ -76,7 +76,7 @@ public:
         if (m_active) {
             m_counter++;
             // Продолжить цикл
-            self.send(msg_loop_class);
+            self.send(msg_loop_class.create());
         }
     }
     //-------------------------------------------------------------------------
@@ -84,7 +84,7 @@ public:
     {
         m_active  = true;
         // Начать цикл
-        self.send(msg_loop_class);
+        self.send(msg_loop_class.create());
     }
     //-------------------------------------------------------------------------
     void doStop(acto::actor_t& sender, const msg_stop& msg)

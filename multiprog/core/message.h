@@ -84,22 +84,61 @@ private:
 
 
 /** */
+template <typename T>
+class msg_box_t {
+    T*  m_msg;
+public:
+    explicit msg_box_t(T* val) : m_msg(val) { }
+
+    inline T* operator * () const {
+        return m_msg;
+    }
+};
+
+
+/** */
 template <typename MsgT>
 class message_class_t {
     TYPEID  m_tid;
+
+    inline msg_box_t< MsgT > _assign_info(MsgT* const msg) const {
+        msg->tid = m_tid;
+        return msg_box_t< MsgT >(msg);
+    }
 
 public:
     message_class_t() {
         m_tid = type_box_t< MsgT >();
     }
 
-    MsgT* create() const {
-        MsgT* const result = new MsgT();
-
-        result->tid = m_tid;
-
-        return result;
+    msg_box_t< MsgT > create() const {
+        return _assign_info(new MsgT());
     }
+
+    template <typename P1>
+        msg_box_t< MsgT > create(P1 p1) const {
+            return _assign_info(new MsgT(p1));
+        }
+    
+    template <typename P1, typename P2>
+        msg_box_t< MsgT > create(P1 p1, P2 p2) const {
+            return _assign_info(new MsgT(p1, p2));
+        }
+
+    template <typename P1, typename P2, typename P3>
+        msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3) const {
+            return _assign_info(new MsgT(p1, p2, p3));
+        }
+
+    template <typename P1, typename P2, typename P3, typename P4>
+        msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3, P4 p4) const {
+            return _assign_info(new MsgT(p1, p2, p3, p4));
+        }
+
+    template <typename P1, typename P2, typename P3, typename P4, typename P5>
+        msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) const {
+            return _assign_info(new MsgT(p1, p2, p3, p4, p5));
+        }
 };
 
 

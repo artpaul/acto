@@ -332,10 +332,6 @@
 				Name="system"
 				>
 				<File
-					RelativePath=".\system\act_mswin.h"
-					>
-				</File>
-				<File
 					RelativePath=".\system\atomic.h"
 					>
 				</File>
