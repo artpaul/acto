@@ -345,8 +345,6 @@ struct thread_context_t {
     object_t*               sender;
 };
 
-//extern runtime_t	runtime;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

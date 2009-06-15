@@ -10,13 +10,8 @@ namespace core {
 using fastdelegate::FastDelegate;
 using fastdelegate::MakeDelegate;
 
-
-// Экземпляр runtime'а
-//runtime_t   runtime;
-
 //
 static TLS_VARIABLE thread_context_t* threadCtx = 0;
-
 
 //-----------------------------------------------------------------------------
 void destroy_object_body(object_t* obj) {
