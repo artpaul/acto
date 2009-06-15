@@ -1,5 +1,5 @@
 
-#include "act_core.h"
+#include "core.h"
 #include "worker.h"
 
 namespace acto {
@@ -14,13 +14,12 @@ extern void destroy_object_body(object_t* obj);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
 worker_t::worker_t(const Slots slots) :
-	m_active  (true),
-    m_object  (0),
-    m_slots   (slots),
-    m_start   (0),
-	m_system  (0)
+	m_active(true),
+    m_object(NULL),
+    m_slots (slots),
+    m_start (0),
+	m_system(0)
 {
-    // -
 	m_system = new thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-----------------------------------------------------------------------------
@@ -76,7 +75,7 @@ void worker_t::execute() {
                 if (!m_object->thread) {
                     if ((clock() - m_start) > m_time) {
                         // -
-                        runtime.m_queue.push(obj);
+                        runtime_t::instance()->m_queue.push(obj);
                         m_object = 0;
                     }
                 }
@@ -126,7 +125,7 @@ void worker_t::execute() {
             // Получить новый объект для обработки,
             // если он есть в очереди
              if (m_object == 0) {
-                m_object = runtime.m_queue.pop();
+                m_object = runtime_t::instance()->m_queue.pop();
                 // -
                 if (m_object)
                     m_start = clock();

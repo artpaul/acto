@@ -13,8 +13,8 @@ static volatile unsigned int	startup_counter = 0;
 ACTO_API void destroy(object_t& object) {
     if (core::object_t* const obj = (core::object_t*)atomic_swap((atomic_t*)&object.m_object, NULL)) {
         // Освободить ссылку на объект и удалить его
-        if (core::runtime.release(obj) > 0)
-            core::runtime.destroyObject(obj);
+        if (core::runtime_t::instance()->release(obj) > 0)
+            core::runtime_t::instance()->destroyObject(obj);
     }
 }
 //-----------------------------------------------------------------------------
@@ -27,13 +27,12 @@ ACTO_API void initialize_thread() {
 }
 //-----------------------------------------------------------------------------
 ACTO_API void join(actor_t& obj) {
-    core::runtime.join(obj.m_object);
+    if (obj.m_object)
+        core::runtime_t::instance()->join(obj.m_object);
 }
 //-----------------------------------------------------------------------------
 ACTO_API void process_messages() {
-    // Если функция вызывается из потока, не созданного библиотекой...
-    if (!core::isCoreThread())
-        core::processBindedActors();
+    core::processBindedActors();
 }
 
 //-----------------------------------------------------------------------------
@@ -79,19 +78,19 @@ object_t::object_t(core::object_t* const an_object) :
     m_object(an_object)
 {
     if (m_object)
-        core::runtime.acquire(m_object);
+        core::runtime_t::instance()->acquire(m_object);
 }
 //-----------------------------------------------------------------------------
 object_t::object_t(const object_t& rhs) :
     m_object(rhs.m_object)
 {
     if (m_object)
-        core::runtime.acquire(m_object);
+        core::runtime_t::instance()->acquire(m_object);
 }
 //-----------------------------------------------------------------------------
 object_t::~object_t() {
     if (m_object)
-        core::runtime.release(m_object);
+        core::runtime_t::instance()->release(m_object);
 }
 
 //-----------------------------------------------------------------------------
@@ -103,10 +102,10 @@ bool object_t::assigned() const {
 void object_t::assign(const object_t& rhs) {
     // 1.
     if (rhs.m_object)
-        core::runtime.acquire(rhs.m_object);
+        core::runtime_t::instance()->acquire(rhs.m_object);
     // 2.
     if (m_object)
-        core::runtime.release(m_object);
+        core::runtime_t::instance()->release(m_object);
     // -
     m_object = rhs.m_object;
 }

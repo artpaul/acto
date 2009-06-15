@@ -1,6 +1,6 @@
 #include <system/platform.h>
 
-#include "act_core.h"
+#include "core.h"
 #include "worker.h"
 
 namespace acto {
@@ -12,7 +12,7 @@ using fastdelegate::MakeDelegate;
 
 
 // Экземпляр runtime'а
-runtime_t   runtime;
+//runtime_t   runtime;
 
 //
 static TLS_VARIABLE thread_context_t* threadCtx = 0;
@@ -130,9 +130,9 @@ package_t::package_t(msg_t* const data_, const TYPEID type_) :
 package_t::~package_t() {
     // Освободить ссылки на объекты
     if (sender)
-        runtime.release(sender);
+        runtime_t::instance()->release(sender);
     // -
-    runtime.release(target);
+    runtime_t::instance()->release(target);
     // Удалить данные сообщения
     delete data;
 }
@@ -167,7 +167,7 @@ void doHandle(package_t* const package) {
             threadCtx->sender = 0;
 
             if (impl->m_terminating)
-                runtime.destroyObject(obj);
+                runtime_t::instance()->destroyObject(obj);
         }
     }
     catch (...) {
@@ -188,6 +188,12 @@ runtime_t::runtime_t() :
 //-----------------------------------------------------------------------------
 runtime_t::~runtime_t() {
     // Удалить рабочие потоки
+}
+//-----------------------------------------------------------------------------
+runtime_t* runtime_t::instance() {
+    static runtime_t value;
+
+    return &value;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -303,17 +309,15 @@ void runtime_t::join(object_t* const obj) {
         Exclusive   lock(obj->cs);
 
         if (obj->impl) {
-            object_t::waiter_t* const ptr = new object_t::waiter_t();
+            node.reset(new object_t::waiter_t());
 
-            node.reset(ptr);
-
-            ptr->event   = &event;
-            ptr->next    = obj->waiters;
-            obj->waiters = ptr;
+            node->event  = &event;
+            node->next   = obj->waiters;
+            obj->waiters = node.get();
             event.reset();
         }
     }
-
+    // -
     if (node.get() != NULL)
         event.wait();
 }
@@ -659,7 +663,7 @@ static long counter = 0;
 void initialize() {
     if (counter == 0) {
         core::initializeThread(false);
-        runtime.startup();
+        runtime_t::instance()->startup();
     }
     // -
     atomic_increment(&counter);
@@ -686,7 +690,7 @@ void finalize() {
         // -
         if (counter == 0) {
             finalizeThread();
-            runtime.shutdown();
+            runtime_t::instance()->shutdown();
         }
     }
 }
@@ -716,11 +720,10 @@ void finalizeThread() {
             std::set<object_t*>::iterator   i;
             // -
             for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
-                if (!(*i)->queue.empty()) {
-                    //printf("not empty\n");
+                if (!(*i)->queue.empty())
                     processActorMessages((*i));
-                }
-                runtime.destroyObject((*i));
+                
+                runtime_t::instance()->destroyObject((*i));
             }
             // -
             delete threadCtx, threadCtx = 0;
@@ -729,11 +732,17 @@ void finalizeThread() {
 }
 
 void processBindedActors() {
-    if (threadCtx) {
-        std::set<object_t*>::iterator   i;
-        // -
-        for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i)
-            processActorMessages((*i));
+    if (thread_t::is_core_thread())
+        // Данная функция не предназначена для внутренних потоков,
+        // так как они управляются ядром библиотеки
+        return;
+    else {
+        if (threadCtx) {
+            std::set<object_t*>::iterator   i;
+            // -
+            for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i)
+                processActorMessages((*i));
+        }
     }
 }
 

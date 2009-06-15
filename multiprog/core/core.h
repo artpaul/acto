@@ -32,7 +32,7 @@
 #include <system/thread.h>
 #include <system/event.h>
 
-#include "act_struct.h"
+#include "struct.h"
 #include "alloc.h"
 #include "message.h"
 
@@ -102,12 +102,27 @@ protected:
     /// Завершить собственную работу
     void terminate();
 
-    // Установка обработчика для сообщения данного типа
+    /// Установка обработчика для сообщения данного типа
     template < typename MsgT, typename ClassName >
-        inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) );
-    // Сброс обработчика для сообщения данного типа
+        inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
+            // Тип сообщения
+            type_box_t< MsgT >                       a_type     = type_box_t< MsgT >();
+            // Метод, обрабатывающий сообщение
+            typename handler_t< MsgT >::delegate_t   a_delegate = fastdelegate::MakeDelegate(this, func);
+            // Обрабочик
+            handler_t< MsgT >* const                 handler    = new handler_t< MsgT >(a_delegate, a_type);
+
+            // Установить обработчик
+            set_handler(handler, a_type);
+        }
+    /// Сброс обработчика для сообщения данного типа
     template < typename MsgT >
-        inline void Handler();
+        inline void Handler() {
+            // Тип сообщения
+            type_box_t< MsgT >	a_type = type_box_t< MsgT >();
+            // Сбросить обработчик указанного типа
+            set_handler(0, a_type);
+        }
 
 private:
     void set_handler(i_handler* const handler, const TYPEID type);
@@ -251,6 +266,8 @@ public:
     runtime_t();
     ~runtime_t();
 
+    static runtime_t* instance();
+
 public:
     // -
     void        acquire(object_t* const obj);
@@ -328,7 +345,7 @@ struct thread_context_t {
     object_t*               sender;
 };
 
-extern runtime_t	runtime;
+//extern runtime_t	runtime;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -344,36 +361,7 @@ void finalize();
 
 void finalizeThread();
 
-// -
-inline bool isCoreThread() {
-    return thread_t::is_core_thread();
-}
-
 void processBindedActors();
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------------------------
-template < typename MsgT, typename ClassName >
-    inline void base_t::Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
-        // Тип сообщения
-        type_box_t< MsgT >                       a_type     = type_box_t< MsgT >();
-        // Метод, обрабатывающий сообщение
-        typename handler_t< MsgT >::delegate_t   a_delegate = fastdelegate::MakeDelegate(this, func);
-        // Обрабочик
-        handler_t< MsgT >* const                 handler    = new handler_t< MsgT >(a_delegate, a_type);
-
-        // Установить обработчик
-        set_handler(handler, a_type);
-    }
-//-------------------------------------------------------------------------------------------------
-template < typename MsgT >
-    inline void base_t::Handler() {
-        // Тип сообщения
-        type_box_t< MsgT >	a_type = type_box_t< MsgT >();
-        // Сбросить обработчик указанного типа
-        set_handler(0, a_type);
-    }
 
 }; // namespace core
 

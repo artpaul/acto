@@ -26,12 +26,12 @@
 #include "system/platform.h"
 
 // Ядро библиотеки
-#include "core/act_core.h"
+#include "core/core.h"
 
 // Интерфейс библиотеки (пользовательский уровень)
 #include "act_user.h"
 // Дополнительные сервисы (пользовательский уровень)
-#include "extension/act_services.h"
+#include "extension/services.h"
 
 
 #endif // acto_h_scvw1123i9014opu5

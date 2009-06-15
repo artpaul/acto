@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright В© 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef acto_event_h_F3FC653C947A45ab8159F41C677233FD
 #define acto_event_h_F3FC653C947A45ab8159F41C677233FD
@@ -14,12 +26,12 @@ enum WaitResult {
     WR_ERROR,
     // -
     WR_SIGNALED,
-    // Превышен установленный период ожидания
+    // РџСЂРµРІС‹С€РµРЅ СѓСЃС‚Р°РЅРѕРІР»РµРЅРЅС‹Р№ РїРµСЂРёРѕРґ РѕР¶РёРґР°РЅРёСЏ
     WR_TIMEOUT
 };
 
 
-/** Событие */
+/** РЎРѕР±С‹С‚РёРµ */
 class event_t {
 public:
     event_t();

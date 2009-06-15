@@ -9,8 +9,6 @@
 //     The authors make no representations about the suitability of this     //
 //     software for any purpose. It is provided "as is" without express or   //
 //     implied warranty.                                                     //
-//---------------------------------------------------------------------------//
-// File: act_user.h                                                          //
 ///////////////////////////////////////////////////////////////////////////////
 
 #if !defined __multiprogs__act_user_h__
@@ -98,7 +96,7 @@ public:
     template <typename MsgT>
         void send(const MsgT& msg) const {
             if (m_object)
-                return core::runtime.send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
+                return core::runtime_t::instance()->send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
         }
 
     template <typename MsgT>
@@ -108,15 +106,30 @@ public:
                 const core::TYPEID  id  = msg->tid ? msg->tid : core::type_box_t< MsgT >();
 
                 // Отправить сообщение
-                return core::runtime.send(m_object, msg, id);
+                return core::runtime_t::instance()->send(m_object, msg, id);
             }
         }
 
     // Послать сообщение объекту
+    template <typename MsgT>
+        void send() const {
+            if (m_object)
+                return core::runtime_t::instance()->send(m_object, new MsgT(), core::type_box_t< MsgT >());
+        }
     template <typename MsgT, typename P1>
         void send(P1 p1) const {
             if (m_object)
-                return core::runtime.send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
+                return core::runtime_t::instance()->send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
+        }
+    template <typename MsgT, typename P1, typename P2>
+        void send(P1 p1, P2 p2) const {
+            if (m_object)
+                return core::runtime_t::instance()->send(m_object, new MsgT(p1, p2), core::type_box_t< MsgT >());
+        }
+    template <typename MsgT, typename P1, typename P2, typename P3>
+        void send(P1 p1, P2 p2, P3 p3) const {
+            if (m_object)
+                return core::runtime_t::instance()->send(m_object, new MsgT(p1, p2, p3), core::type_box_t< MsgT >());
         }
 
 /* Операторы */
@@ -191,51 +204,46 @@ ACTO_API void startup();
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// Desc:
-inline core::object_t* dereference(object_t& object) {
-    return object.m_object;
-}
 
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
 template <typename ActorT>
     instance_t< ActorT >::instance_t() : object_t() {
         // 1.
         ActorT* const value = new ActorT();
         // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime.createActor(value, 0);
+        m_object = core::runtime_t::instance()->createActor(value, 0);
         // -
         value->self = actor_t(m_object);
     }
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 template <typename ActorT>
     instance_t< ActorT >::instance_t(actor_t& context) : object_t() {
         // 1.
         ActorT* const value = new ActorT();
         // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime.createActor(value, 0);
+        m_object = core::runtime_t::instance()->createActor(value, 0);
         // -
         value->context = context;
         value->self    = actor_t(m_object);
     }
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 template <typename ActorT>
     instance_t< ActorT >::instance_t(const int options) : object_t() {
         // 1.
         ActorT* const value = new ActorT();
         // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime.createActor(value, options);
+        m_object = core::runtime_t::instance()->createActor(value, options);
         // -
         value->self = actor_t(m_object);
     }
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 template <typename ActorT>
     instance_t< ActorT >::instance_t(actor_t& context, const int options) {
         // 1.
         ActorT* const value = new ActorT();
         // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime.createActor(value, options);
+        m_object = core::runtime_t::instance()->createActor(value, options);
         // -
         value->context = context;
         value->self    = actor_t(m_object);

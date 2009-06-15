@@ -18,7 +18,6 @@
 #if !defined ( __multiprog__act_struct_h__ )
 #define __multiprog__act_struct_h__
 
-#include <generic/ptr.h>
 #include <generic/sequence.h>
 
 #include <system/platform.h>

@@ -209,7 +209,7 @@ int main() {
 
             for(unsigned int j = 0; j < 3; j++) {
                 // Создать стену.
-                // Опция "act_o::aoExclusive" создает для объекта отдельный поток,
+                // Опция "acto::aoExclusive" создает для объекта отдельный поток,
                 // в котором будут выполнятся все обработчики этого объекта
                 acto::actor_t wall = acto::instance_t< Wall >();
 
@@ -217,7 +217,7 @@ int main() {
                 console.send< msg_out >("send start");
 
                 // Начать игру: инициализировать объект, запустить мячи
-                wall.send(msg_start(BALLS, console));
+                wall.send< msg_start >(BALLS, console);
 
                 // Игра продолжается некоторое время в независимых потоках
                 acto::core::Sleep(DURATION);

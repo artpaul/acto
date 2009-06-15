@@ -283,15 +283,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\core\act_core.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\act_o.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\extension\act_services.cpp"
+				RelativePath=".\core\core.cpp"
 				>
 			</File>
 			<File
@@ -304,6 +300,10 @@
 			</File>
 			<File
 				RelativePath=".\system\mutex.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\extension\services.cpp"
 				>
 			</File>
 			<File
@@ -326,6 +326,10 @@
 			</File>
 			<File
 				RelativePath=".\acto.h"
+				>
+			</File>
+			<File
+				RelativePath=".\extension\services.h"
 				>
 			</File>
 			<Filter
@@ -360,10 +364,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\generic\ptr.h"
-					>
-				</File>
-				<File
 					RelativePath=".\generic\sequence.h"
 					>
 				</File>
@@ -372,19 +372,19 @@
 				Name="core"
 				>
 				<File
-					RelativePath=".\core\act_core.h"
-					>
-				</File>
-				<File
-					RelativePath=".\core\act_struct.h"
-					>
-				</File>
-				<File
 					RelativePath=".\core\alloc.h"
 					>
 				</File>
 				<File
+					RelativePath=".\core\core.h"
+					>
+				</File>
+				<File
 					RelativePath=".\core\message.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\struct.h"
 					>
 				</File>
 				<File
