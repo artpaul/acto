@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright В© 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef message_h_EA18085F0CF7480fA57FBF6C0E610820
 #define message_h_EA18085F0CF7480fA57FBF6C0E610820
@@ -15,10 +27,10 @@ namespace acto {
 
 namespace core {
 
-// Идентификатор типов
+// РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С‚РёРїРѕРІ
 typedef long    TYPEID;
 
-/** Базовый тип для сообщений */
+/** Р‘Р°Р·РѕРІС‹Р№ С‚РёРї РґР»СЏ СЃРѕРѕР±С‰РµРЅРёР№ */
 struct ACTO_API msg_t {
     TYPEID    tid;
 
@@ -27,29 +39,26 @@ public:
     virtual ~msg_t() { }
 };
 
+
 /** */
 class message_map_t {
-    // Тип множества зарегистрированных типов сообщений
+    // РўРёРї РјРЅРѕР¶РµСЃС‚РІР° Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹С… С‚РёРїРѕРІ СЃРѕРѕР±С‰РµРЅРёР№
     typedef std::map< std::string, TYPEID > Types;
 
 public:
     message_map_t();
 
-    static message_map_t* instance() {
-        static message_map_t value;
-
-        return &value;
-    }
+    static message_map_t* instance();
 
 public:
     TYPEID  get_typeid(const char* const type_name);
 
 private:
-    // Критическая секция для доступа к полям
+    // РљСЂРёС‚РёС‡РµСЃРєР°СЏ СЃРµРєС†РёСЏ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє РїРѕР»СЏРј
     mutex_t             m_cs;
-    // Генератор идентификаторов
+    // Р“РµРЅРµСЂР°С‚РѕСЂ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ
     volatile TYPEID     m_counter;
-    // Типы сообщений
+    // РўРёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
     Types               m_types;
 };
 
@@ -58,9 +67,9 @@ private:
 template <typename T>
 class type_box_t {
 public:
-    // Оборачиваемый тип
+    // РћР±РѕСЂР°С‡РёРІР°РµРјС‹Р№ С‚РёРї
     typedef T           type_type;
-    // Тип идентификатора
+    // РўРёРї РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
     typedef TYPEID      value_type;
 
 public:
@@ -72,13 +81,13 @@ public:
     template <typename U>
         bool operator == (const type_box_t< U >& rhs) const;
 
-    // Преобразование к типу идентификатора
+    // РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ Рє С‚РёРїСѓ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
     operator value_type () const {
         return m_id;
     }
 
 private:
-    // Уникальный идентификатор типа
+    // РЈРЅРёРєР°Р»СЊРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С‚РёРїР°
     const value_type    m_id;
 };
 

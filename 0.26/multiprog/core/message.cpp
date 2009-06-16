@@ -13,6 +13,12 @@ message_map_t::message_map_t()
 {
 }
 
+message_map_t* message_map_t::instance() {
+    static message_map_t value;
+
+    return &value;
+}
+
 TYPEID  message_map_t::get_typeid(const char* const type_name) {
     // -
     std::string name(type_name);

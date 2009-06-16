@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright В© 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef acto_mutex_h_2BA91EE9AA574deaBF6884ADB355901E
 #define acto_mutex_h_2BA91EE9AA574deaBF6884ADB355901E
@@ -15,9 +27,9 @@ public:
     ~mutex_t();
 
 public:
-    /// Захватить мютекс
+    /// Р—Р°С…РІР°С‚РёС‚СЊ РјСЋС‚РµРєСЃ
     void acquire();
-    /// Освободить мютекс
+    /// РћСЃРІРѕР±РѕРґРёС‚СЊ РјСЋС‚РµРєСЃ
     void release();
 
 private:

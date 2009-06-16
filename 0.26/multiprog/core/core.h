@@ -33,7 +33,6 @@
 #include <system/event.h>
 
 #include "struct.h"
-#include "alloc.h"
 #include "message.h"
 
 namespace acto {

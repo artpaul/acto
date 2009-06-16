@@ -43,9 +43,6 @@ ACTO_API void shutdown() {
         startup_counter--;
         // Заврешить работу ядра
         if (startup_counter == 0) {
-            // -
-            services::finalize();
-            // -
             core::finalize();
         }
     }
@@ -58,9 +55,6 @@ ACTO_API void startup() {
     if (startup_counter == 0) {
         // Инициализировать ядро
         core::initialize();
-
-        // Инициализировать сервисные компоненты
-        services::initialize();
     }
     startup_counter++;
 }
@@ -69,13 +63,13 @@ ACTO_API void startup() {
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-object_t::object_t() :
-    m_object(0)
+object_t::object_t() 
+    : m_object(0)
 {
 }
 //-----------------------------------------------------------------------------
-object_t::object_t(core::object_t* const an_object) :
-    m_object(an_object)
+object_t::object_t(core::object_t* const an_object) 
+    : m_object(an_object)
 {
     if (m_object)
         core::runtime_t::instance()->acquire(m_object);
