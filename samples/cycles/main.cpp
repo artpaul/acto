@@ -155,7 +155,7 @@ int main() {
     acto::startup();
     {
         // -
-        acto::actor_t   analizer = acto::instance_t< Analizer >(acto::aoExclusive);
+        acto::actor_t   analizer = acto::instance_t< Analizer >();
         // -
         std::cout << "Statistic is being collected." << std::endl;
         std::cout << "Please wait some seconds..." << std::endl;

@@ -133,9 +133,9 @@ TLS_VARIABLE thread_t::impl*  thread_t::impl::instance = NULL;
 ///////////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------------
-thread_t::thread_t(const proc_t& proc, void* const param) :
-    m_param(param),
-    m_pimpl(new impl(proc))
+thread_t::thread_t(const proc_t& proc, void* const param) 
+    : m_param(param)
+    , m_pimpl(new impl(proc))
 {
     // -
 }

@@ -115,10 +115,10 @@ object_t::object_t(worker_t* const thread_)
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-package_t::package_t(msg_t* const data_, const TYPEID type_) :
-    data  (data_),
-    sender(0),
-    type  (type_)
+package_t::package_t(msg_t* const data_, const TYPEID type_) 
+    : data  (data_)
+    , sender(0)
+    , type  (type_)
 {
 }
 //-----------------------------------------------------------------------------
@@ -492,7 +492,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
     assert(target != 0);
 
     // 1. Создать экземпляр пакета
-    package_t* const result = allocator_t::allocate< package_t >(data, type); //new package_t(data, type);
+    package_t* const result = new package_t(data, type);
     // 2.
     result->sender = determineSender();
     result->target = target;
@@ -650,7 +650,7 @@ void runtime_t::pushIdle(worker_t* const worker) {
 //                       ИНТЕРФЕЙСНЫЕ МЕТОДЫ ЯДРА                            //
 ///////////////////////////////////////////////////////////////////////////////
 
-static long counter = 0;
+static atomic_t counter = 0;
 
 //-----------------------------------------------------------------------------
 // Desc: Инициализация библиотеки.

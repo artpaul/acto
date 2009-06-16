@@ -30,8 +30,6 @@
 
 // »нтерфейс библиотеки (пользовательский уровень)
 #include "act_user.h"
-// ƒополнительные сервисы (пользовательский уровень)
-#include "extension/services.h"
 
 
 #endif // acto_h_scvw1123i9014opu5

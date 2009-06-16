@@ -203,7 +203,7 @@ int main() {
         acto::startup();
         {
             // Создать консоль.
-            // Все актеры должны создаваться с использованием шаблона act_o::instance_t<>.
+            // Все актеры должны создаваться с использованием шаблона acto::instance_t<>.
             // Использование оператора new недопустимо.
             acto::actor_t   console = acto::instance_t< Console >(acto::aoBindToThread);
 
