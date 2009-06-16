@@ -59,20 +59,18 @@
             }
         } // namespace acto
 #   else
+#       define ATOMICOPS_WORD_SUFFIX "l"
+        
         namespace acto {
             typedef volatile long   atomic_t;
 
             inline long atomic_add(atomic_t* const a, long b) {
-                long tmp = b;
-
-                __asm__ __volatile__(
-                    "lock\n\t"
-                    "xadd %0, %1\n\t"
-                    : "+r" (tmp), "+m" (*(a))
-                    :
-                    : "memory");
-
-                return tmp + b;
+                  long temp = b;
+                  __asm__ __volatile__("lock; xadd" ATOMICOPS_WORD_SUFFIX " %0,%1"
+                                       : "+r" (b), "+m" (*a)
+                                       : : "memory");
+                  // temp now contains the previous value of *a
+                  return temp + b;
             }
 
             inline long atomic_increment(atomic_t* const a) {
@@ -98,19 +96,15 @@
             }
 
             inline long atomic_swap(atomic_t* const a, long b) {
-                register long ret = b;
-
-                __asm__ __volatile__ (
-                    "lock\n\t"
-                    "xchg %0, %1\n\t"
-                    : "+m" (*(a)) , "+q" (ret)
-                    :
-                    : "cc");
-
-                return ret;
+                __asm__ __volatile__("xchg" ATOMICOPS_WORD_SUFFIX " %1,%0"  // The lock prefix
+                                   : "=r" (b)                               // is implicit for
+                                   : "m" (*a), "0" (b)                      // xchg.
+                                   : "memory");
+                return b;  // Now it's the previous value.
             }
 
         } // namespace acto
+#       undef ATOMICOPS_WORD_SUFFIX
 #   endif
 #endif
 
