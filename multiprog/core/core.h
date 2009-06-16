@@ -78,6 +78,46 @@ typedef structs::queue_t< package_t >       MessageQueue;
 typedef MutexLocker                         Exclusive;
 
 
+// Desc:
+struct ACTO_API i_handler {
+    // Идентификатор типа сообщения
+    const TYPEID    m_type;
+
+public:
+    i_handler(const TYPEID type_);
+
+public:
+    virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
+};
+
+
+// Desc: Обертка для вызова обработчика сообщения конкретного типа
+template <typename MsgT>
+class handler_t : public i_handler {
+public:
+    typedef fastdelegate::FastDelegate< void (acto::actor_t&, const MsgT&) >    delegate_t;
+
+public:
+    handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_)
+        : i_handler ( type_ )
+        , m_delegate( delegate_ )
+    {
+    }
+
+    // Вызвать обработчик
+    virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        acto::actor_t   actor(sender);
+
+        m_delegate(actor, *static_cast< const MsgT* const >(msg));
+    }
+
+private:
+    // Делегат, хранящий указатель на
+    // метод конкретного объекта.
+    const delegate_t    m_delegate;
+};
+
+
 /**
  * Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских).
  */
@@ -129,19 +169,6 @@ private:
 };
 
 
-// Desc:
-struct ACTO_API i_handler {
-    // Идентификатор типа сообщения
-    const TYPEID    m_type;
-
-public:
-    i_handler(const TYPEID type_);
-
-public:
-    virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
-};
-
-
 // Desc: Объект
 struct ACTO_API object_t : public intrusive_t< object_t > {
     struct waiter_t : public intrusive_t< waiter_t > {
@@ -188,33 +215,6 @@ struct ACTO_API package_t : public intrusive_t< package_t > {
 public:
     package_t(msg_t* const data_, const TYPEID type_);
     ~package_t();
-};
-
-
-// Desc: Обертка для вызова обработчика сообщения конкретного типа
-template <typename MsgT>
-class handler_t : public i_handler {
-public:
-    typedef fastdelegate::FastDelegate< void (acto::actor_t&, const MsgT&) >    delegate_t;
-
-public:
-    handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_)
-        : i_handler ( type_ )
-        , m_delegate( delegate_ )
-    {
-    }
-
-    // Вызвать обработчик
-    virtual void invoke(object_t* const sender, msg_t* const msg) const {
-        acto::actor_t   actor(sender);
-
-        m_delegate(actor, *static_cast< const MsgT* const >(msg));
-    }
-
-private:
-    // Делегат, хранящий указатель на
-    // метод конкретного объекта.
-    const delegate_t    m_delegate;
 };
 
 
