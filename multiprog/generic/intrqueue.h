@@ -30,6 +30,10 @@ public:
 
         return result;
     }
+    ///
+    bool empty() const {
+        return m_head == NULL;
+    }
     /// Указатель на первый элемент
     T* front() const {
         return m_head;

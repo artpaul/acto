@@ -18,8 +18,6 @@
 #include "libsocket.h"
 #include "runtime.h"
 
-typedef acto::intrusive_queue_t<SOCOMMAND>    Queue;
-
 struct timeitem {
     SOCOMMAND*          cmd;
     time_t              deadline;
@@ -34,102 +32,69 @@ typedef struct _fdescriptors {
 } FileDescriptors;
 
 
-/** Описание группы событий, обслуживаемых в одном потоке */
-typedef struct _cluster {
+typedef acto::intrusive_queue_t<SOCOMMAND>  Queue;
+typedef acto::intrusive_queue_t<timeitem>   TimeQueue;
+
+/**
+ * Описание группы событий, обслуживаемых в одном потоке
+ */
+struct cluster_t {
     Queue                   gate;       // Mutex protected queue
     std::set<SOCOMMAND*>    reads;
     Queue                   writes;
-    struct timeitem*        timeouts;
+    TimeQueue               timeouts;
     FileDescriptors         fds;        //
 
-    pthread_t               thread;
+    //pthread_t               thread;
     pthread_mutex_t         mutex;
     volatile long           active;
 
-    _cluster() {
-        timeouts  = 0;
-        thread    = 0;
-        active    = 1;
+public:
+    cluster_t()
+        : active(1)
+    {
+        //thread    = 0;
         fds.fds   = 0;
         fds.count = 0;
     }
-} Cluster;
 
-
-/**
- * Ядро библиотеки сокетов
- */
-class so_runtime_t {
-    typedef acto::core::thread_t    ThreadType;
-
-    volatile long               m_active;
-    Queue                       m_queue;
-    acto::core::mutex_t         m_mutex;
-    std::auto_ptr<ThreadType>   m_thread;
-
-private:
+public:
     //-------------------------------------------------------------------------
-    void clearCluster(Cluster* const ctx) {
-        if (ctx->fds.fds != 0)
-            free(ctx->fds.fds);
+    void clear() {
+        if (fds.fds != 0)
+            free(fds.fds);
 
-        ctx->fds.fds   = 0;
-        ctx->fds.count = 0;
+        fds.fds   = 0;
+        fds.count = 0;
     }
     //-------------------------------------------------------------------------
-    void checkTimeQueue(Cluster* cluster) {
-        timeitem* const tq = cluster->timeouts;
+    void check_timequeue() {
+        if (timeouts.empty())
+            return;
 
-        if (tq != 0) {
-            timeitem* prev = tq;
-            timeitem* tl   = tq->next;
-            // -
-            do {
-                if (tl->deadline < time(0)) {
-                    timeitem* tmp = tl;
-                    SOEVENT   ev  = {SOEVENT_TIMEOUT, 0, tl->cmd->param};
-                    // -
-                    tl->cmd->callback(tl->cmd->s, &ev);
-                    // Remove item
-                    if (tl->next == tl) {
-                        tl                = 0;
-                        cluster->timeouts = 0;
-                    }
-                    else {
-                        prev->next = tl->next;
-                        tl         = tl->next;
-                        // -
-                        if (tmp == tq)
-                            cluster->timeouts = tl;
-                    }
-                    // - заменить на map - так можно быстро удалять
-                    //   элемент и получать общий размер элементов
-                    //!!! cluster->reads.remove(tmp->cmd);
-                    free(tmp->cmd);
-                    free(tmp);
-                }
-                else {
-                    prev = tl;
-                    tl   = tl->next;
-                }
-            } while (tl != cluster->timeouts);
-        }
+        timeitem* prev = NULL;
+        timeitem* tl   = timeouts.front();
+        // -
+        do {
+            if (tl->deadline < time(0)) {
+                timeitem* tmp = tl;
+                SOEVENT   ev  = {SOEVENT_TIMEOUT, 0, tl->cmd->param};
+                // -
+                tl->cmd->callback(tl->cmd->s, &ev);
+                // Remove item
+                tl = timeouts.remove(tl, prev);
+                reads.erase(tmp->cmd);
+                free(tmp->cmd);
+                free(tmp);
+            }
+            else {
+                prev = tl;
+                tl   = tl->next;
+            }
+        } while (tl != NULL);
     }
     //-------------------------------------------------------------------------
-    struct pollfd* relocateDescriptors(Cluster* ctx, size_t count) {
-        if (ctx->fds.fds == 0 or ctx->fds.count < count or (ctx->fds.count > count << 1)) {
-            if (ctx->fds.fds != 0)
-                free(ctx->fds.fds);
-
-            ctx->fds.fds   = (struct pollfd*)malloc(sizeof(struct pollfd) * count);
-            ctx->fds.count = count;
-        }
-        return ctx->fds.fds;
-    }
-    //-------------------------------------------------------------------------
-    SOCOMMAND* processRead(Cluster* cluster, SOCOMMAND* const cmd) {
-        SOCOMMAND* result = cmd;
-
+    void process_read(SOCOMMAND* const cmd) {
         switch (cmd->code & ~0x000F) {
         default:
             break;
@@ -165,34 +130,37 @@ private:
                     close(cmd->s);
                 }
                 // Remove command form queue
-                timeQueueRemove(cluster, cmd);
-                /// !!! result = cluster->reads.remove(cmd);
+                this->remove_timequeue(cmd);
+                this->reads.erase(cmd);
                 free(cmd);
             }
             break;
         }
-        return result;
     }
     //-------------------------------------------------------------------------
-    void timeQueueRemove(Cluster* const ctx, SOCOMMAND* cmd) {
-        if (ctx->timeouts == 0 or ctx->timeouts->next == 0)
+    struct pollfd* relocate_descriptors(size_t count) {
+        if (fds.fds == 0 || fds.count < count || (fds.count > count << 1)) {
+            if (fds.fds != 0)
+                free(fds.fds);
+
+            fds.fds   = (struct pollfd*)malloc(sizeof(struct pollfd) * count);
+            fds.count = count;
+        }
+        return fds.fds;
+    }
+    //-------------------------------------------------------------------------
+    void remove_timequeue(SOCOMMAND* cmd) {
+        if (timeouts.empty())
             return;
         // -
-        struct timeitem* prev = ctx->timeouts;
-        struct timeitem* tl   = ctx->timeouts->next;
+        struct timeitem* prev = NULL;
+        struct timeitem* tl   = timeouts.front();
         // -
         do {
             if (tl->cmd == cmd) {
                 struct timeitem* tmp = tl;
                 // Remove item
-                if (tmp->next == tmp) {
-                    tl            = 0;
-                    ctx->timeouts = 0;
-                }
-                else {
-                    prev->next = tl->next;
-                    tl         = tl->next;
-                }
+                tl = timeouts.remove(tl, prev);
                 free(tmp);
                 break;
             }
@@ -200,11 +168,26 @@ private:
                 prev = tl;
                 tl   = tl->next;
             }
-        } while (tl != ctx->timeouts);
+        } while (tl != NULL);
     }
+};
+
+
+/**
+ * Ядро библиотеки сокетов
+ */
+class so_runtime_t {
+    typedef acto::core::thread_t    ThreadType;
+
+    volatile long               m_active;
+    Queue                       m_queue;
+    acto::core::mutex_t         m_mutex;
+    std::auto_ptr<ThreadType>   m_thread;
+
+private:
     //-------------------------------------------------------------------------
     void execute(void* param) {
-        Cluster     cluster;
+        cluster_t     cluster;
         //int epfd = epoll_create(10);
         // -
         while (m_active) {
@@ -226,19 +209,11 @@ private:
                     item->cmd      = cmd;
                     item->deadline = t;
                     item->next     = 0;
-                    if (cluster.timeouts) {
-                        item->next = cluster.timeouts->next;
-                        cluster.timeouts->next = item;
-                    }
-                    else {
-                        item->next       = item;
-                        cluster.timeouts = item;
-                    }
+                    cluster.timeouts.push(item);
                 }
 
                 if (cmd->code & SOFLAG_READ)
                     cluster.reads.insert(cmd);
-                    //cluster.reads.push(cmd);
                 else
                     if (cmd->code & SOFLAG_WRITE)
                         cluster.writes.push(cmd);
@@ -248,18 +223,17 @@ private:
             //
             // Reading
             //
-            if (cluster.reads.front())  {
-                struct pollfd* const fds = relocateDescriptors(&cluster, cluster.reads.size());
+            if (!cluster.reads.empty())  {
+                typedef std::set<SOCOMMAND*>    cmd_set_t;
+
+                struct pollfd* const fds = cluster.relocate_descriptors(cluster.reads.size());
                 int        rval;
-                int        i = 0;
-                SOCOMMAND* p = cluster.reads.front();
+                int        j = 0;
 
-
-                while (p != 0) {
-                    fds[i].fd     = p->s;
-                    fds[i].events = POLLIN;
-                    p = p->next;
-                    i++;
+                for (cmd_set_t::const_iterator i = cluster.reads.begin(); i != cluster.reads.end(); ++i) {
+                    fds[j].fd     = (*i)->s;
+                    fds[j].events = POLLIN;
+                    ++j;
                 }
 
                 rval = poll(fds, cluster.reads.size(), 300);
@@ -267,14 +241,11 @@ private:
                     printf("error poll()\n");
                 }
                 else if (rval > 0) {
-                    p = cluster.reads.front();
-                    i = 0;
-                    while (p != 0) {
-                        if (fds[i].revents & POLLIN)
-                            p = processRead(&cluster, p);
-                        if (p != 0)
-                            p = p->next;
-                        i++;
+                    j = 0;
+                    for (cmd_set_t::const_iterator i = cluster.reads.begin(); i != cluster.reads.end(); ++i) {
+                        if (fds[j].revents & POLLIN)
+                            cluster.process_read(*i);
+                        ++j;
                     }
                 }
             }
@@ -283,7 +254,7 @@ private:
             // Writing
             //
             if (cluster.writes.front())  {
-                struct pollfd* const fds = relocateDescriptors(&cluster, cluster.writes.size());
+                struct pollfd* const fds = cluster.relocate_descriptors(cluster.writes.size());
                 int         rval;
                 int         i = 0;
                 SOCOMMAND*  p = cluster.writes.front();
@@ -314,9 +285,9 @@ private:
             }
 
             // -
-            checkTimeQueue(&cluster);
+            cluster.check_timequeue();
         }
-        clearCluster(&cluster);
+        cluster.clear();
     }
 
 public:
