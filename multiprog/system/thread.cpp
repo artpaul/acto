@@ -24,6 +24,7 @@ class thread_t::impl {
     // Идентификатор потока
     DWORD       m_id;
     // -
+    void*       m_param;
     proc_t      m_proc;
 
     static TLS_VARIABLE impl*  instance;
@@ -35,7 +36,7 @@ private:
                 // Связать экземпляр с потоком
                 instance = p_impl;
                 // Вызвать процедуру потока
-                p_impl->m_proc();
+                p_impl->m_proc(p_impl->m_param);
                 // Обнулить связь
                 instance = NULL;
             }
@@ -44,9 +45,10 @@ private:
     }
 
 public:
-    impl(const proc_t& proc)
+    impl(const proc_t& proc, void* param)
         : m_handle(0)
         , m_id    (0)
+        , m_param (param)
         , m_proc  (proc)
     {
         m_handle = ::CreateThread(0, 0, &impl::thread_proc, this, 0, &m_id);
@@ -78,7 +80,7 @@ public:
 class thread_t::impl {
     // Дескриптор потока
     pthread_t   m_handle;
-    // -
+    void*       m_param;
     proc_t      m_proc;
 
     static TLS_VARIABLE impl*  instance;
@@ -90,7 +92,7 @@ private:
                 // Связать экземпляр с потоком
                 instance = p_impl;
                 // Вызвать процедуру потока
-                p_impl->m_proc();
+                p_impl->m_proc(p_impl->m_param);
                 // Обнулить связь
                 instance = NULL;
             }
@@ -99,8 +101,9 @@ private:
     }
 
 public:
-    impl(const proc_t& proc)
+    impl(const proc_t& proc, void* param)
         : m_handle(0)
+        , m_param(param)
         , m_proc(proc)
     {
         if (pthread_create(&m_handle, 0, &impl::thread_proc, this) != 0)
@@ -135,7 +138,7 @@ TLS_VARIABLE thread_t::impl*  thread_t::impl::instance = NULL;
 //-----------------------------------------------------------------------------
 thread_t::thread_t(const proc_t& proc, void* const param) :
     m_param(param),
-    m_pimpl(new impl(proc))
+    m_pimpl(new impl(proc, param))
 {
     // -
 }

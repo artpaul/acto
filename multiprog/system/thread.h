@@ -16,14 +16,17 @@
 
 #include <memory>
 
+#include <generic/delegates.h>
+
 namespace acto {
 
 namespace core {
 
-/** */
+/**
+ */
 class thread_t {
 public:
-    typedef fastdelegate::FastDelegate< void () >   proc_t;
+    typedef fastdelegate::FastDelegate< void (void*) >   proc_t;
 
     thread_t(const proc_t& proc, void* const param = 0);
     ~thread_t();

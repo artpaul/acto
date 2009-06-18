@@ -29,8 +29,8 @@ struct object_t;
 struct package_t;
 
 
-/** 
- * Системный поток 
+/**
+ * Системный поток
  */
 class worker_t : public intrusive_t< worker_t > {
 public:
@@ -56,7 +56,7 @@ public:
     void wakeup();
 
 private:
-    void execute();
+    void execute(void* param);
 
 private:
     // Флаг активности потока

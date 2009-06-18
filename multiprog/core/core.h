@@ -288,7 +288,7 @@ public:
 
 private:
     // Цикл выполнения планировщика
-    void        cleaner();
+    void        cleaner(void* param);
     // -
     package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
     // -
@@ -298,7 +298,7 @@ private:
     // Определить отправителя сообщения
     object_t*   determineSender();
     // Цикл выполнения планировщика
-    void        execute();
+    void        execute(void* param);
     // -
     void        pushDelete(object_t* const obj);
     // -
