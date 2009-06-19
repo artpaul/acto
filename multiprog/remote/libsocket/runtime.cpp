@@ -38,35 +38,18 @@ typedef acto::intrusive_queue_t<timeitem>   TimeQueue;
 /**
  * Описание группы событий, обслуживаемых в одном потоке
  */
-struct cluster_t {
-    Queue                   gate;       // Mutex protected queue
+class cluster_t {
     std::set<SOCOMMAND*>    reads;
     Queue                   writes;
     TimeQueue               timeouts;
     FileDescriptors         fds;        //
 
-    //pthread_t               thread;
-    pthread_mutex_t         mutex;
-    volatile long           active;
-
 public:
-    cluster_t()
-        : active(1)
-    {
-        //thread    = 0;
-        fds.fds   = 0;
-        fds.count = 0;
-    }
+    acto::core::mutex_t     m_mutex;
+    Queue                   m_queue;    // Mutex protected queue
+    volatile long           m_active;
 
-public:
-    //-------------------------------------------------------------------------
-    void clear() {
-        if (fds.fds != 0)
-            free(fds.fds);
-
-        fds.fds   = 0;
-        fds.count = 0;
-    }
+private:
     //-------------------------------------------------------------------------
     void check_timequeue() {
         if (timeouts.empty())
@@ -170,25 +153,28 @@ public:
             }
         } while (tl != NULL);
     }
-};
 
+public:
+    cluster_t()
+        : m_active(1)
+    {
+        //thread    = 0;
+        fds.fds   = 0;
+        fds.count = 0;
+    }
 
-/**
- * Ядро библиотеки сокетов
- */
-class so_runtime_t {
-    typedef acto::core::thread_t    ThreadType;
+public:
+    //-------------------------------------------------------------------------
+    void clear() {
+        if (fds.fds != 0)
+            free(fds.fds);
 
-    volatile long               m_active;
-    Queue                       m_queue;
-    acto::core::mutex_t         m_mutex;
-    std::auto_ptr<ThreadType>   m_thread;
-
-private:
+        fds.fds   = 0;
+        fds.count = 0;
+    }
     //-------------------------------------------------------------------------
     void execute(void* param) {
-        cluster_t     cluster;
-        //int epfd = epoll_create(10);
+       //int epfd = epoll_create(10);
         // -
         while (m_active) {
             SOCOMMAND* cmd = 0;
@@ -209,42 +195,42 @@ private:
                     item->cmd      = cmd;
                     item->deadline = t;
                     item->next     = 0;
-                    cluster.timeouts.push(item);
+                    this->timeouts.push(item);
                 }
 
                 if (cmd->code & SOFLAG_READ)
-                    cluster.reads.insert(cmd);
+                    this->reads.insert(cmd);
                 else
                     if (cmd->code & SOFLAG_WRITE)
-                        cluster.writes.push(cmd);
+                        this->writes.push(cmd);
                 cmd = next;
             }
 
             //
             // Reading
             //
-            if (!cluster.reads.empty())  {
+            if (!this->reads.empty())  {
                 typedef std::set<SOCOMMAND*>    cmd_set_t;
 
-                struct pollfd* const fds = cluster.relocate_descriptors(cluster.reads.size());
+                struct pollfd* const fds = this->relocate_descriptors(this->reads.size());
                 int        rval;
                 int        j = 0;
 
-                for (cmd_set_t::const_iterator i = cluster.reads.begin(); i != cluster.reads.end(); ++i) {
+                for (cmd_set_t::const_iterator i = this->reads.begin(); i != this->reads.end(); ++i) {
                     fds[j].fd     = (*i)->s;
                     fds[j].events = POLLIN;
                     ++j;
                 }
 
-                rval = poll(fds, cluster.reads.size(), 300);
+                rval = poll(fds, this->reads.size(), 300);
                 if (rval == -1) {
                     printf("error poll()\n");
                 }
                 else if (rval > 0) {
                     j = 0;
-                    for (cmd_set_t::const_iterator i = cluster.reads.begin(); i != cluster.reads.end(); ++i) {
+                    for (cmd_set_t::const_iterator i = this->reads.begin(); i != this->reads.end(); ++i) {
                         if (fds[j].revents & POLLIN)
-                            cluster.process_read(*i);
+                            this->process_read(*i);
                         ++j;
                     }
                 }
@@ -253,11 +239,11 @@ private:
             //
             // Writing
             //
-            if (cluster.writes.front())  {
-                struct pollfd* const fds = cluster.relocate_descriptors(cluster.writes.size());
+            if (this->writes.front())  {
+                struct pollfd* const fds = this->relocate_descriptors(this->writes.size());
                 int         rval;
                 int         i = 0;
-                SOCOMMAND*  p = cluster.writes.front();
+                SOCOMMAND*  p = this->writes.front();
 
                 while (p != 0) {
                     fds[i].fd     = p->s;
@@ -266,12 +252,12 @@ private:
                     i++;
                 }
 
-                rval = poll(fds, cluster.writes.size(), 300);
+                rval = poll(fds, this->writes.size(), 300);
                 if (rval == -1) {
                     printf("error poll()\n");
                 }
                 else if (rval > 0) {
-                    p = cluster.writes.front();
+                    p = this->writes.front();
                     i = 0;
                     while (p != 0) {
                         if (fds[i].revents & POLLOUT) {
@@ -285,14 +271,30 @@ private:
             }
 
             // -
-            cluster.check_timequeue();
+            this->check_timequeue();
         }
-        cluster.clear();
+    }
+};
+
+
+/**
+ * Ядро библиотеки сокетов
+ */
+class so_runtime_t {
+    typedef acto::core::thread_t    ThreadType;
+
+    std::auto_ptr<ThreadType>   m_thread;
+    cluster_t                   m_cluster;
+
+private:
+    //-------------------------------------------------------------------------
+    void execute(void* param) {
+        m_cluster.execute(param);
+        m_cluster.clear();
     }
 
 public:
     so_runtime_t()
-        : m_active(0)
     {
         m_thread.reset(new ThreadType(fastdelegate::MakeDelegate(this, &so_runtime_t::execute), NULL));
     }
@@ -316,15 +318,15 @@ public:
     }
     /// Поместить команду в очередь обработки
     int enqueue(SOCOMMAND* const cmd) {
-        m_mutex.acquire();
-        m_queue.push(cmd);
-        m_mutex.release();
+        m_cluster.m_mutex.acquire();
+        m_cluster.m_queue.push(cmd);
+        m_cluster.m_mutex.release();
 
         return 0;
     }
 
     void loop(int timeout, soloopcallback cb, void* param) {
-        while (m_active) {
+        while (m_cluster.m_active) {
             if (cb != NULL)
                 cb(param);
             // -

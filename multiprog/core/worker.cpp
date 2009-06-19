@@ -13,14 +13,14 @@ extern void destroy_object_body(object_t* obj);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
-worker_t::worker_t(const Slots slots) :
-	m_active(true),
-    m_object(NULL),
-    m_slots (slots),
-    m_start (0),
-	m_system(0)
+worker_t::worker_t(const Slots slots)
+    : m_active(true)
+    , m_object(NULL)
+    , m_slots (slots)
+    , m_start (0)
+    , m_system(0)
 {
-	m_system = new thread_t(MakeDelegate(this, &worker_t::execute), this);
+    m_system = new thread_t(MakeDelegate(this, &worker_t::execute), this);
 }
 //-----------------------------------------------------------------------------
 worker_t::~worker_t() {
@@ -28,10 +28,10 @@ worker_t::~worker_t() {
     m_active = false;
     // 2.
     m_event.signaled();
-	// 3. Дождаться завершения системного потока
+    // 3. Дождаться завершения системного потока
     m_system->join();
     // 4. Удалить системный поток
-	delete m_system;
+    delete m_system;
 }
 
 //-----------------------------------------------------------------------------
@@ -57,7 +57,7 @@ void worker_t::wakeup() {
 void worker_t::execute(void* param) {
     core::initializeThread(true);
     // -
-	while (m_active) {
+    while (m_active) {
         //
         // 1. Если данному потоку назначен объект, то необходимо
         //    обрабатывать сообщения, ему поступившие
@@ -139,7 +139,7 @@ void worker_t::execute(void* param) {
         //
         m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
         m_event.reset();
-	}
+    }
     // -
     core::finalizeThread();
 }
