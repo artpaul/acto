@@ -459,7 +459,7 @@ void runtime_t::startup() {
 //-----------------------------------------------------------------------------
 // Desc:
 //-----------------------------------------------------------------------------
-void runtime_t::cleaner() {
+void runtime_t::cleaner(void*) {
     while (m_active) {
         //
         // 1. Извлечение потоков, отмеченых для удаления
@@ -555,7 +555,7 @@ object_t* runtime_t::determineSender() {
     return threadCtx->sender;
 }
 //-----------------------------------------------------------------------------
-void runtime_t::execute() {
+void runtime_t::execute(void*) {
     // -
     u_int   newWorkerTimeout = 2;
     int     lastCleanupTime  = clock();

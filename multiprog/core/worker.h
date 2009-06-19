@@ -56,7 +56,7 @@ public:
     void wakeup();
 
 private:
-    void execute();
+    void execute(void*);
 
 private:
     // Флаг активности потока

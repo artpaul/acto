@@ -54,7 +54,7 @@ void worker_t::wakeup() {
 //-----------------------------------------------------------------------------
 // Desc:
 //-----------------------------------------------------------------------------
-void worker_t::execute() {
+void worker_t::execute(void*) {
     core::initializeThread(true);
     // -
 	while (m_active) {
