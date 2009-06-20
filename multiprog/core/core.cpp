@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "worker.h"
+#include "thread_pool.h"
 
 namespace acto {
 
@@ -216,7 +217,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
 
     // Создать для актера индивидуальный поток
     if (options & acto::aoExclusive)
-        worker = createWorker();
+        worker = create_worker();
 
     // 2. Проверка истинности предусловий
     preconditions = true &&
@@ -459,7 +460,7 @@ void runtime_t::startup() {
 //-----------------------------------------------------------------------------
 // Desc:
 //-----------------------------------------------------------------------------
-void runtime_t::cleaner(void* param) {
+void runtime_t::cleaner(void*) {
     while (m_active) {
         //
         // 1. Извлечение потоков, отмеченых для удаления
@@ -505,7 +506,7 @@ package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, c
     return result;
 }
 //-----------------------------------------------------------------------------
-worker_t* runtime_t::createWorker() {
+worker_t* runtime_t::create_worker() {
     if (atomic_increment(&m_workers.count) > 0)
         m_evnoworkers.reset();
     // -
@@ -516,7 +517,7 @@ worker_t* runtime_t::createWorker() {
         slots.handle  = worker_t::HandlePackage(&doHandle);
         slots.idle    = MakeDelegate(this, &runtime_t::pushIdle);
         // -
-        return new core::worker_t(slots);
+        return new core::worker_t(slots, thread_pool_t::instance());
     }
     catch (...) {
         if (atomic_decrement(&m_workers.count) == 0)
@@ -555,7 +556,7 @@ object_t* runtime_t::determineSender() {
     return threadCtx->sender;
 }
 //-----------------------------------------------------------------------------
-void runtime_t::execute(void* param) {
+void runtime_t::execute(void*) {
     // -
     u_int   newWorkerTimeout = 2;
     int     lastCleanupTime  = clock();
@@ -570,7 +571,7 @@ void runtime_t::execute(void* param) {
                 // Если текущее количество потоков меньше оптимального,
                 // то создать новый поток
                 if (m_workers.count < (m_workers.reserved + (m_processors << 1)))
-                    worker = createWorker();
+                    worker = create_worker();
                 else {
                     // Подождать некоторое время осовобождения какого-нибудь потока
                     m_evworker.reset();
@@ -584,7 +585,7 @@ void runtime_t::execute(void* param) {
                         newWorkerTimeout += 2;
                         // -
                         if (m_workers.count < MAX_WORKERS)
-                            worker = createWorker();
+                            worker = create_worker();
                         else {
                             m_evworker.reset();
                             m_evworker.wait();
@@ -603,11 +604,13 @@ void runtime_t::execute(void* param) {
                 else
                     m_workers.idle.push(worker);
             }
+            
             yield();
         }
 
 		// -
         if (m_terminating || (m_event.wait(10 * 1000) == WR_TIMEOUT)) {
+            thread_pool_t::instance()->collect_all();
             m_workers.deleted.push(m_workers.idle.extract());
             m_evclean.signaled();
             // -
@@ -615,6 +618,7 @@ void runtime_t::execute(void* param) {
         }
         else {
             if ((clock() - lastCleanupTime) > (10 * CLOCKS_PER_SEC)) {
+                thread_pool_t::instance()->collect_one();
                 if (worker_t* const item = m_workers.idle.pop()) {
                     m_workers.deleted.push(item);
                     m_evclean.signaled();
@@ -717,7 +721,7 @@ void finalizeThread() {
             for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
                 if (!(*i)->queue.empty())
                     processActorMessages((*i));
-
+                
                 runtime_t::instance()->destroyObject((*i));
             }
             // -

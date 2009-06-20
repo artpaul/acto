@@ -311,6 +311,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\core\thread_pool.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\core\worker.cpp"
 				>
 			</File>
@@ -385,6 +389,10 @@
 				</File>
 				<File
 					RelativePath=".\core\struct.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\thread_pool.h"
 					>
 				</File>
 				<File

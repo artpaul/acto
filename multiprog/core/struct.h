@@ -18,6 +18,8 @@
 #if !defined ( __multiprog__act_struct_h__ )
 #define __multiprog__act_struct_h__
 
+#include <assert.h>
+
 #include <generic/sequence.h>
 
 #include <system/platform.h>
@@ -42,6 +44,16 @@ public:
     queue_t() {
         head = 0;
         tail = 0;
+    }
+
+    sequence_t<T> extract() {
+        MutexLocker lock(m_cs);
+
+        node_t* const top = head;
+
+        head = tail = 0;
+
+        return top;
     }
 
     void push(node_t* const node) {

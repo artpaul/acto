@@ -288,17 +288,17 @@ public:
 
 private:
     // Цикл выполнения планировщика
-    void        cleaner(void* param);
+    void        cleaner(void*);
     // -
     package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
     // -
-    worker_t*   createWorker();
+    worker_t*   create_worker();
     // Деструткор для пользовательских объектов (актеров)
     void        destruct_actor(object_t* const actor);
     // Определить отправителя сообщения
     object_t*   determineSender();
     // Цикл выполнения планировщика
-    void        execute(void* param);
+    void        execute(void*);
     // -
     void        pushDelete(object_t* const obj);
     // -
