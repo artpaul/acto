@@ -292,7 +292,7 @@ private:
     // -
     package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
     // -
-    worker_t*   createWorker();
+    worker_t*   create_worker();
     // Деструткор для пользовательских объектов (актеров)
     void        destruct_actor(object_t* const actor);
     // Определить отправителя сообщения
