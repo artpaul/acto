@@ -66,7 +66,7 @@ int    so_bind(int s, unsigned long addr, unsigned short port);
 int    so_broadcast(int s, unsigned short port, const char* buf, int len);
 
 // -
-int    so_closesocket(int s);
+int    so_close(int s);
 
 /// Connect to remote socket
 int    so_connect(int s, unsigned long addr, unsigned short port);

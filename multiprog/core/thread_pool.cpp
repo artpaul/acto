@@ -38,7 +38,7 @@ private:
     }
 
 public:
-    thread_worker_t::thread_worker_t(thread_pool_t* const owner)
+    thread_worker_t(thread_pool_t* const owner)
         : m_owner(owner)
         , m_param(NULL)
         , m_active(true)
@@ -124,7 +124,7 @@ thread_worker_t* thread_pool_t::sync_allocate() {
         return worker;
     else {
         atomic_increment(&m_count);
-        
+
         return new thread_worker_t(this);
     }
 }

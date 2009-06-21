@@ -21,4 +21,5 @@ PROJECT (ACTO-SOLUTION)
 
         samples/cycles
         samples/ping-pong
+        samples/sotest
     )

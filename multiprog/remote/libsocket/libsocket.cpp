@@ -37,7 +37,7 @@ int so_broadcast(int s, unsigned short port, const char* buf, int len) {
     return sendto(s, buf, len, 0, (struct sockaddr*)&sa, sizeof(sa));
 }
 //-----------------------------------------------------------------------------
-int so_closesocket(int s) {
+int so_close(int s) {
     return close(s);
 }
 //-----------------------------------------------------------------------------
