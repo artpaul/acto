@@ -126,18 +126,17 @@ public:
             top = m_head;
             if (top == 0)
                 return 0;
-            if (atomic_compare_and_swap((atomic_t*)&m_head, 0, (long)top))
+            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, 0))
                 return top;
         }
     }
 
     void push(node_t* const node) {
-        node_t*     top;
-
         while (true) {
-            top = m_head;
+            node_t* const top = m_head;
+
             node->next = top;
-            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)node, (long)top))
+            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)node))
                 return;
         }
     }
@@ -148,16 +147,17 @@ public:
     }
 
     node_t* pop() {
-        node_t*     top;
-        node_t*     next;
-
         while (true) {
-            top = m_head;
-            if (top == 0)
-                return 0;
-            next = top->next;
-            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)next, (long)top))
-                return top;
+            node_t* const top = m_head;
+
+            if (top == NULL)
+                return NULL;
+            else {
+                node_t* const next = top->next;
+
+                if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)next))
+                    return top;
+            }
         }
     }
 
@@ -218,7 +218,6 @@ public:
 private:
     node_t*     m_head;
 };
-
 
 }; // namespace structs
 

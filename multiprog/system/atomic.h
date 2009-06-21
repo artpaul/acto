@@ -22,8 +22,8 @@
             return InterlockedDecrement(a);
         }
 
-        inline bool atomic_compare_and_swap(atomic_t* const a, long val, long cmp) {
-            return InterlockedCompareExchange(a, val, cmp) == cmp;
+        inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
+            return InterlockedCompareExchange(a, val, comapre) == compare;
         }
 
         inline long atomic_swap(atomic_t* const a, long b) {
@@ -50,8 +50,8 @@
                 return __sync_sub_and_fetch(a, 1);
             }
 
-            inline bool atomic_compare_and_swap(atomic_t* const a, long val, long cmp) {
-                return __sync_bool_compare_and_swap(a, cmp, val);
+            inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
+                return __sync_bool_compare_and_swap(a, compare, val);
             }
 
             inline long atomic_swap(atomic_t* const a, long b) {
@@ -81,15 +81,15 @@
                 return atomic_add(a, -1);
             }
 
-            inline bool atomic_compare_and_swap(atomic_t* const a, long val, long cmp) {
+            inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
                 char ret;
 
                 __asm__ __volatile__ (
                     "lock\n\t"
                     "cmpxchg %3,%1\n\t"
                     "sete %0\n\t"
-                    : "=q" (ret), "+m" (*(a)), "+a" (cmp)
-                    : "r" (val)
+                    : "=q" (ret), "+m" (*(a)), "+a" (val)
+                    : "r" (compare)
                     : "cc", "memory");
 
                 return ret;

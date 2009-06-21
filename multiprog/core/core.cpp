@@ -363,7 +363,7 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
     bool undelivered = true;
 
     // 1. Создать пакет
-    core::package_t* const package = createPackage(target, msg, type);
+    core::package_t* const package = create_package(target, msg, type);
     // 2.
     {
         // Эксклюзивный доступ
@@ -375,7 +375,7 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
             // 1. Поставить сообщение в очередь объекта
             target->queue.push(package);
             // 2. Подобрать для него необходимый поток
-            if (target->thread != 0)
+            if (target->thread != NULL)
                 target->thread->wakeup();
             else {
                 if (!target->binded && !target->scheduled) {
@@ -439,7 +439,7 @@ void runtime_t::shutdown() {
 //-----------------------------------------------------------------------------
 void runtime_t::startup() {
     assert(m_active    == false);
-    assert(m_scheduler == 0);
+    assert(m_scheduler == NULL && m_cleaner == NULL);
 
     // 1.
     m_active      = true;
@@ -457,8 +457,6 @@ void runtime_t::startup() {
 //                            INTERNAL METHODS                               //
 ///////////////////////////////////////////////////////////////////////////////
 
-//-----------------------------------------------------------------------------
-// Desc:
 //-----------------------------------------------------------------------------
 void runtime_t::cleaner(void*) {
     while (m_active) {
@@ -489,7 +487,7 @@ void runtime_t::cleaner(void*) {
 }
 
 //-----------------------------------------------------------------------------
-package_t* runtime_t::createPackage(object_t* const target, msg_t* const data, const TYPEID type) {
+package_t* runtime_t::create_package(object_t* const target, msg_t* const data, const TYPEID type) {
     assert(target != 0);
 
     // 1. Создать экземпляр пакета
@@ -604,11 +602,11 @@ void runtime_t::execute(void*) {
                 else
                     m_workers.idle.push(worker);
             }
-            
+
             yield();
         }
 
-		// -
+        // -
         if (m_terminating || (m_event.wait(10 * 1000) == WR_TIMEOUT)) {
             thread_pool_t::instance()->collect_all();
             m_workers.deleted.push(m_workers.idle.extract());
@@ -721,7 +719,7 @@ void finalizeThread() {
             for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
                 if (!(*i)->queue.empty())
                     processActorMessages((*i));
-                
+
                 runtime_t::instance()->destroyObject((*i));
             }
             // -

@@ -187,7 +187,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     // Очередь сообщений, поступивших данному объекту
     MessageQueue        queue;
     // Count of references to object
-    volatile long       references;
+    atomic_t            references;
 
     // Флаги состояния текущего объекта
     unsigned int        binded    : 1;
@@ -290,7 +290,7 @@ private:
     // Цикл выполнения планировщика
     void        cleaner(void*);
     // -
-    package_t*  createPackage(object_t* const target, msg_t* const data, const TYPEID type);
+    package_t*  create_package(object_t* const target, msg_t* const data, const TYPEID type);
     // -
     worker_t*   create_worker();
     // Деструткор для пользовательских объектов (актеров)
