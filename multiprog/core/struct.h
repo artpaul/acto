@@ -37,66 +37,57 @@ namespace structs {
 // Desc:
 template <typename T, typename Guard = mutex_t>
 class queue_t {
-public:
-    typedef T       node_t;
+    T*      m_tail;
+    Guard   m_cs;
 
 public:
     queue_t() {
-        head = 0;
-        tail = 0;
+        m_tail = NULL;
     }
 
     sequence_t<T> extract() {
         MutexLocker lock(m_cs);
 
-        node_t* const top = head;
+        if (m_tail) {
+           T* const head = m_tail->next;
 
-        head = tail = 0;
-
-        return top;
+           m_tail->next = NULL;
+           m_tail       = NULL;
+           return head;
+        }
+        return NULL;
     }
 
-    void push(node_t* const node) {
+    void push(T* const node) {
         MutexLocker lock(m_cs);
-        // -
-        if (tail) {
-            tail->next = node;
-            node->next = 0;
-            tail = node;
+
+        if (m_tail) {
+            node->next   = m_tail->next;
+            m_tail->next = node;
         }
-        else {
-            node->next = 0;
-            head = node;
-            tail = node;
-        }
+        else
+            node->next = node;
+        m_tail = node;
     }
 
-    node_t* pop() {
+    T* pop() {
         MutexLocker lock(m_cs);
-        // -
-        node_t* const result = head;
-        // -
-        if (head) {
-            head = head->next;
-            // -
-            if (head == 0)
-                tail = 0;
+
+        if (m_tail) {
+            T* const result = m_tail->next;
+
+            if (result == m_tail)
+                m_tail = NULL;
+            else
+                m_tail->next = m_tail->next->next;
+            return result;
         }
-        // -
-        if (result)
-            result->next = 0;
-        return result;
+        return NULL;
     }
 
     bool empty() const {
-        return (head == 0);
+        return (m_tail == NULL);
     }
-
-private:
-    node_t* volatile    head;
-    node_t* volatile    tail;
-    // -
-    mutable Guard   m_cs;
 };
 
 
