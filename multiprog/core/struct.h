@@ -80,6 +80,8 @@ public:
                 m_tail = NULL;
             else
                 m_tail->next = m_tail->next->next;
+            // -
+            result->next = NULL;
             return result;
         }
         return NULL;
