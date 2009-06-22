@@ -388,6 +388,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\core\runtime.h"
+					>
+				</File>
+				<File
 					RelativePath=".\core\struct.h"
 					>
 				</File>

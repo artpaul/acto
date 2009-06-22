@@ -1,3 +1,4 @@
+
 #include <system/platform.h>
 
 #include "core.h"
@@ -357,8 +358,6 @@ long runtime_t::release(object_t* const obj) {
     return result;
 }
 //-----------------------------------------------------------------------------
-// Desc:
-//-----------------------------------------------------------------------------
 void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type) {
     bool undelivered = true;
 
@@ -393,8 +392,6 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
     if (undelivered)
         delete package;
 }
-//-----------------------------------------------------------------------------
-// Desc:
 //-----------------------------------------------------------------------------
 void runtime_t::shutdown() {
     // 1. Инициировать процедуру удаления для всех оставшихся объектов

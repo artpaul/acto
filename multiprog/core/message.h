@@ -15,10 +15,10 @@ namespace acto {
 
 namespace core {
 
-// Идентификатор типов
+// РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С‚РёРїРѕРІ
 typedef long    TYPEID;
 
-/** Базовый тип для сообщений */
+/** Р‘Р°Р·РѕРІС‹Р№ С‚РёРї РґР»СЏ СЃРѕРѕР±С‰РµРЅРёР№ */
 struct ACTO_API msg_t {
     TYPEID    tid;
 
@@ -29,7 +29,7 @@ public:
 
 /** */
 class message_map_t {
-    // Тип множества зарегистрированных типов сообщений
+    // РўРёРї РјРЅРѕР¶РµСЃС‚РІР° Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹С… С‚РёРїРѕРІ СЃРѕРѕР±С‰РµРЅРёР№
     typedef std::map< std::string, TYPEID > Types;
 
 public:
@@ -45,11 +45,11 @@ public:
     TYPEID  get_typeid(const char* const type_name);
 
 private:
-    // Критическая секция для доступа к полям
+    // РљСЂРёС‚РёС‡РµСЃРєР°СЏ СЃРµРєС†РёСЏ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє РїРѕР»СЏРј
     mutex_t             m_cs;
-    // Генератор идентификаторов
+    // Р“РµРЅРµСЂР°С‚РѕСЂ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ
     volatile TYPEID     m_counter;
-    // Типы сообщений
+    // РўРёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
     Types               m_types;
 };
 
@@ -57,29 +57,39 @@ private:
 /** */
 template <typename T>
 class type_box_t {
+    // РЈРЅРёРєР°Р»СЊРЅС‹Р№ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ С‚РёРїР°
+    const TYPEID        m_id;
+
 public:
-    // Оборачиваемый тип
+    // РћР±РѕСЂР°С‡РёРІР°РµРјС‹Р№ С‚РёРї
     typedef T           type_type;
-    // Тип идентификатора
+    // РўРёРї РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
     typedef TYPEID      value_type;
 
 public:
-    type_box_t();
-    type_box_t(const type_box_t& rhs);
+    type_box_t()
+        : m_id( message_map_t::instance()->get_typeid(typeid(T).name()) )
+    {
+    }
 
-    bool operator == (const value_type& rhs) const;
+    type_box_t(const type_box_t& rhs)
+        : m_id( rhs.m_id )
+    {
+    }
+
+    bool operator == (const value_type& rhs) const {
+        return (m_id == rhs);
+    }
 
     template <typename U>
-        bool operator == (const type_box_t< U >& rhs) const;
+        bool operator == (const type_box_t< U >& rhs) const {
+            return (m_id == rhs.m_id);
+        }
 
-    // Преобразование к типу идентификатора
+    // РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ Рє С‚РёРїСѓ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
     operator value_type () const {
         return m_id;
     }
-
-private:
-    // Уникальный идентификатор типа
-    const value_type    m_id;
 };
 
 
@@ -119,7 +129,7 @@ public:
         msg_box_t< MsgT > create(P1 p1) const {
             return _assign_info(new MsgT(p1));
         }
-    
+
     template <typename P1, typename P2>
         msg_box_t< MsgT > create(P1 p1, P2 p2) const {
             return _assign_info(new MsgT(p1, p2));
@@ -140,34 +150,6 @@ public:
             return _assign_info(new MsgT(p1, p2, p3, p4, p5));
         }
 };
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
-template <typename T>
-	type_box_t< T >::type_box_t() :
-		m_id( message_map_t::instance()->get_typeid(typeid(T).name()) )
-	{
-	}
-//-----------------------------------------------------------------------------
-template <typename T>
-	type_box_t< T >::type_box_t(const type_box_t& rhs) :
-		m_id( rhs.m_id )
-	{
-	}
-//-----------------------------------------------------------------------------
-template <typename T>
-	bool type_box_t< T >::operator == (const value_type& rhs) const {
-		return (m_id == rhs);
-	}
-//-----------------------------------------------------------------------------
-template <typename T>
-template <typename U>
-	bool type_box_t< T >::operator == (const type_box_t< U >& rhs) const {
-		return (m_id == rhs.m_id);
-	}
-
 
 } // namespace core
 

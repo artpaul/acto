@@ -99,34 +99,32 @@ public:
 //    единственный поток извлекает объекты из стека и удаляет их.
 template <typename T>
 class stack_t {
-public:
-    typedef T       node_t;
+    T* volatile    m_head;
 
 public:
-    stack_t() :
-        m_head( 0 )
+    stack_t()
+        : m_head(NULL)
     {
     }
 
     bool empty() const {
-        return (m_head == 0);
+        return (m_head == NULL);
     }
 
     sequence_t<T> extract() {
-        node_t*     top;
-
         while (true) {
-            top = m_head;
-            if (top == 0)
-                return 0;
+            T* const top = m_head;
+
+            if (top == NULL)
+                return NULL;
             if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, 0))
                 return top;
         }
     }
 
-    void push(node_t* const node) {
+    void push(T* const node) {
         while (true) {
-            node_t* const top = m_head;
+            T* const top = m_head;
 
             node->next = top;
             if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)node))
@@ -139,23 +137,20 @@ public:
             this->push(item);
     }
 
-    node_t* pop() {
+    T* pop() {
         while (true) {
-            node_t* const top = m_head;
+            T* const top = m_head;
 
             if (top == NULL)
                 return NULL;
             else {
-                node_t* const next = top->next;
+                T* const next = top->next;
 
                 if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)next))
                     return top;
             }
         }
     }
-
-private:
-    node_t* volatile m_head;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

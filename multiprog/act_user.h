@@ -77,7 +77,9 @@ public:
 
 
 
-// Desc: Пользовательский объект (актер)
+/**
+ * Пользовательский объект (актер)
+ */
 class actor_t : public object_t {
 public:
     actor_t();
@@ -203,7 +205,8 @@ ACTO_API void startup();
 //-----------------------------------------------------------------------------
 template <typename T>
 inline instance_t< T > instance() {
-    return instance_t< T >(actor_t(), 0);
+    actor_t a;
+    return instance_t< T >(a, 0);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
@@ -213,7 +216,8 @@ inline instance_t< T > instance(actor_t& context) {
 //-----------------------------------------------------------------------------
 template <typename T>
 inline instance_t< T > instance(const int options) {
-    return instance_t< T >(actor_t(), options);
+    actor_t a;
+    return instance_t< T >(a, options);
 }
 //-----------------------------------------------------------------------------
 template <typename T>

@@ -88,8 +88,8 @@
                     "lock\n\t"
                     "cmpxchg %3,%1\n\t"
                     "sete %0\n\t"
-                    : "=q" (ret), "+m" (*(a)), "+a" (val)
-                    : "r" (compare)
+                    : "=q" (ret), "+m" (*(a)), "+a" (compare)
+                    : "r" (val)
                     : "cc", "memory");
 
                 return ret;

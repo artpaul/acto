@@ -113,9 +113,9 @@ public:
         WaitResult  result = WR_SIGNALED;
         timespec    time;
 
-        clock_gettime(CLOCK_MONOTONIC, &time);
+        clock_gettime(CLOCK_REALTIME, &time);
 
-        time.tv_sec += 1000 * msec;
+        time.tv_sec += msec / float(1000);
 
         pthread_mutex_lock(&m_mutex);
         while (!m_triggered && (result != WR_TIMEOUT && result != WR_ERROR)) {
