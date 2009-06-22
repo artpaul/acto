@@ -113,6 +113,18 @@ object_t::object_t(worker_t* const thread_)
 {
     next = NULL;
 }
+//-----------------------------------------------------------------------------
+void object_t::enqueue(package_t* const msg) {
+    queue.push(msg);
+}
+//-----------------------------------------------------------------------------
+bool object_t::has_messages() const {
+    return !queue.empty();
+}
+//-----------------------------------------------------------------------------
+package_t* object_t::select_message() {
+    return queue.pop();
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -372,7 +384,7 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
         // то ему более нельзя посылать сообщения
         if (!target->deleting) {
             // 1. Поставить сообщение в очередь объекта
-            target->queue.push(package);
+            target->enqueue(package);
             // 2. Подобрать для него необходимый поток
             if (target->thread != NULL)
                 target->thread->wakeup();
@@ -686,22 +698,10 @@ void finalize() {
 }
 
 static void processActorMessages(object_t* const actor) {
-    package_t* package;
-
-    do {
-        package = 0;
-        {
-            Exclusive   lock(actor->cs);
-            // -
-            if (!actor->queue.empty())
-                package = actor->queue.pop();
-        }
-
-        if (package) {
-            doHandle(package);
-            delete package;
-        }
-    } while (package);
+    while (package_t* const package = actor->select_message()) {
+        doHandle(package);
+        delete package;
+    }
 }
 
 void finalizeThread() {
@@ -710,8 +710,7 @@ void finalizeThread() {
             std::set<object_t*>::iterator   i;
             // -
             for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
-                if (!(*i)->queue.empty())
-                    processActorMessages((*i));
+                processActorMessages((*i));
 
                 runtime_t::instance()->destroy_object(*i);
             }

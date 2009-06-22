@@ -38,7 +38,7 @@ public:
     bool process(worker_t* const owner) {
         while (object_t* const obj = m_object) {
             // -
-            if (package_t* const package = obj->queue.pop()) {
+            if (package_t* const package = obj->select_message()) {
                 // Обработать сообщение
                 m_slots.handle(package);
                 // -
@@ -60,7 +60,7 @@ public:
                 {
                     Exclusive	lock(obj->cs);
                     // -
-                    if (obj->queue.empty()) {
+                    if (!obj->has_messages()) {
                         // Если это динамический объект
                         if (obj->thread == NULL) {
                             // -

@@ -198,6 +198,13 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
 
 public:
     object_t(worker_t* const thread_);
+
+    ///
+    void enqueue(package_t* const msg);
+    ///
+    bool has_messages() const;
+    /// Выбрать сообщение из очереди
+    package_t* select_message();
 };
 
 
