@@ -115,15 +115,22 @@ object_t::object_t(worker_t* const thread_)
 }
 //-----------------------------------------------------------------------------
 void object_t::enqueue(package_t* const msg) {
-    queue.push(msg);
+    input_stack.push(msg);
 }
 //-----------------------------------------------------------------------------
 bool object_t::has_messages() const {
-    return !queue.empty();
+    return !local_stack.empty() || !input_stack.empty();
 }
 //-----------------------------------------------------------------------------
 package_t* object_t::select_message() {
-    return queue.pop();
+    if (package_t* const p = local_stack.pop()) {
+        return p;
+    }
+    else {
+        local_stack.push(input_stack.extract());
+        // -
+        return local_stack.pop();
+    }
 }
 
 

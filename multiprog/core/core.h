@@ -23,6 +23,7 @@
 #include <new>
 #include <vector>
 #include <set>
+#include <stack>
 #include <string>
 
 #include <generic/intrlist.h>
@@ -91,7 +92,7 @@ public:
 };
 
 
-// Desc: Обертка для вызова обработчика сообщения конкретного типа
+/** Обертка для вызова обработчика сообщения конкретного типа */
 template <typename MsgT>
 class handler_t : public i_handler {
 public:
@@ -175,6 +176,9 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
         event_t*    event;
     };
 
+    typedef structs::stack_t<package_t>      atomic_stack_t; 
+    typedef structs::localstack_t<package_t> intusive_stack_t; 
+
     // Критическая секция для доступа к полям
     mutex_t             cs;
 
@@ -185,7 +189,8 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     // Список сигналов для потоков, ожидающих уничтожения объекта
     waiter_t*           waiters;
     // Очередь сообщений, поступивших данному объекту
-    MessageQueue        queue;
+    atomic_stack_t      input_stack;
+    intusive_stack_t    local_stack;
     // Count of references to object
     atomic_t            references;
 
@@ -199,16 +204,16 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
 public:
     object_t(worker_t* const thread_);
 
-    ///
+    /// Поставить сообщение в очередь
     void enqueue(package_t* const msg);
-    ///
+    /// Есть ли сообщения
     bool has_messages() const;
     /// Выбрать сообщение из очереди
     package_t* select_message();
 };
 
 
-// Desc: Транспортный пакет для сообщения
+/** Транспортный пакет для сообщения */
 struct ACTO_API package_t : public intrusive_t< package_t > {
     // Данные сообщения
     msg_t* const        data;
