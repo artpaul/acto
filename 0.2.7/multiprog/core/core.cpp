@@ -507,7 +507,7 @@ package_t* runtime_t::create_package(object_t* const target, msg_t* const data, 
     assert(target != 0);
 
     // 1. Создать экземпляр пакета
-    package_t* const result = allocator_t::allocate< package_t >(data, type);
+    package_t* const result = new package_t(data, type);
     // 2.
     result->sender = determine_sender();
     result->target = target;
