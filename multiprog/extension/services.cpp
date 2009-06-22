@@ -238,7 +238,7 @@ void timer_t::cancel(acto::actor_t& actor) {
 void timer_t::setup(acto::actor_t& actor, const int time, const bool once) {
     // Инициализация актера
     if (!m_actor.assigned())
-        m_actor = acto::instance_t< impl::TimerActor >( aoExclusive );
+        m_actor = acto::instance< impl::TimerActor >(aoExclusive);
 
     // -
 	if (actor.assigned()) {

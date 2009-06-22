@@ -23,7 +23,7 @@
         }
 
         inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
-            return InterlockedCompareExchange(a, val, comapre) == compare;
+            return InterlockedCompareExchange(a, val, compare) == compare;
         }
 
         inline long atomic_swap(atomic_t* const a, long b) {

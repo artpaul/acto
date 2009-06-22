@@ -127,7 +127,7 @@ private:
     void doStart(acto::actor_t& sender, const msg_start& msg) {
         for (size_t i = 0; i < LISTENERS; i++) {
             // -
-            acto::actor_t   actor = acto::instance_t< Listener >(self);
+            acto::actor_t   actor = acto::instance< Listener >(self);
             // -
             actor.send(msg_start());
             // -
@@ -155,7 +155,7 @@ int main() {
     acto::startup();
     {
         // -
-        acto::actor_t   analizer = acto::instance_t< Analizer >(acto::aoExclusive);
+        acto::actor_t   analizer = acto::instance< Analizer >(acto::aoExclusive);
         // -
         std::cout << "Statistic is being collected." << std::endl;
         std::cout << "Please wait some seconds..." << std::endl;

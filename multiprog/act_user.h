@@ -64,14 +64,15 @@ protected:
 template <typename ActorT>
 class instance_t : public object_t {
 public:
-    // Стандартная инициализация
-    instance_t();
-    // Указание контекстного объекта для данного
-    instance_t(actor_t& context);
-    // Указание дополнительных параметров для актера
-    instance_t(const int options);
-    // -
-    instance_t(actor_t& context, const int options);
+    instance_t(actor_t& context, const int options) {
+        // 1.
+        ActorT* const value = new ActorT();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        m_object = core::runtime_t::instance()->create_actor(value, options);
+        // -
+        value->context = context;
+        value->self    = actor_t(m_object);
+    }
 };
 
 
@@ -199,56 +200,27 @@ ACTO_API void shutdown();
 ACTO_API void startup();
 
 
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-
-
-///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template <typename ActorT>
-    instance_t< ActorT >::instance_t() : object_t() {
-        // 1.
-        ActorT* const value = new ActorT();
-        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime_t::instance()->createActor(value, 0);
-        // -
-        value->self = actor_t(m_object);
-    }
+template <typename T>
+inline instance_t< T > instance() {
+    return instance_t< T >(actor_t(), 0);
+}
 //-----------------------------------------------------------------------------
-template <typename ActorT>
-    instance_t< ActorT >::instance_t(actor_t& context) : object_t() {
-        // 1.
-        ActorT* const value = new ActorT();
-        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime_t::instance()->createActor(value, 0);
-        // -
-        value->context = context;
-        value->self    = actor_t(m_object);
-    }
+template <typename T>
+inline instance_t< T > instance(actor_t& context) {
+    return instance_t< T >(context, 0);
+}
 //-----------------------------------------------------------------------------
-template <typename ActorT>
-    instance_t< ActorT >::instance_t(const int options) : object_t() {
-        // 1.
-        ActorT* const value = new ActorT();
-        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime_t::instance()->createActor(value, options);
-        // -
-        value->self = actor_t(m_object);
-    }
+template <typename T>
+inline instance_t< T > instance(const int options) {
+    return instance_t< T >(actor_t(), options);
+}
 //-----------------------------------------------------------------------------
-template <typename ActorT>
-    instance_t< ActorT >::instance_t(actor_t& context, const int options) {
-        // 1.
-        ActorT* const value = new ActorT();
-        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime_t::instance()->createActor(value, options);
-        // -
-        value->context = context;
-        value->self    = actor_t(m_object);
-    }
+template <typename T>
+inline instance_t< T > instance(actor_t& context, const int options) {
+    return instance_t< T >(context, options);
+}
 
-}; // namespace acto
+} // namespace acto
 
 #endif // __multiprogs__act_user_h__

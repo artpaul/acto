@@ -221,11 +221,6 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 // Desc: Данные среды выполнения
 class runtime_t {
-    struct resources_t {
-        // Для контейнера заголовков актеров
-        mutex_t     actors;
-    };
-
     // Тип множества актеров
     typedef std::set< object_t* >           Actors;
     // -
@@ -258,9 +253,6 @@ public:
 /* Общие для всех потоков данные */
    // Очередь объектов, которым пришли сообщения
     structs::queue_t< object_t > m_queue;
-    // Параметры потоков
-    workers_t   m_workers;
-    event_t     m_evclean;
 
 public:
     runtime_t();
@@ -272,9 +264,9 @@ public:
     // -
     void        acquire(object_t* const obj);
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
-    object_t*   createActor(base_t* const impl, const int options = 0);
+    object_t*   create_actor(base_t* const impl, const int options = 0);
     // Уничтожить объект
-    void        destroyObject(object_t* const object);
+    void        destroy_object(object_t* const object);
     // -
     void        join(object_t* const obj);
     // -
@@ -296,7 +288,7 @@ private:
     // Деструткор для пользовательских объектов (актеров)
     void        destruct_actor(object_t* const actor);
     // Определить отправителя сообщения
-    object_t*   determineSender();
+    object_t*   determine_sender();
     // Цикл выполнения планировщика
     void        execute(void*);
     // -
@@ -312,21 +304,23 @@ private:
     long                m_processors;
     // Экземпляр GC потока
     thread_t*           m_cleaner;
+    // -
+    HeaderStack         m_deleted;
     // Экземпляр системного потока
     thread_t*           m_scheduler;
     // -
+    event_t             m_evclean;
     event_t             m_event;
     event_t             m_evworker;
-
     // -
     event_t             m_evnoactors;
-    event_t             m_evnoworkers;
-
-    HeaderStack         m_deleted;
+    event_t             m_evnoworkers;    
+    // Параметры потоков
+    workers_t           m_workers;
 
 /* Защищаемые блокировкой данные */
     // Критическая секция для доступа к полям
-    resources_t         m_cs;
+    mutex_t             m_cs;
     // Текущее множество актеров
     Actors              m_actors;
 };

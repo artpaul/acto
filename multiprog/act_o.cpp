@@ -14,7 +14,7 @@ ACTO_API void destroy(object_t& object) {
     if (core::object_t* const obj = (core::object_t*)atomic_swap((atomic_t*)&object.m_object, NULL)) {
         // Освободить ссылку на объект и удалить его
         if (core::runtime_t::instance()->release(obj) > 0)
-            core::runtime_t::instance()->destroyObject(obj);
+            core::runtime_t::instance()->destroy_object(obj);
     }
 }
 //-----------------------------------------------------------------------------

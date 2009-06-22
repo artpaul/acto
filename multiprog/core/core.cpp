@@ -163,7 +163,7 @@ void doHandle(package_t* const package) {
             threadCtx->sender = 0;
 
             if (impl->m_terminating)
-                runtime_t::instance()->destroyObject(obj);
+                runtime_t::instance()->destroy_object(obj);
         }
     }
     catch (...) {
@@ -205,7 +205,7 @@ void runtime_t::acquire(object_t* const obj) {
     atomic_increment(&obj->references);
 }
 //-----------------------------------------------------------------------------
-object_t* runtime_t::createActor(base_t* const impl, const int options) {
+object_t* runtime_t::create_actor(base_t* const impl, const int options) {
     assert(impl != 0);
 
     // Флаг соблюдения предусловий
@@ -221,7 +221,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
 
     // 2. Проверка истинности предусловий
     preconditions = true &&
-    // Поток зарзервирован
+        // Поток зарзервирован
         (options & acto::aoExclusive) ? (worker != 0) : (worker == 0);
 
     // 3. Создание актера
@@ -240,7 +240,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
                 threadCtx->actors.insert(result);
             }
             else {
-                Exclusive  lock(m_cs.actors);
+                Exclusive  lock(m_cs);
                 // -
                 m_actors.insert(result);
                 m_evnoactors.reset();
@@ -263,7 +263,7 @@ object_t* runtime_t::createActor(base_t* const impl, const int options) {
     return 0;
 }
 //-----------------------------------------------------------------------------
-void runtime_t::destroyObject(object_t* const obj) {
+void runtime_t::destroy_object(object_t* const obj) {
     assert(obj != 0);
 
     // -
@@ -399,10 +399,10 @@ void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type
 void runtime_t::shutdown() {
     // 1. Инициировать процедуру удаления для всех оставшихся объектов
     {
-        Exclusive   lock(m_cs.actors);
+        Exclusive   lock(m_cs);
         // -
         for (Actors::iterator i = m_actors.begin(); i != m_actors.end(); ++i)
-            destroyObject( (*i) );
+            destroy_object(*i);
     }
     m_event.signaled();
     m_evworker.signaled();
@@ -491,9 +491,9 @@ package_t* runtime_t::create_package(object_t* const target, msg_t* const data, 
     assert(target != 0);
 
     // 1. Создать экземпляр пакета
-    package_t* const result = allocator_t::allocate< package_t >(data, type); //new package_t(data, type);
+    package_t* const result = allocator_t::allocate< package_t >(data, type);
     // 2.
-    result->sender = determineSender();
+    result->sender = determine_sender();
     result->target = target;
     // 3.
     acquire(result->target);
@@ -537,7 +537,7 @@ void runtime_t::destruct_actor(object_t* const actor) {
 
     // Удалить регистрацию объекта
     if (!actor->binded) {
-        Exclusive   lock(m_cs.actors);
+        Exclusive   lock(m_cs);
         // -
         m_actors.erase(actor);
         // -
@@ -550,7 +550,7 @@ void runtime_t::destruct_actor(object_t* const actor) {
         delete actor;
 }
 //-----------------------------------------------------------------------------
-object_t* runtime_t::determineSender() {
+object_t* runtime_t::determine_sender() {
     return threadCtx->sender;
 }
 //-----------------------------------------------------------------------------
@@ -652,18 +652,16 @@ void runtime_t::pushIdle(worker_t* const worker) {
 //                       ИНТЕРФЕЙСНЫЕ МЕТОДЫ ЯДРА                            //
 ///////////////////////////////////////////////////////////////////////////////
 
-static long counter = 0;
+static atomic_t counter = 0;
 
 //-----------------------------------------------------------------------------
 // Desc: Инициализация библиотеки.
 //-----------------------------------------------------------------------------
 void initialize() {
-    if (counter == 0) {
+    if (atomic_increment(&counter) > 0) {
         core::initializeThread(false);
         runtime_t::instance()->startup();
     }
-    // -
-    atomic_increment(&counter);
 }
 
 void initializeThread(const bool isInternal) {
@@ -683,9 +681,7 @@ void initializeThread(const bool isInternal) {
 //-----------------------------------------------------------------------------
 void finalize() {
     if (counter > 0) {
-        atomic_decrement(&counter);
-        // -
-        if (counter == 0) {
+        if (atomic_decrement(&counter) == 0) {
             finalizeThread();
             runtime_t::instance()->shutdown();
         }
@@ -720,7 +716,7 @@ void finalizeThread() {
                 if (!(*i)->queue.empty())
                     processActorMessages((*i));
 
-                runtime_t::instance()->destroyObject((*i));
+                runtime_t::instance()->destroy_object(*i);
             }
             // -
             delete threadCtx, threadCtx = 0;
