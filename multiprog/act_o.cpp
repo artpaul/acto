@@ -4,7 +4,7 @@
 
 namespace acto {
 
-static volatile unsigned int	startup_counter = 0;
+static atomic_t startup_counter = 0;
 
 
 //-----------------------------------------------------------------------------
@@ -40,11 +40,8 @@ ACTO_API void process_messages() {
 //-----------------------------------------------------------------------------
 ACTO_API void shutdown() {
     if (startup_counter > 0) {
-        startup_counter--;
         // Заврешить работу ядра
-        if (startup_counter == 0) {
-            // -
-            services::finalize();
+        if (atomic_decrement(&startup_counter) == 0) {
             // -
             core::finalize();
         }
@@ -55,14 +52,10 @@ ACTO_API void shutdown() {
 // Desc: Инициализировать библиотеку
 //-----------------------------------------------------------------------------
 ACTO_API void startup() {
-    if (startup_counter == 0) {
+    if (atomic_increment(&startup_counter) == 1) {
         // Инициализировать ядро
         core::initialize();
-
-        // Инициализировать сервисные компоненты
-        services::initialize();
     }
-    startup_counter++;
 }
 
 

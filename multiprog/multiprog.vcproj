@@ -303,10 +303,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\extension\services.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\system\thread.cpp"
 				>
 			</File>
@@ -330,10 +326,6 @@
 			</File>
 			<File
 				RelativePath=".\acto.h"
-				>
-			</File>
-			<File
-				RelativePath=".\extension\services.h"
 				>
 			</File>
 			<Filter
@@ -375,10 +367,6 @@
 			<Filter
 				Name="core"
 				>
-				<File
-					RelativePath=".\core\alloc.h"
-					>
-				</File>
 				<File
 					RelativePath=".\core\core.h"
 					>
