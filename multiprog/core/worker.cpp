@@ -6,7 +6,6 @@ namespace acto {
 
 namespace core {
 
-extern void destroy_object_body(object_t* obj);
 
 /**
 */
@@ -49,7 +48,7 @@ public:
                 if (!m_object->thread) {
                     if ((clock() - m_start) > m_time) {
                         // -
-                        runtime_t::instance()->m_queue.push(obj);
+                        runtime_t::instance()->push_object(obj);
                         m_object = NULL;
                     }
                 }
@@ -58,7 +57,7 @@ public:
                 bool deleting = false;
                 // -
                 {
-                    Exclusive	lock(obj->cs);
+                    MutexLocker	lock(obj->cs);
                     // -
                     if (!obj->has_messages()) {
                         // Если это динамический объект
@@ -82,7 +81,7 @@ public:
                         if (obj->deleting) {
                             assert(!obj->scheduled);
                             // -
-                            destroy_object_body(obj);
+                            runtime_t::instance()->destroy_object_body(obj);
                             // -
                             if (!obj->freeing && (obj->references == 0)) {
                                 obj->freeing = true;
@@ -99,7 +98,7 @@ public:
             // Получить новый объект для обработки,
             // если он есть в очереди
              if (m_object == NULL) {
-                m_object = runtime_t::instance()->m_queue.pop();
+                m_object = runtime_t::instance()->pop_object();
                 // -
                 if (m_object)
                     m_start = clock();

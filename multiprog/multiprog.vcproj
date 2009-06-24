@@ -303,6 +303,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\core\runtime.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\extension\services.cpp"
 				>
 			</File>
@@ -397,6 +401,10 @@
 				</File>
 				<File
 					RelativePath=".\core\thread_pool.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\types.h"
 					>
 				</File>
 				<File

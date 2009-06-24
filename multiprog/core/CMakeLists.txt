@@ -4,4 +4,5 @@ ADD_LIBRARY (acto-core STATIC
     message.cpp
     worker.cpp
     thread_pool.cpp
+    runtime.cpp
 )

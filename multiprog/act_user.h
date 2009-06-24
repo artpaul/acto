@@ -20,7 +20,7 @@ namespace acto {
 namespace detail {
 
 template <typename Impl>
-core::object_t* make_instance(actor_t& context, const int options) {
+core::object_t* make_instance(const actor_t& context, const int options) {
     core::object_t* result = NULL;
     // 1.
     Impl* const value = new Impl();
@@ -42,42 +42,24 @@ core::object_t* make_instance(actor_t& context, const int options) {
 using core::msg_t;
 using core::message_class_t;
 
-/**
- * Базовый класс для всех интерфейсных объектов
- */
-class object_t {
-    // -
-    friend inline core::object_t* dereference(object_t& object);
-    friend void join(actor_t& obj);
-    friend void destroy(object_t& object);
-
-public:
-    ~object_t();
-
-public:
-    // Инициализирован ли текущий объект
-    bool assigned() const;
-
-protected:
-    object_t();
-    object_t(core::object_t* const an_object, bool acquire = true);
-    object_t(const object_t& rhs);
-
-protected:
-    // Присваивает новое значение текущему объекту
-    void assign(const object_t& rhs);
-    // -
-    bool same(const object_t& rhs) const;
-
-protected:
-    core::object_t* volatile    m_object;
-};
-
 
 /**
  * Пользовательский объект (актер)
  */
-class actor_t : public object_t {
+class actor_t {
+    // -
+    friend inline core::object_t* dereference(actor_t& object);
+    friend void join(actor_t& obj);
+    friend void destroy(actor_t& object);
+
+private:
+    core::object_t* volatile  m_object;
+
+    /// Присваивает новое значение текущему объекту
+    void assign(const actor_t& rhs);
+    /// 
+    bool same(const actor_t& rhs) const;
+
 public:
     actor_t();
     // -
@@ -85,7 +67,12 @@ public:
     // -
     actor_t(const actor_t& rhs);
 
+    ~actor_t();
+
 public:
+    /// Инициализирован ли текущий объект
+    bool assigned() const;
+
     // Послать сообщение объекту
     template <typename MsgT>
         void send(const MsgT& msg) const {
@@ -141,7 +128,7 @@ public:
  */
 class implementation_t : public core::base_t {
     template <typename Impl> 
-        friend core::object_t* detail::make_instance(actor_t& context, const int options);
+        friend core::object_t* detail::make_instance(const actor_t& context, const int options);
 
 protected:
     // Ссылка на контекстный объект для данного
@@ -163,7 +150,7 @@ struct msg_time : public msg_t { };
 ///////////////////////////////////////////////////////////////////////////////
 
 /* Уничтожить указанный объект */
-ACTO_API void destroy(object_t& object);
+ACTO_API void destroy(actor_t& object);
 
 //
 ACTO_API void finalize_thread();
