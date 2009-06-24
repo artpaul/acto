@@ -368,7 +368,15 @@
 					>
 				</File>
 				<File
+					RelativePath=".\generic\queue.h"
+					>
+				</File>
+				<File
 					RelativePath=".\generic\sequence.h"
+					>
+				</File>
+				<File
+					RelativePath=".\generic\stack.h"
 					>
 				</File>
 			</Filter>
@@ -389,10 +397,6 @@
 				</File>
 				<File
 					RelativePath=".\core\runtime.h"
-					>
-				</File>
-				<File
-					RelativePath=".\core\struct.h"
 					>
 				</File>
 				<File

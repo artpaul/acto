@@ -2,9 +2,9 @@
 #ifndef sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
 #define sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
 
-namespace acto {
-
-namespace core {
+namespace acto { 
+    
+namespace generics {
 
 /** */
 template <typename T>
@@ -35,7 +35,7 @@ public:
     }
 };
 
-} // namespace core
+} // namespace generics
 
 } // namespace acto
 

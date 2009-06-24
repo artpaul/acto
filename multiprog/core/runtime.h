@@ -4,7 +4,7 @@
 
 #include <set>
 
-#include "struct.h"
+#include <generic/stack.h>
 
 namespace acto {
 
@@ -21,15 +21,15 @@ struct package_t;
  */
 class runtime_t {
     // Тип множества актеров
-    typedef std::set< object_t* >           Actors;
+    typedef std::set< object_t* >               Actors;
     // -
-    typedef structs::queue_t< object_t >    HeaderQueue;
+    typedef generics::queue_t< object_t >       HeaderQueue;
     // Стек заголовков объектов
-    typedef structs::stack_t< object_t >    HeaderStack;
+    typedef generics::mpsc_stack_t< object_t >  HeaderStack;
     // Очередь вычислителей
-    typedef structs::queue_t< worker_t >    WorkerQueue;
+    typedef generics::queue_t< worker_t >       WorkerQueue;
     // -
-    typedef structs::stack_t< worker_t >    WorkerStack;
+    typedef generics::mpsc_stack_t< worker_t >  WorkerStack;
 
     //
     struct workers_t {
@@ -51,7 +51,7 @@ class runtime_t {
 public:
 /* Общие для всех потоков данные */
    // Очередь объектов, которым пришли сообщения
-    structs::queue_t< object_t > m_queue;
+    generics::queue_t< object_t > m_queue;
 
 public:
     runtime_t();

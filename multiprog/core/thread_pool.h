@@ -18,7 +18,7 @@
 #include <system/atomic.h>
 #include <system/event.h>
 
-#include <core/struct.h>
+#include <generic/queue.h>
 
 namespace acto {
 
@@ -33,7 +33,7 @@ class thread_pool_t {
     friend class thread_worker_t;
 
     typedef fastdelegate::FastDelegate< void (void*) >  callback_t;
-    typedef core::structs::queue_t< thread_worker_t >   idle_queue_t;
+    typedef generics::queue_t< thread_worker_t >        idle_queue_t;
 
 public:
     thread_pool_t();

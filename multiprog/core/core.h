@@ -28,11 +28,12 @@
 
 #include <generic/intrlist.h>
 #include <generic/delegates.h>
+#include <generic/stack.h>
+#include <generic/queue.h>
 
 #include <system/thread.h>
 #include <system/event.h>
 
-#include "struct.h"
 #include "alloc.h"
 #include "message.h"
 #include "runtime.h"
@@ -74,7 +75,7 @@ public:
 // Карта обработчиков сообщений
 typedef std::vector< HandlerItem* >         Handlers;
 // Тип очереди сообщений
-typedef structs::queue_t< package_t >       MessageQueue;
+typedef generics::queue_t< package_t >      MessageQueue;
 // -
 typedef MutexLocker                         Exclusive;
 
@@ -176,8 +177,8 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
         event_t*    event;
     };
 
-    typedef structs::stack_t<package_t>      atomic_stack_t; 
-    typedef structs::localstack_t<package_t> intusive_stack_t; 
+    typedef generics::mpsc_stack_t<package_t> atomic_stack_t; 
+    typedef generics::stack_t<package_t>      intusive_stack_t; 
 
     // Критическая секция для доступа к полям
     mutex_t             cs;

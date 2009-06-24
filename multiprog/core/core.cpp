@@ -479,7 +479,7 @@ void runtime_t::cleaner(void*) {
         //
         // 1. Извлечение потоков, отмеченых для удаления
         //
-        structs::localstack_t< worker_t >   queue(m_workers.deleted.extract());
+        generics::stack_t< worker_t >   queue(m_workers.deleted.extract());
         // Удалить все потоки
         while (worker_t* const item = queue.pop()) {
             delete item;
@@ -490,7 +490,7 @@ void runtime_t::cleaner(void*) {
         //
         // 2.
         //
-        structs::localstack_t< object_t >   objects(m_deleted.extract());
+        generics::stack_t< object_t >   objects(m_deleted.extract());
         // Удлаить заголовки объектов
         while (object_t* const item = objects.pop())
             destruct_actor(item);

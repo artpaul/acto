@@ -2,6 +2,7 @@
 #include <memory>
 
 #include <generic/intrlist.h>
+#include <generic/stack.h>
 #include <system/thread.h>
 
 #include "thread_pool.h"
@@ -98,7 +99,7 @@ void thread_pool_t::collect_one() {
 //-----------------------------------------------------------------------------
 void thread_pool_t::collect_all() {
     // TN: Вызов данного метода может осуществляться из разных потоков
-    core::structs::localstack_t< thread_worker_t > queue(m_idles.extract());
+    generics::stack_t< thread_worker_t > queue(m_idles.extract());
     // Удалить все потоки
     while (thread_worker_t* const item = queue.pop())
         delete_worker(item);

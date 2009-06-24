@@ -19,7 +19,6 @@
 #include <generic/intrlist.h>
 #include <generic/delegates.h>
 
-#include "struct.h"
 #include "thread_pool.h"
 
 namespace acto {
