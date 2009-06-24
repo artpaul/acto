@@ -11,16 +11,33 @@
 //     implied warranty.                                                     //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !defined __multiprogs__act_user_h__
-#define __multiprogs__act_user_h__
+#ifndef act_user_h_02821F1061B24ad28024E630DDF1DC9E
+#define act_user_h_02821F1061B24ad28024E630DDF1DC9E
 
 
 namespace acto {
 
+namespace detail {
+
+template <typename Impl>
+core::object_t* make_instance(actor_t& context, const int options) {
+    core::object_t* result = NULL;
+    // 1.
+    Impl* const value = new Impl();
+    // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+    result = core::runtime_t::instance()->create_actor(value, options);
+    // -
+    value->context = context;
+    value->self    = actor_t(result);
+    // -
+    return result;
+}
+
+} // namespace detail
+
 ///////////////////////////////////////////////////////////////////////////////
 //                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
 ///////////////////////////////////////////////////////////////////////////////
-
 
 using core::msg_t;
 using core::message_class_t;
@@ -43,7 +60,7 @@ public:
 
 protected:
     object_t();
-    object_t(core::object_t* const an_object);
+    object_t(core::object_t* const an_object, bool acquire = true);
     object_t(const object_t& rhs);
 
 protected:
@@ -57,26 +74,6 @@ protected:
 };
 
 
-
-/**
- * Класс предназначен для создания пользовательских экземпляров актеров.
- */
-template <typename ActorT>
-class instance_t : public object_t {
-public:
-    instance_t(actor_t& context, const int options) {
-        // 1.
-        ActorT* const value = new ActorT();
-        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        m_object = core::runtime_t::instance()->create_actor(value, options);
-        // -
-        value->context = context;
-        value->self    = actor_t(m_object);
-    }
-};
-
-
-
 /**
  * Пользовательский объект (актер)
  */
@@ -84,15 +81,9 @@ class actor_t : public object_t {
 public:
     actor_t();
     // -
-    explicit actor_t(core::object_t* const an_object);
+    explicit actor_t(core::object_t* const an_object, bool acquire = true);
     // -
     actor_t(const actor_t& rhs);
-
-    template <typename ActorT>
-        actor_t(const instance_t< ActorT >& inst) : object_t(inst)
-        {
-            // -
-        }
 
 public:
     // Послать сообщение объекту
@@ -138,13 +129,6 @@ public:
 /* Операторы */
 public:
     actor_t& operator = (const actor_t& rhs);
-
-    template <typename ActorT>
-        actor_t& operator = (const instance_t< ActorT >& inst) {
-            object_t::assign(inst);
-            return *this;
-        }
-
     // -
     bool operator == (const actor_t& rhs) const;
     // -
@@ -152,12 +136,12 @@ public:
 };
 
 
-
 /**
  * Базовый класс для реализации пользовательских объектов (актеров)
  */
 class implementation_t : public core::base_t {
-    template <typename ActorT> friend class instance_t;
+    template <typename Impl> 
+        friend core::object_t* detail::make_instance(actor_t& context, const int options);
 
 protected:
     // Ссылка на контекстный объект для данного
@@ -204,27 +188,27 @@ ACTO_API void startup();
 
 //-----------------------------------------------------------------------------
 template <typename T>
-inline instance_t< T > instance() {
+inline actor_t instance() {
     actor_t a;
-    return instance_t< T >(a, 0);
+    return actor_t(detail::make_instance< T >(a, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline instance_t< T > instance(actor_t& context) {
-    return instance_t< T >(context, 0);
+inline actor_t instance(actor_t& context) {
+    return actor_t(detail::make_instance< T >(context, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline instance_t< T > instance(const int options) {
+inline actor_t instance(const int options) {
     actor_t a;
-    return instance_t< T >(a, options);
+    return actor_t(detail::make_instance< T >(a, options), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline instance_t< T > instance(actor_t& context, const int options) {
-    return instance_t< T >(context, options);
+inline actor_t instance(actor_t& context, const int options) {
+    return actor_t(detail::make_instance< T >(context, options), false);
 }
 
 } // namespace acto
 
-#endif // __multiprogs__act_user_h__
+#endif // _act_user_h_02821F1061B24ad28024E630DDF1DC9E

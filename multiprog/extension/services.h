@@ -9,13 +9,10 @@
 //     The authors make no representations about the suitability of this     //
 //     software for any purpose. It is provided "as is" without express or   //
 //     implied warranty.                                                     //
-//---------------------------------------------------------------------------//
-// File: act_services.h                                                      //
-//     Дополнительные сервисы.                                               //
 ///////////////////////////////////////////////////////////////////////////////
 
-#if !defined ( __multiprog__act_services_h__ )
-#define __multiprog__act_services_h__
+#ifndef acto_services_h_86A045F6D3CC4790A6E798C909C88279
+#define acto_services_h_86A045F6D3CC4790A6E798C909C88279
 
 #include <system/platform.h>
 
@@ -76,14 +73,10 @@ private:
 // Сервис таймера
 extern timer_t  timer;
 
-#endif
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//                        РЕАЛИЗАЦИЯ ВСТРАИВАЕМЫХ И ШАБЛОННЫХ МЕТОДОВ                            //
-///////////////////////////////////////////////////////////////////////////////////////////////////
+#endif // ACTO_WIN
 
 }; // namespace services
 
 }; // namespace acto
 
-#endif // __multiprog__act_services_h__
+#endif // acto_services_h_86A045F6D3CC4790A6E798C909C88279

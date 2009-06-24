@@ -1,14 +1,12 @@
 
-#include <acto.h>
-
+#include <core/core.h>
+#include "act_user.h"
+#include <extension/services.h>
 
 namespace acto {
 
-static volatile unsigned int	startup_counter = 0;
+static atomic_t startup_counter = 0;
 
-
-//-----------------------------------------------------------------------------
-// Desc:
 //-----------------------------------------------------------------------------
 ACTO_API void destroy(object_t& object) {
     if (core::object_t* const obj = (core::object_t*)atomic_swap((atomic_t*)&object.m_object, NULL)) {
@@ -34,9 +32,6 @@ ACTO_API void join(actor_t& obj) {
 ACTO_API void process_messages() {
     core::processBindedActors();
 }
-
-//-----------------------------------------------------------------------------
-// Desc:
 //-----------------------------------------------------------------------------
 ACTO_API void shutdown() {
     if (startup_counter > 0) {
@@ -50,9 +45,6 @@ ACTO_API void shutdown() {
         }
     }
 }
-
-//-----------------------------------------------------------------------------
-// Desc: Инициализировать библиотеку
 //-----------------------------------------------------------------------------
 ACTO_API void startup() {
     if (startup_counter == 0) {
@@ -74,10 +66,10 @@ object_t::object_t() :
 {
 }
 //-----------------------------------------------------------------------------
-object_t::object_t(core::object_t* const an_object) :
+object_t::object_t(core::object_t* const an_object, bool acquire) :
     m_object(an_object)
 {
-    if (m_object)
+    if (m_object && acquire)
         core::runtime_t::instance()->acquire(m_object);
 }
 //-----------------------------------------------------------------------------
@@ -92,12 +84,10 @@ object_t::~object_t() {
     if (m_object)
         core::runtime_t::instance()->release(m_object);
 }
-
 //-----------------------------------------------------------------------------
 bool object_t::assigned() const {
     return (m_object != 0);
 }
-
 //-----------------------------------------------------------------------------
 void object_t::assign(const object_t& rhs) {
     // 1.
@@ -121,8 +111,8 @@ actor_t::actor_t() : object_t()
 {
 }
 //-----------------------------------------------------------------------------
-actor_t::actor_t(core::object_t* const an_object) :
-    object_t(an_object)
+actor_t::actor_t(core::object_t* const an_object, bool acquire) :
+    object_t(an_object, acquire)
 {
 
 }
@@ -147,6 +137,5 @@ bool actor_t::operator == (const actor_t& rhs) const {
 bool actor_t::operator != (const actor_t& rhs) const {
     return !object_t::same( rhs );
 }
-
 
 }; // namespace acto

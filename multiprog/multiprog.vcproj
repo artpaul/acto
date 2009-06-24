@@ -283,7 +283,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\act_o.cpp"
+				RelativePath=".\acto.cpp"
 				>
 			</File>
 			<File
@@ -330,10 +330,6 @@
 			</File>
 			<File
 				RelativePath=".\acto.h"
-				>
-			</File>
-			<File
-				RelativePath=".\extension\services.h"
 				>
 			</File>
 			<Filter
@@ -405,6 +401,14 @@
 				</File>
 				<File
 					RelativePath=".\core\worker.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="extension"
+				>
+				<File
+					RelativePath=".\extension\services.h"
 					>
 				</File>
 			</Filter>
