@@ -177,8 +177,8 @@ private:
     // Цикл выполнения планировщика
     void execute(void*) {
         // -
-        u_int   newWorkerTimeout = 2;
-        int     lastCleanupTime  = clock();
+        int newWorkerTimeout = 2;
+        int lastCleanupTime  = clock();
 
         while (m_active) {
             while(!m_queue.empty()) {
@@ -270,7 +270,7 @@ private:
     }
 
 public:
-    impl() 
+    impl()
         : m_active     (false)
         , m_processors (1)
         , m_cleaner    (NULL)
@@ -554,7 +554,7 @@ public:
         }
 
         assert(m_workers.count == 0);
-        assert(m_actors.size() == 0); 
+        assert(m_actors.size() == 0);
     }
     //-----------------------------------------------------------------------------
     // Начать выполнение
@@ -577,7 +577,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-runtime_t::runtime_t() 
+runtime_t::runtime_t()
     : m_pimpl(new impl())
 {
     // -
