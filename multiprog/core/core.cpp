@@ -14,7 +14,7 @@ using fastdelegate::FastDelegate;
 using fastdelegate::MakeDelegate;
 
 //
-TLS_VARIABLE thread_context_t* threadCtx = 0;
+TLS_VARIABLE thread_context_t* threadCtx = NULL;
 
 
 ///////////////////////////////////////////////////////////////////////////////
