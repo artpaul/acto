@@ -42,12 +42,13 @@ class runtime_t::impl {
     };
 
     // Максимальное кол-во рабочих потоков в системе
-    static const unsigned int MAX_WORKERS = 512;
+    static const size_t     MAX_WORKERS   = 512;
+    // Максимальное кол-во возможных модулей
+    static const size_t     MODULES_COUNT = 32;
 
 private:
-/* Внутренние данные планировщика*/
-    volatile bool       m_active;
-    volatile bool       m_terminating;
+    /// Список зарегистрированных модулей
+    module_t*           m_modules[MODULES_COUNT];
     // Количество физических процессоров (ядер) в системе
     long                m_processors;
     // Экземпляр GC потока
@@ -67,8 +68,11 @@ private:
     event_t             m_evnoworkers;
     // Параметры потоков
     workers_t           m_workers;
+    volatile bool       m_active;
+    volatile bool       m_terminating;
 
 /* Защищаемые блокировкой данные */
+
     // Критическая секция для доступа к полям
     mutex_t             m_cs;
     // Текущее множество актеров
@@ -132,7 +136,7 @@ private:
             worker_t::Slots     slots;
             // -
             slots.deleted = fastdelegate::MakeDelegate(this, &impl::pushDelete);
-            slots.handle  = worker_t::HandlePackage(&base_t::handle_message);
+            slots.handle  = fastdelegate::MakeDelegate(this, &impl::handle_message);
             slots.idle    = fastdelegate::MakeDelegate(this, &impl::pushIdle);
             // -
             return new core::worker_t(slots, thread_pool_t::instance());
@@ -280,6 +284,9 @@ public:
         , m_terminating(false)
     {
         m_processors = NumberOfProcessors();
+
+        for (size_t i = 0; i < MODULES_COUNT; ++i)
+            m_modules[i] = NULL;
     }
 
 public:
@@ -291,13 +298,13 @@ public:
     }
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
-    object_t* create_actor(base_t* const body, const int options = 0) {
-        assert(body != 0);
+    object_t* create_actor(actor_body_t* const body, const int options, const ui8 module) {
+        assert(body != NULL);
 
         // Флаг соблюдения предусловий
         bool        preconditions = false;
         // Зарезервированный поток
-        worker_t*   worker        = 0;
+        worker_t*   worker        = NULL;
 
         // !!! aoExclusive aoBindToThread - не могут быть вместе
 
@@ -314,7 +321,7 @@ public:
         if (preconditions) {
             try {
                 // -
-                object_t* const result = new core::object_t(worker);
+                object_t* const result = new core::object_t(worker, module);
                 // -
                 result->impl       = body;
                 result->references = 1;
@@ -410,6 +417,14 @@ public:
             obj->waiters = NULL;
         }
     }
+    //-------------------------------------------------------------------------
+    void handle_message(package_t* const package) {
+        assert(package->target != NULL);
+
+        const ui8 id = package->target->module;
+
+        m_modules[id]->handle_message(package);
+    }
     //-----------------------------------------------------------------------------
     // -
     void join(object_t* const obj) {
@@ -441,6 +456,8 @@ public:
     // -
     void push_object(object_t* obj) {
         m_queue.push(obj);
+
+        m_event.signaled();
     }
     //-----------------------------------------------------------------------------
     // -
@@ -483,40 +500,20 @@ public:
         return result;
     }
     //-----------------------------------------------------------------------------
+    void register_module(module_t* const inst, const ui8 id) {
+        assert(inst != NULL && m_modules[id] == NULL);
+
+        m_modules[id] = inst;
+    }
+    //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
     void send(object_t* const target, msg_t* const msg, const TYPEID type) {
-        bool undelivered = true;
+        assert(m_modules[target->module] != NULL);
 
-        // 1. Создать пакет
+        // Создать пакет
         core::package_t* const package = create_package(target, msg, type);
-        // 2.
-        {
-            // Эксклюзивный доступ
-            MutexLocker lock(target->cs);
-
-            // Если объект отмечен для удалдения,
-            // то ему более нельзя посылать сообщения
-            if (!target->deleting) {
-                // 1. Поставить сообщение в очередь объекта
-                target->enqueue(package);
-                // 2. Подобрать для него необходимый поток
-                if (target->thread != NULL)
-                    target->thread->wakeup();
-                else {
-                    if (!target->binded && !target->scheduled) {
-                        target->scheduled = true;
-                        // 1. Добавить объект в очередь
-                        m_queue.push(target);
-                        // 2. Разбудить планировщик для обработки поступившего задания
-                        m_event.signaled();
-                    }
-                }
-                undelivered = false;
-            }
-        }
-        // 3.
-        if (undelivered)
-            delete package;
+        // -
+        m_modules[target->module]->send_message(package);
     }
     //-----------------------------------------------------------------------------
     // Завершить выполнение
@@ -554,6 +551,9 @@ public:
             delete m_scheduler, m_scheduler = 0;
             delete m_cleaner, m_cleaner = 0;
         }
+        // -
+        for (size_t i = 0; i < MODULES_COUNT; ++i)
+            m_modules[i] = NULL;
 
         assert(m_workers.count == 0);
         assert(m_actors.size() == 0);
@@ -604,8 +604,8 @@ void runtime_t::acquire(object_t* const obj) {
     m_pimpl->acquire(obj);
 }
 //-----------------------------------------------------------------------------
-object_t* runtime_t::create_actor(base_t* const body, const int options) {
-    return m_pimpl->create_actor(body, options);
+object_t* runtime_t::create_actor(actor_body_t* const body, const int options, const ui8 module) {
+    return m_pimpl->create_actor(body, options, module);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::destroy_object(object_t* const obj) {
@@ -614,6 +614,10 @@ void runtime_t::destroy_object(object_t* const obj) {
 //-----------------------------------------------------------------------------
 void runtime_t::destroy_object_body(object_t* obj) {
     m_pimpl->destroy_object_body(obj);
+}
+//-----------------------------------------------------------------------------
+void runtime_t::handle_message(package_t* const package) {
+    m_pimpl->handle_message(package);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::join(object_t* const obj) {
@@ -630,6 +634,10 @@ void runtime_t::push_object(object_t* obj) {
 //-----------------------------------------------------------------------------
 long runtime_t::release(object_t* const obj) {
     return m_pimpl->release(obj);
+}
+//-----------------------------------------------------------------------------
+void runtime_t::register_module(module_t* const inst, const ui8 id) {
+    m_pimpl->register_module(inst, id);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type) {

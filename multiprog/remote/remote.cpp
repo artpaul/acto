@@ -22,7 +22,7 @@ namespace remote {
 class server_t {
     struct actor_info_t {
         actor_t     actor;
-        uint64_t    id;
+        ui64        id;
     };
 
     typedef std::map<std::string, actor_info_t>  global_t;
@@ -30,7 +30,7 @@ class server_t {
     core::mutex_t   m_cs;
     global_t        m_actors;
     int             m_fd;
-    uint64_t        m_counter;
+    ui64            m_counter;
 
 private:
     static void read_data(int s, SOEVENT* const ev) {
@@ -54,7 +54,7 @@ private:
                         {
                             printf("ACTOR_REFERENCE\n");
 
-                            uint32_t    len;
+                            ui32        len;
                             std::string name;
 
                             so_readsync(s, &len, sizeof(len), 5);
@@ -67,8 +67,8 @@ private:
                             }
 
                             {
-                                uint16_t cmd = ACTOR_REFERENCE;
-                                uint64_t aid = 0;
+                                ui16    cmd = ACTOR_REFERENCE;
+                                ui64    aid = 0;
 
                                 global_t::iterator i = pthis->m_actors.find(name);
                                 if (i != pthis->m_actors.end()) {

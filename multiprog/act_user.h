@@ -14,6 +14,7 @@
 #ifndef act_user_h_02821F1061B24ad28024E630DDF1DC9E
 #define act_user_h_02821F1061B24ad28024E630DDF1DC9E
 
+#include <core/module.h>
 
 namespace acto {
 
@@ -25,7 +26,7 @@ core::object_t* make_instance(const actor_t& context, const int options) {
     // 1.
     Impl* const value = new Impl();
     // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-    result = core::runtime_t::instance()->create_actor(value, options);
+    result = core::runtime_t::instance()->create_actor(value, options, 0);
     // -
     value->context = context;
     value->self    = actor_t(result);
@@ -57,7 +58,7 @@ private:
 
     /// Присваивает новое значение текущему объекту
     void assign(const actor_t& rhs);
-    /// 
+    ///
     bool same(const actor_t& rhs) const;
 
 public:
@@ -127,7 +128,7 @@ public:
  * Базовый класс для реализации пользовательских объектов (актеров)
  */
 class implementation_t : public core::base_t {
-    template <typename Impl> 
+    template <typename Impl>
         friend core::object_t* detail::make_instance(const actor_t& context, const int options);
 
 protected:

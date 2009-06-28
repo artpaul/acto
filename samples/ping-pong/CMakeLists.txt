@@ -8,5 +8,11 @@ TARGET_LINK_LIBRARIES (ping-pong
     acto-core
     acto-system
     rt
-    pthread
 )
+
+SET_TARGET_PROPERTIES(ping-pong PROPERTIES
+    COMPILE_FLAGS "-pthread")
+
+
+SET_TARGET_PROPERTIES(ping-pong PROPERTIES
+    LINK_FLAGS "-pthread")

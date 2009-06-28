@@ -7,9 +7,9 @@ namespace acto {
 namespace remote {
 
 /// Получить ссылку на объект
-const uint16_t  ACTOR_REFERENCE = 0x0010;
+const ui16  ACTOR_REFERENCE = 0x0010;
 ///
-const uint16_t  SEND_MESSAGE    = 0x0011;
+const ui16  SEND_MESSAGE    = 0x0011;
 } // namespace remote
 
 } // namespace acto

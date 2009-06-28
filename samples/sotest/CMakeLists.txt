@@ -9,5 +9,11 @@ TARGET_LINK_LIBRARIES (sotest
     acto-system
     acto-remote
     rt
-    pthread
 )
+
+SET_TARGET_PROPERTIES(sotest PROPERTIES
+    COMPILE_FLAGS "-pthread")
+
+
+SET_TARGET_PROPERTIES(sotest PROPERTIES
+    LINK_FLAGS "-pthread")

@@ -8,5 +8,11 @@ TARGET_LINK_LIBRARIES (cycles
     acto-core
     acto-system
     rt
-    pthread
 )
+
+SET_TARGET_PROPERTIES(cycles PROPERTIES
+    COMPILE_FLAGS "-pthread")
+
+
+SET_TARGET_PROPERTIES(cycles PROPERTIES
+    LINK_FLAGS "-pthread")

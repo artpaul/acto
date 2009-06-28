@@ -76,16 +76,16 @@
 #   define TLS_VARIABLE     __declspec (thread)
 
     /* Целые со знаком */
-    typedef __int8              int8;
-    typedef __int16             int16;
-    typedef __int32             int32;
-    typedef __int64             int64;
+    typedef __int8              i8;
+    typedef __int16             i16;
+    typedef __int32             i32;
+    typedef __int64             i64;
 
     /* Беззнаковые целые */
-    typedef unsigned __int8     uint8;
-    typedef unsigned __int16    uint16;
-    typedef unsigned __int32    uint32;
-    typedef unsigned __int64    uint64;
+    typedef unsigned __int8     ui8;
+    typedef unsigned __int16    ui16;
+    typedef unsigned __int32    ui32;
+    typedef unsigned __int64    ui64;
 
 namespace acto {
 
@@ -114,21 +114,22 @@ namespace core {
 
 #   define TLS_VARIABLE     __thread
 
+#   include <pthread.h>
 #   include <stdint.h>
 #   include <unistd.h>
 #   include <sched.h>
 
     /* Целые со знаком */
-    typedef int8_t              int8;
-    typedef int16_t             int16;
-    typedef int32_t             int32;
-    typedef int64_t             int64;
+    typedef int8_t              i8;
+    typedef int16_t             i16;
+    typedef int32_t             i32;
+    typedef int64_t             i64;
 
     /* Беззнаковые целые */
-    typedef uint8_t             uint8;
-    typedef uint16_t            uint16;
-    typedef uint32_t            uint32;
-    typedef uint64_t            uint64;
+    typedef uint8_t             ui8;
+    typedef uint16_t            ui16;
+    typedef uint32_t            ui32;
+    typedef uint64_t            ui64;
 
 namespace acto {
 

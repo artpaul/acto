@@ -13,6 +13,17 @@
 
 namespace acto {
 
+namespace serialization {
+
+template <typename T>
+class metainfo_t;
+
+template <typename T>
+class metainfo_t {
+};
+
+} // serialization
+
 namespace core {
 
 // Идентификатор типов
@@ -106,8 +117,10 @@ public:
 };
 
 
+
+
 /** */
-template <typename MsgT>
+template <typename MsgT, typename Writer = serialization::metainfo_t< MsgT > >
 class message_class_t {
     TYPEID  m_tid;
 
@@ -115,6 +128,8 @@ class message_class_t {
         msg->tid = m_tid;
         return msg_box_t< MsgT >(msg);
     }
+
+    Writer  w;
 
 public:
     message_class_t() {

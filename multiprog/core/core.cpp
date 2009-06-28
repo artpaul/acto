@@ -3,6 +3,7 @@
 #include <system/thread.h>
 
 #include "core.h"
+#include "module.h"
 #include "worker.h"
 #include "thread_pool.h"
 
@@ -19,84 +20,6 @@ TLS_VARIABLE thread_context_t* threadCtx = NULL;
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-base_t::base_t()
-    : m_terminating(false)
-{
-    // -
-}
-//-----------------------------------------------------------------------------
-base_t::~base_t() {
-    for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
-        // Удалить обработчик
-        if ((*i)->handler)
-            delete (*i)->handler;
-        // Удалить элемент списка
-        delete (*i);
-    }
-}
-//-----------------------------------------------------------------------------
-void base_t::handle_message(package_t* const package) {
-    object_t* const obj = package->target;
-    i_handler* handler  = 0;
-    base_t* const impl  = obj->impl;
-
-    // 1. Найти обработчик соответствующий данному сообщению
-    for (Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
-        if (package->type == (*i)->type) {
-            handler = (*i)->handler;
-            break;
-        }
-    }
-    // 2. Если соответствующий обработчик найден, то вызвать его
-    try {
-        if (handler) {
-            // TN: Данный параметр читает только функция determine_sender,
-            //     которая всегда выполняется в контексте этого потока.
-            threadCtx->sender = obj;
-            // -
-            handler->invoke(package->sender, package->data);
-            // -
-            threadCtx->sender = 0;
-
-            if (impl->m_terminating)
-                runtime_t::instance()->destroy_object(obj);
-        }
-    }
-    catch (...) {
-        // -
-    }
-}
-
-//-----------------------------------------------------------------------------
-void base_t::terminate() {
-    this->m_terminating = true;
-}
-//-----------------------------------------------------------------------------
-void base_t::set_handler(i_handler* const handler, const TYPEID type) {
-    for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
-        if ((*i)->type == type) {
-            // 1. Удалить предыдущий обработчик
-            if ((*i)->handler)
-                delete (*i)->handler;
-            // 2. Установить новый
-            (*i)->handler = handler;
-            // -
-            return;
-        }
-    }
-    // Запись для данного типа сообщения еще не существует
-    {
-        HandlerItem* const item = new HandlerItem(type);
-        // -
-        item->handler = handler;
-        // -
-        m_handlers.push_back(item);
-    }
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
 i_handler::i_handler(const TYPEID type_)
     : m_type(type_)
 {
@@ -105,11 +28,12 @@ i_handler::i_handler(const TYPEID type_)
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-object_t::object_t(worker_t* const thread_)
+object_t::object_t(worker_t* const thread_, const ui8 module_)
     : impl      (NULL)
     , thread    (thread_)
     , waiters   (NULL)
     , references(0)
+    , module    (module_)
     , binded    (false)
     , deleting  (false)
     , freeing   (false)
@@ -171,6 +95,7 @@ static atomic_t counter = 0;
 void initialize() {
     if (atomic_increment(&counter) > 0) {
         core::initializeThread(false);
+        runtime_t::instance()->register_module(main_module_t::instance(), 0);
         runtime_t::instance()->startup();
     }
 }
@@ -201,7 +126,7 @@ void finalize() {
 
 static void processActorMessages(object_t* const actor) {
     while (package_t* const package = actor->select_message()) {
-        base_t::handle_message(package);
+        runtime_t::instance()->handle_message(package);
         delete package;
     }
 }

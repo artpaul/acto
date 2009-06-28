@@ -5,6 +5,7 @@
 #include <map>
 
 #include <system/mutex.h>
+#include <system/event.h>
 #include <remote/libsocket/libsocket.h>
 
 #include "protocol.h"
@@ -16,7 +17,16 @@ namespace remote {
 
 /**
  */
-class client_t {
+class remote_base_t : public core::actor_body_t {
+public:
+    ui64    m_id;
+    /// Сокет взаимодействия с удаленным хостом
+    int     m_fd;
+};
+
+/**
+ */
+class client_t : public core::module_t {
     struct remote_host_t {
         std::string name;
         int         fd;
@@ -24,16 +34,18 @@ class client_t {
     };
 
     struct actor_info_t {
-        uint64_t    id;
+        ui64        id;
         actor_t     ref;
     };
 
     typedef std::map<std::string, remote_host_t>    host_map_t;
-    typedef std::map<uint64_t, actor_info_t>        actors_t;
+    typedef std::map<ui64, actor_info_t>            actors_t;
 
     core::mutex_t   m_cs;
     host_map_t      m_hosts;
     actors_t        m_actors;
+    core::event_t   m_event_getid;
+    volatile ui64   m_last;
 
 private:
     static void read_actor_connect(int s, SOEVENT* const ev) {
@@ -46,8 +58,8 @@ private:
         case SOEVENT_READ:
             {
                 // code, len|name, id,
-                uint16_t    cmd = 0;
-                int64_t     id  = 0;
+                ui16    cmd = 0;
+                ui64    id  = 0;
 
                 so_readsync(s, &cmd, sizeof(cmd), 5);
                 so_readsync(s, &id,  sizeof(id),  5);
@@ -60,6 +72,8 @@ private:
 
                     pthis->m_actors[id] = info;
                     printf("actor id: %Zu\n", id);
+                    pthis->m_last = id;
+                    pthis->m_event_getid.signaled();
                 }
             }
             break;
@@ -97,6 +111,7 @@ private:
 public:
     client_t() {
         so_init();
+        core::runtime_t::instance()->register_module(this, 1);
     }
 
     ~client_t() {
@@ -110,20 +125,55 @@ public:
     }
 
 public:
+    /// -
+    virtual void handle_message(core::package_t* const package) {
+        // -
+    }
+    /// Отправить сообщение соответствующему объекту
+    virtual void send_message(core::package_t* const package) {
+        core::object_t* const target = package->target;
+        remote_base_t*  const impl   = static_cast<remote_base_t*>(target->impl);
+        // -
+        assert(target->module == 1);
+
+        // 1. преобразовать текущее сообщение в байтовый поток
+        // 2. передать по сети
+
+        //package->data;
+        //package->type;
+
+        printf("sending remote message\n");
+        delete package;
+    }
+
     actor_t connect(const char* path, unsigned int port) {
         int fd = get_host_connection("127.0.0.1", port);
 
         if (fd > 0) {
+            m_event_getid.reset();
             printf("so_connect\n");
             so_pending(fd, SOEVENT_READ, 100, &read_actor_connect, this);
             // !!! Получить данные об актёре
             {
-                uint16_t    id  = ACTOR_REFERENCE;
-                uint32_t    len = strlen("server");
+                ui16    id  = ACTOR_REFERENCE;
+                ui32    len = strlen("server");
 
                 so_sendsync(fd, &id,  sizeof(id));
                 so_sendsync(fd, &len, sizeof(len));
                 so_sendsync(fd, "server", len);
+            }
+            m_event_getid.wait();
+            printf("after wait\n");
+            //
+            {
+                remote_base_t* const value  = new remote_base_t();
+                // 1.
+                value->m_id = m_last;
+                value->m_fd = fd;
+                // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+                core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
+
+                return actor_t(result);
             }
         }
         return actor_t();
