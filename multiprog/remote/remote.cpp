@@ -3,6 +3,7 @@
 
 #include <map>
 
+#include <generic/memory.h>
 #include <system/mutex.h>
 #include <remote/libsocket/libsocket.h>
 
@@ -44,7 +45,6 @@ private:
             break;
         case SOEVENT_READ:
             {
-
                 uint16_t    id = 0;
 
                 so_readsync(s, &id, sizeof(id), 5);
@@ -59,11 +59,11 @@ private:
 
                             so_readsync(s, &len, sizeof(len), 5);
                             {
-                                char* buf = new char[len + 1];
-                                so_readsync(s, buf, len, 5);
+                                generics::array_ptr<char>   buf(new char[len + 1]);
+
+                                so_readsync(s, buf.get(), len, 5);
                                 buf[len] = '\0';
-                                name = buf;
-                                delete [] buf;
+                                name = buf.get();
                             }
 
                             {
@@ -82,11 +82,6 @@ private:
                         }
                         break;
                 }
-
-                struct D {
-                    uint64_t    id;
-                    uint64_t    len;
-                } data;
             }
             break;
         }

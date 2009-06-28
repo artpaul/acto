@@ -37,7 +37,7 @@ class client_t {
 
 private:
     static void read_actor_connect(int s, SOEVENT* const ev) {
-        client_t* const pthis = static_cast<cleint_t*>(ev->param);
+        client_t* const pthis = static_cast<client_t*>(ev->param);
 
         switch (ev->type) {
         case SOEVENT_CLOSED:
