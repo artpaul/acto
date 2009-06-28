@@ -1,5 +1,5 @@
 
-ADD_LIBRARY (acto-remote STATIC
+ADD_LIBRARY (acto-libsocket STATIC
     runtime.cpp
     libsocket.cpp
 )

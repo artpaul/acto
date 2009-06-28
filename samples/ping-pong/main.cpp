@@ -16,6 +16,9 @@
 #include <cstdlib>
 #include <iostream>
 
+// Исключить компоненты сетевого взаимодействия
+#define ACTO_EXCLUDE_REMOTE
+
 // Для использование библиотеки достаточно подключить
 // только один этот файл
 #include <acto.h>
