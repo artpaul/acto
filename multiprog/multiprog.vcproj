@@ -299,6 +299,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\core\module.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\system\mutex.cpp"
 				>
 			</File>
@@ -396,7 +400,15 @@
 					>
 				</File>
 				<File
+					RelativePath=".\core\module.h"
+					>
+				</File>
+				<File
 					RelativePath=".\core\runtime.h"
+					>
+				</File>
+				<File
+					RelativePath=".\core\serialization.h"
 					>
 				</File>
 				<File

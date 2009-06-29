@@ -80,6 +80,12 @@ private:
 
 private:
     //-------------------------------------------------------------------------
+    template <typename T>
+    inline void safe_delete(T& ptr) {
+        assert(ptr != NULL);
+        delete ptr, ptr = NULL;
+    }
+    //-------------------------------------------------------------------------
     // Цикл выполнения планировщика
     void cleaner(void*) {
         while (m_active) {
@@ -129,7 +135,7 @@ private:
     //-------------------------------------------------------------------------
     // -
     worker_t* create_worker() {
-        if (atomic_increment(&m_workers.count) > 0)
+        if (atomic_increment(&m_workers.count) == 1)
             m_evnoworkers.reset();
         // -
         try {
@@ -284,6 +290,10 @@ public:
         , m_terminating(false)
     {
         m_processors = NumberOfProcessors();
+        
+        m_workers.count    = 0;
+        m_workers.deleting = 0;
+        m_workers.reserved = 0;
 
         for (size_t i = 0; i < MODULES_COUNT; ++i)
             m_modules[i] = NULL;
@@ -548,14 +558,14 @@ public:
             m_scheduler->join();
             m_cleaner->join();
             // -
-            delete m_scheduler, m_scheduler = 0;
-            delete m_cleaner, m_cleaner = 0;
+            safe_delete(m_scheduler);
+            safe_delete(m_cleaner);
         }
         // -
         for (size_t i = 0; i < MODULES_COUNT; ++i)
             m_modules[i] = NULL;
 
-        assert(m_workers.count == 0);
+        assert(m_workers.count == 0 && m_workers.deleting == 0 && m_workers.reserved == 0);
         assert(m_actors.size() == 0);
     }
     //-----------------------------------------------------------------------------

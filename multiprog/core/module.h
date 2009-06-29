@@ -32,7 +32,7 @@ public:
     typedef fastdelegate::FastDelegate< void (acto::actor_t&, const MsgT&) >    delegate_t;
 
 public:
-    handler_t(const delegate_t& delegate_, type_box_t< MsgT >& type_)
+    handler_t(const delegate_t& delegate_, const TYPEID type_)
         : i_handler ( type_ )
         , m_delegate( delegate_ )
     {
@@ -95,11 +95,11 @@ protected:
     template < typename MsgT, typename ClassName >
         inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
             // Тип сообщения
-            type_box_t< MsgT >                       a_type     = type_box_t< MsgT >();
+            const TYPEID                            a_type     = get_message_type< MsgT >();
             // Метод, обрабатывающий сообщение
-            typename handler_t< MsgT >::delegate_t   a_delegate = fastdelegate::MakeDelegate(this, func);
+            typename handler_t< MsgT >::delegate_t  a_delegate = fastdelegate::MakeDelegate(this, func);
             // Обрабочик
-            handler_t< MsgT >* const                 handler    = new handler_t< MsgT >(a_delegate, a_type);
+            handler_t< MsgT >* const                handler    = new handler_t< MsgT >(a_delegate, a_type);
 
             // Установить обработчик
             set_handler(handler, a_type);
@@ -107,10 +107,8 @@ protected:
     /// Сброс обработчика для сообщения данного типа
     template < typename MsgT >
         inline void Handler() {
-            // Тип сообщения
-            type_box_t< MsgT > a_type = type_box_t< MsgT >();
             // Сбросить обработчик указанного типа
-            set_handler(0, a_type);
+            set_handler(0, get_message_type< MsgT >());
         }
 
 private:

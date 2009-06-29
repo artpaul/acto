@@ -12,7 +12,7 @@ struct msg_get : public acto::msg_t {
     msg_get(const std::string c) : content(c) { }
 
 public:
-    class metainfo_t {
+    class metainfo_t : public acto::serializer_t {
     public:
         metainfo_t() {
             printf("serializer_t\n");

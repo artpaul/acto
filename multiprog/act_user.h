@@ -48,7 +48,6 @@ using core::message_class_t;
  * Пользовательский объект (актер)
  */
 class actor_t {
-    // -
     friend inline core::object_t* dereference(actor_t& object);
     friend void join(actor_t& obj);
     friend void destroy(actor_t& object);
@@ -60,6 +59,18 @@ private:
     void assign(const actor_t& rhs);
     ///
     bool same(const actor_t& rhs) const;
+    ///
+    template <typename T>
+    void send_message(T* const msg) const {
+        if (m_object) {
+            assert(msg != NULL);
+
+            if (msg->meta == NULL) 
+                msg->meta = core::get_metaclass< T >();
+            // Отправить сообщение
+            core::runtime_t::instance()->send(m_object, msg, msg->meta->tid);
+        }
+    }
 
 public:
     actor_t();
@@ -74,45 +85,39 @@ public:
     /// Инициализирован ли текущий объект
     bool assigned() const;
 
-    // Послать сообщение объекту
-    template <typename MsgT>
-        void send(const MsgT& msg) const {
-            if (m_object)
-                return core::runtime_t::instance()->send(m_object, new MsgT(msg), core::type_box_t< MsgT >());
-        }
 
-    template <typename MsgT>
-        void send(const core::msg_box_t< MsgT >& box) const {
-            if (m_object) {
-                MsgT* const         msg = *box;
-                const core::TYPEID  id  = msg->tid ? msg->tid : core::type_box_t< MsgT >();
-
-                // Отправить сообщение
-                return core::runtime_t::instance()->send(m_object, msg, id);
-            }
-        }
 
     // Послать сообщение объекту
     template <typename MsgT>
-        void send() const {
-            if (m_object)
-                return core::runtime_t::instance()->send(m_object, new MsgT(), core::type_box_t< MsgT >());
-        }
+    inline void send(const MsgT& msg) const {
+        this->send_message< MsgT >(new MsgT(msg));
+    }
+
+    template <typename MsgT>
+    inline void send(const core::msg_box_t< MsgT >& box) const {
+        this->send_message< MsgT >(*box);
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send() const {
+        this->send_message< MsgT >(new MsgT());
+    }
+
     template <typename MsgT, typename P1>
-        void send(P1 p1) const {
-            if (m_object)
-                return core::runtime_t::instance()->send(m_object, new MsgT(p1), core::type_box_t< MsgT >());
-        }
+    inline void send(P1 p1) const {
+        this->send_message< MsgT >(new MsgT(p1));
+    }
+
     template <typename MsgT, typename P1, typename P2>
-        void send(P1 p1, P2 p2) const {
-            if (m_object)
-                return core::runtime_t::instance()->send(m_object, new MsgT(p1, p2), core::type_box_t< MsgT >());
-        }
+    inline void send(P1 p1, P2 p2) const {
+        this->send_message< MsgT >(new MsgT(p1, p2));
+    }
+
     template <typename MsgT, typename P1, typename P2, typename P3>
-        void send(P1 p1, P2 p2, P3 p3) const {
-            if (m_object)
-                return core::runtime_t::instance()->send(m_object, new MsgT(p1, p2, p3), core::type_box_t< MsgT >());
-        }
+    inline void send(P1 p1, P2 p2, P3 p3) const {
+        this->send_message< MsgT >(new MsgT(p1, p2, p3));
+    }
 
 /* Операторы */
 public:
