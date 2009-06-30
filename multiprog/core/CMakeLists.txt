@@ -2,10 +2,9 @@
 ADD_LIBRARY (acto-core STATIC
     core.cpp
     message.cpp
-    worker.cpp
-    thread_pool.cpp
-    module.cpp
     runtime.cpp
+    ../modules/main/worker.cpp
+    ../modules/main/module.cpp
 )
 
 SET_TARGET_PROPERTIES(acto-core PROPERTIES

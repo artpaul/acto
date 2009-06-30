@@ -14,24 +14,16 @@
 #ifndef act_user_h_02821F1061B24ad28024E630DDF1DC9E
 #define act_user_h_02821F1061B24ad28024E630DDF1DC9E
 
-#include <core/module.h>
+#include <core/runtime.h>
+#include <modules/main/module.h>
 
 namespace acto {
 
 namespace detail {
 
 template <typename Impl>
-core::object_t* make_instance(const actor_t& context, const int options) {
-    core::object_t* result = NULL;
-    // 1.
-    Impl* const value = new Impl();
-    // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-    result = core::runtime_t::instance()->create_actor(value, options, 0);
-    // -
-    value->context = context;
-    value->self    = actor_t(result);
-    // -
-    return result;
+inline core::object_t* make_instance(const actor_t& context, const int options) {
+    return core::main_module_t::instance()->make_instance< Impl >(context, options);
 }
 
 } // namespace detail
@@ -65,7 +57,7 @@ private:
         if (m_object) {
             assert(msg != NULL);
 
-            if (msg->meta == NULL) 
+            if (msg->meta == NULL)
                 msg->meta = core::get_metaclass< T >();
             // Отправить сообщение
             core::runtime_t::instance()->send(m_object, msg, msg->meta->tid);
@@ -84,8 +76,6 @@ public:
 public:
     /// Инициализирован ли текущий объект
     bool assigned() const;
-
-
 
     // Послать сообщение объекту
     template <typename MsgT>
@@ -133,8 +123,7 @@ public:
  * Базовый класс для реализации пользовательских объектов (актеров)
  */
 class implementation_t : public core::base_t {
-    template <typename Impl>
-        friend core::object_t* detail::make_instance(const actor_t& context, const int options);
+    friend class core::main_module_t;
 
 protected:
     // Ссылка на контекстный объект для данного

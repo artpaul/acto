@@ -1,7 +1,8 @@
 
-#include <core/core.h>
-#include "act_user.h"
+#include <core/runtime.h>
 #include <extension/services.h>
+
+#include "act_user.h"
 
 namespace acto {
 
@@ -17,11 +18,11 @@ ACTO_API void destroy(actor_t& object) {
 }
 //-----------------------------------------------------------------------------
 ACTO_API void finalize_thread() {
-    core::finalizeThread();
+    core::finalize_thread();
 }
 //-----------------------------------------------------------------------------
 ACTO_API void initialize_thread() {
-    core::initializeThread(false);
+    core::initialize_thread(false);
 }
 //-----------------------------------------------------------------------------
 ACTO_API void join(actor_t& obj) {
@@ -30,7 +31,7 @@ ACTO_API void join(actor_t& obj) {
 }
 //-----------------------------------------------------------------------------
 ACTO_API void process_messages() {
-    core::processBindedActors();
+    core::main_module_t::instance()->process_binded_actors(false);
 }
 //-----------------------------------------------------------------------------
 ACTO_API void shutdown() {
@@ -40,7 +41,10 @@ ACTO_API void shutdown() {
             // -
             services::finalize();
             // -
-            core::finalize();
+            {
+                core::runtime_t::instance()->shutdown();
+                core::finalize_thread();
+            }
         }
     }
 }
@@ -48,7 +52,11 @@ ACTO_API void shutdown() {
 ACTO_API void startup() {
     if (atomic_increment(&startup_counter) == 1) {
         // Инициализировать ядро
-        core::initialize();
+        {
+            core::initialize_thread(false);
+            core::runtime_t::instance()->register_module(core::main_module_t::instance(), 0);
+            core::runtime_t::instance()->startup();
+        }
 
         // Инициализировать сервисные компоненты
         services::initialize();

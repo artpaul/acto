@@ -38,7 +38,6 @@ const int aoBindToThread = 0x02;
 namespace core {
 
 // -
-class  worker_t;
 struct package_t;
 
 /**
@@ -58,6 +57,10 @@ public:
     virtual void handle_message(package_t* const package) = 0;
     /// Отправить сообщение соответствующему объекту
     virtual void send_message(package_t* const package)   = 0;
+    ///
+    virtual void shutdown(event_t& event) = 0;
+    /// -
+    virtual void startup() = 0;
 };
 
 
@@ -77,8 +80,6 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
 
     // Реализация объекта
     actor_body_t*       impl;
-    // Поток, в котором должен выполнятся объект
-    worker_t* const     thread;
     // Список сигналов для потоков, ожидающих уничтожения объекта
     waiter_t*           waiters;
     // Очередь сообщений, поступивших данному объекту
@@ -96,7 +97,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     ui32                unimpl    : 1;
 
 public:
-    object_t(worker_t* const thread_, const ui8 module_);
+    object_t(actor_body_t* const impl_, const ui8 module_);
 
     /// Поставить сообщение в очередь
     void enqueue(package_t* const msg);
@@ -130,7 +131,7 @@ struct thread_context_t {
     // только с текущим потоком
     std::set< object_t* >   actors;
     // Счетчик инициализаций
-    int                     counter;
+    atomic_t                counter;
     // -
     bool                    is_core;
     // Текущий активный объект в данном потоке
@@ -138,6 +139,11 @@ struct thread_context_t {
 };
 
 extern TLS_VARIABLE thread_context_t* threadCtx;
+
+// -
+void initialize_thread(const bool isInternal);
+// -
+void finalize_thread();
 
 } // namespace core
 

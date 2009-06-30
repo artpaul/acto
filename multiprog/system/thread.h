@@ -32,7 +32,7 @@ public:
     ~thread_t();
 
     // Создан ли текущий системный поток библиотекой acto
-    static bool is_core_thread();
+    static bool is_library_thread();
 
 public:
     /// Ждать завершения текущего потока

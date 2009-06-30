@@ -44,9 +44,7 @@ public:
     /// Ждать уничтожения тела объекта
     void        join(object_t* const obj);
     /// -
-    object_t*   pop_object();
-    /// -
-    void        push_object(object_t* obj);
+    void        push_deleted(object_t* const obj);
     /// -
     long        release(object_t* const obj);
     /// Зарегистрировать новый модуль

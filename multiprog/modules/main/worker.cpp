@@ -1,6 +1,8 @@
 
-#include "core.h"
+#include <core/runtime.h>
+
 #include "worker.h"
+#include "module.h"
 
 namespace acto {
 
@@ -33,7 +35,7 @@ public:
     }
     ///
     /// \return true  - если есть возможность обработать следующие сообщения
-    ///         false - если сообщений больше нет 
+    ///         false - если сообщений больше нет
     bool process(worker_t* const owner) {
         while (object_t* const obj = m_object) {
             // -
@@ -45,10 +47,9 @@ public:
 
                 // Проверить истечение лимита времени
                 // обработки для данного объекта
-                if (!m_object->thread) {
+                if (m_object->impl && !static_cast<base_t*>(m_object->impl)->m_thread) {
                     if ((clock() - m_start) > m_time) {
-                        // -
-                        runtime_t::instance()->push_object(obj);
+                        m_slots.push(obj);
                         m_object = NULL;
                     }
                 }
@@ -61,13 +62,13 @@ public:
                     // -
                     if (!obj->has_messages()) {
                         // Если это динамический объект
-                        if (obj->thread == NULL) {
+                        if (static_cast<base_t*>(m_object->impl)->m_thread == NULL) {
                             // -
                             obj->scheduled = false;
                             m_object = NULL;
                         }
                         else { // Если это эксклюзивный объект
-                            assert(obj->thread == owner);
+                            assert(static_cast<base_t*>(m_object->impl)->m_thread == owner);
                             // -
                             if (obj->deleting) {
                                 // -
@@ -98,7 +99,7 @@ public:
             // Получить новый объект для обработки,
             // если он есть в очереди
              if (m_object == NULL) {
-                m_object = runtime_t::instance()->pop_object();
+                m_object = m_slots.pop();
                 // -
                 if (m_object)
                     m_start = clock();
@@ -131,7 +132,7 @@ worker_t::~worker_t() {
     m_active = false;
     // 2.
     m_event.signaled();
-	// 3. Дождаться завершения потока
+    // 3. Дождаться завершения потока
     m_complete.wait();
 }
 //-----------------------------------------------------------------------------
@@ -148,7 +149,7 @@ void worker_t::wakeup() {
 }
 //-----------------------------------------------------------------------------
 void worker_t::execute(void* param) {
-    core::initializeThread(true);
+    core::initialize_thread(true);
     // -
     while (m_active) {
         //
@@ -164,7 +165,7 @@ void worker_t::execute(void* param) {
         m_event.reset();
     }
     // -
-    core::finalizeThread();
+    core::finalize_thread();
     // -
     m_complete.signaled();
 }

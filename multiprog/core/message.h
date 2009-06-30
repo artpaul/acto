@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef message_h_EA18085F0CF7480fA57FBF6C0E610820
 #define message_h_EA18085F0CF7480fA57FBF6C0E610820

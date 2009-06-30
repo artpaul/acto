@@ -19,7 +19,7 @@
 #include <generic/intrlist.h>
 #include <generic/delegates.h>
 
-#include "thread_pool.h"
+#include <system/thread_pool.h>
 
 namespace acto {
 
@@ -29,19 +29,23 @@ struct object_t;
 struct package_t;
 
 
-/** 
- * Системный поток 
+/**
+ * Системный поток
  */
 class worker_t : public intrusive_t< worker_t > {
 public:
     typedef fastdelegate::FastDelegate< void (object_t* const) >    PushDelete;
     typedef fastdelegate::FastDelegate< void (worker_t* const) >    PushIdle;
     typedef fastdelegate::FastDelegate< void (package_t *const package) >    HandlePackage;
+    typedef fastdelegate::FastDelegate< void (object_t* const) >    PushObject;
+    typedef fastdelegate::FastDelegate< object_t* () >              PopObject;
 
     struct Slots {
         PushDelete      deleted;
         HandlePackage   handle;
         PushIdle        idle;
+        PopObject       pop;
+        PushObject      push;
     };
 
 public:
@@ -67,7 +71,7 @@ private:
     const Slots         m_slots;
     // Экземпляр системного потока
     thread_worker_t*    m_system;
-    
+
     std::auto_ptr< class object_processor_t > m_processor;
 };
 

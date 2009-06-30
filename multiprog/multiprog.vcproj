@@ -299,7 +299,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\core\module.cpp"
+				RelativePath=".\modules\main\module.cpp"
 				>
 			</File>
 			<File
@@ -319,11 +319,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\core\thread_pool.cpp"
+				RelativePath=".\system\thread_pool.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\core\worker.cpp"
+				RelativePath=".\modules\main\worker.cpp"
 				>
 			</File>
 		</Filter>
@@ -363,6 +363,10 @@
 					RelativePath=".\system\thread.h"
 					>
 				</File>
+				<File
+					RelativePath=".\system\thread_pool.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="generic"
@@ -392,15 +396,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\core\core.h"
-					>
-				</File>
-				<File
 					RelativePath=".\core\message.h"
 					>
 				</File>
 				<File
-					RelativePath=".\core\module.h"
+					RelativePath=".\modules\main\module.h"
 					>
 				</File>
 				<File
@@ -412,15 +412,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\core\thread_pool.h"
-					>
-				</File>
-				<File
 					RelativePath=".\core\types.h"
 					>
 				</File>
 				<File
-					RelativePath=".\core\worker.h"
+					RelativePath=".\modules\main\worker.h"
 					>
 				</File>
 			</Filter>

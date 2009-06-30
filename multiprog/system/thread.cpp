@@ -64,7 +64,7 @@ public:
     }
 
     // Текущий поток для вызываемого метода
-    static bool is_core_thread() {
+    static bool is_library_thread() {
         return instance != NULL;
     }
 
@@ -115,7 +115,7 @@ public:
     }
 
     // Текущий поток для вызываемого метода
-    static bool is_core_thread() {
+    static bool is_library_thread() {
         return instance != NULL;
     }
 
@@ -147,8 +147,8 @@ thread_t::~thread_t() {
     // must be defined for delete m_pimpl
 }
 //-----------------------------------------------------------------------------
-bool thread_t::is_core_thread() {
-    return impl::is_core_thread();
+bool thread_t::is_library_thread() {
+    return impl::is_library_thread();
 }
 //-----------------------------------------------------------------------------
 void thread_t::join() {

@@ -146,6 +146,13 @@ public:
         delete package;
     }
 
+    virtual void shutdown(core::event_t& event) {
+        event.signaled();
+    }
+    
+    virtual void startup() {
+    }
+
     actor_t connect(const char* path, unsigned int port) {
         int fd = get_host_connection("127.0.0.1", port);
 

@@ -1,8 +1,25 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2009                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef acto_core_module_h_cbc7f72e6ef34806b94705e9abc98295
 #define acto_core_module_h_cbc7f72e6ef34806b94705e9abc98295
 
-#include "types.h"
+#include <system/event.h>
+#include <system/thread.h>
+
+#include <generic/queue.h>
+
+#include <core/types.h>
 
 namespace acto {
 
@@ -53,10 +70,11 @@ private:
 
 
 /**
- * Базовый класс для всех актеров, как внутренних, так и внешних (пользовательских).
+ * Базовый класс для локальных актеров.
  */
 class ACTO_API base_t : public actor_body_t {
     friend class main_module_t;
+    friend class object_processor_t;
 
     ///
     struct HandlerItem {
@@ -75,6 +93,9 @@ class ACTO_API base_t : public actor_body_t {
 private:
     // Карта обработчиков сообщений для данного объекта
     Handlers        m_handlers;
+    // Поток, в котором должен выполнятся объект
+    class worker_t* m_thread;
+    // -
     bool            m_terminating;
 
 public:
@@ -120,7 +141,15 @@ private:
  * Модуль, обеспечивающий обработку локальных актёров
  */
 class main_module_t : public module_t {
+    /// -
+    core::object_t* create_actor(base_t* const body, const int options);
+    /// Обработать все сообщения для актера
+    void            process_actor_messages(object_t* const actor);
+
 public:
+    main_module_t();
+    ~main_module_t();
+
     static main_module_t* instance() {
         static main_module_t    value;
 
@@ -132,6 +161,34 @@ public:
     virtual void handle_message(package_t* const package);
     /// Отправить сообщение соответствующему объекту
     virtual void send_message(package_t* const package);
+    ///
+    virtual void shutdown(event_t& event);
+    /// -
+    virtual void startup();
+   
+    /// -
+    void process_binded_actors(bool need_delete);
+
+    /// Создать экземпляр актёра
+    template <typename Impl>
+    object_t* make_instance(const actor_t& context, const int options) {
+        // 1.
+        Impl* const value = new Impl();
+        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        core::object_t* const result = this->create_actor(value, options);
+        // -
+        if (result) {
+            value->context = context;
+            value->self    = actor_t(result);
+        }
+        // -
+        return result;
+    }
+
+private:
+    class impl;
+
+    std::auto_ptr< impl >   m_pimpl;
 };
 
 } // namespace core

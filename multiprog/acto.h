@@ -25,9 +25,6 @@
 // Обертка над API операционных систем
 #include "system/platform.h"
 
-// Ядро библиотеки
-#include "core/core.h"
-
 // Интерфейс библиотеки (пользовательский уровень)
 #include "act_user.h"
 

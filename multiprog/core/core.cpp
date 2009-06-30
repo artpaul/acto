@@ -2,17 +2,14 @@
 #include <system/platform.h>
 #include <system/thread.h>
 
-#include "core.h"
-#include "module.h"
-#include "worker.h"
-#include "thread_pool.h"
+#include <modules/main/module.h>
+
+#include "types.h"
+#include "runtime.h"
 
 namespace acto {
 
 namespace core {
-
-using fastdelegate::FastDelegate;
-using fastdelegate::MakeDelegate;
 
 //
 TLS_VARIABLE thread_context_t* threadCtx = NULL;
@@ -28,9 +25,8 @@ i_handler::i_handler(const TYPEID type_)
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-object_t::object_t(worker_t* const thread_, const ui8 module_)
-    : impl      (NULL)
-    , thread    (thread_)
+object_t::object_t(actor_body_t* const impl_, const ui8 module_)
+    : impl      (impl_)
     , waiters   (NULL)
     , references(0)
     , module    (module_)
@@ -87,21 +83,8 @@ package_t::~package_t() {
 //                       ИНТЕРФЕЙСНЫЕ МЕТОДЫ ЯДРА                            //
 ///////////////////////////////////////////////////////////////////////////////
 
-static atomic_t counter = 0;
-
 //-----------------------------------------------------------------------------
-// Desc: Инициализация библиотеки.
-//-----------------------------------------------------------------------------
-void initialize() {
-    if (atomic_increment(&counter) > 0) {
-        core::initializeThread(false);
-        runtime_t::instance()->register_module(main_module_t::instance(), 0);
-        runtime_t::instance()->startup();
-    }
-}
-
-void initializeThread(const bool isInternal) {
-    // -
+void initialize_thread(const bool isInternal) {
     if (!threadCtx) {
         threadCtx = new thread_context_t();
         threadCtx->counter = 1;
@@ -109,59 +92,20 @@ void initializeThread(const bool isInternal) {
         threadCtx->is_core = isInternal;
     }
     else
-        threadCtx->counter++;
+        atomic_increment(&threadCtx->counter);
 }
-
 //-----------------------------------------------------------------------------
-//
-//-----------------------------------------------------------------------------
-void finalize() {
-    if (counter > 0) {
-        if (atomic_decrement(&counter) == 0) {
-            finalizeThread();
-            runtime_t::instance()->shutdown();
-        }
-    }
-}
-
-static void processActorMessages(object_t* const actor) {
-    while (package_t* const package = actor->select_message()) {
-        runtime_t::instance()->handle_message(package);
-        delete package;
-    }
-}
-
-void finalizeThread() {
+void finalize_thread() {
     if (threadCtx) {
-        if (--threadCtx->counter == 0) {
-            std::set<object_t*>::iterator   i;
-            // -
-            for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
-                processActorMessages((*i));
-
-                runtime_t::instance()->destroy_object(*i);
-            }
+        if (atomic_decrement(&threadCtx->counter) == 0) {
+            main_module_t::instance()->process_binded_actors(true);
             // -
             delete threadCtx, threadCtx = 0;
         }
     }
 }
 
-void processBindedActors() {
-    if (thread_t::is_core_thread())
-        // Данная функция не предназначена для внутренних потоков,
-        // так как они управляются ядром библиотеки
-        return;
-    else {
-        if (threadCtx) {
-            std::set<object_t*>::iterator   i;
-            // -
-            for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i)
-                processActorMessages((*i));
-        }
-    }
-}
 
-}; // namespace core
+} // namespace core
 
-}; // namespace acto
+} // namespace acto

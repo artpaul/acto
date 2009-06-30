@@ -16,12 +16,13 @@
 
 #include <system/platform.h>
 
+#include <act_user.h>
+
 namespace acto {
+
 
 // Дополнительные сервисы
 namespace services {
-
-
 
 #if !defined (ACTO_WIN)
 
