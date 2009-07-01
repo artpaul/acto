@@ -359,6 +359,8 @@ main_module_t::~main_module_t() {
 }
 //-----------------------------------------------------------------------------
 void main_module_t::handle_message(package_t* const package) {
+    assert(package != NULL && package->target != NULL);
+
     object_t* const obj = package->target;
     i_handler* handler  = 0;
     base_t* const impl  = static_cast<base_t*>(obj->impl);
@@ -375,6 +377,7 @@ void main_module_t::handle_message(package_t* const package) {
     // 2. Если соответствующий обработчик найден, то вызвать его
     try {
         if (handler) {
+            assert(threadCtx != NULL);
             // TN: Данный параметр читает только функция determine_sender,
             //     которая всегда выполняется в контексте этого потока.
             threadCtx->sender = obj;

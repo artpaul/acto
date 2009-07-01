@@ -14,7 +14,6 @@
 #include <generic/intrqueue.h>
 #include <system/mutex.h>
 #include <system/thread.h>
-#include <core/core.h>
 
 #include "libsocket.h"
 #include "runtime.h"
