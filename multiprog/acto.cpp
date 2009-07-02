@@ -18,11 +18,11 @@ ACTO_API void destroy(actor_t& object) {
 }
 //-----------------------------------------------------------------------------
 ACTO_API void finalize_thread() {
-    core::finalize_thread();
+    core::runtime_t::instance()->destroy_thread_binding();
 }
 //-----------------------------------------------------------------------------
 ACTO_API void initialize_thread() {
-    core::initialize_thread(false);
+    core::runtime_t::instance()->create_thread_binding();
 }
 //-----------------------------------------------------------------------------
 ACTO_API void join(actor_t& obj) {
@@ -31,7 +31,7 @@ ACTO_API void join(actor_t& obj) {
 }
 //-----------------------------------------------------------------------------
 ACTO_API void process_messages() {
-    core::main_module_t::instance()->process_binded_actors(false);
+    core::runtime_t::instance()->process_binded_actors();
 }
 //-----------------------------------------------------------------------------
 ACTO_API void shutdown() {
@@ -41,22 +41,18 @@ ACTO_API void shutdown() {
             // -
             services::finalize();
             // -
-            {
-                core::runtime_t::instance()->shutdown();
-                core::finalize_thread();
-            }
+            core::runtime_t::instance()->shutdown();
         }
     }
 }
 //-----------------------------------------------------------------------------
 ACTO_API void startup() {
     if (atomic_increment(&startup_counter) == 1) {
+        //
         // Инициализировать ядро
-        {
-            core::initialize_thread(false);
-            core::runtime_t::instance()->register_module(core::main_module_t::instance(), 0);
-            core::runtime_t::instance()->startup();
-        }
+        //
+        core::runtime_t::instance()->register_module(core::main_module_t::instance(), 0);
+        core::runtime_t::instance()->startup();
 
         // Инициализировать сервисные компоненты
         services::initialize();
@@ -66,12 +62,12 @@ ACTO_API void startup() {
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-actor_t::actor_t() 
+actor_t::actor_t()
     : m_object(NULL)
 {
 }
 //-----------------------------------------------------------------------------
-actor_t::actor_t(core::object_t* const an_object, bool acquire) 
+actor_t::actor_t(core::object_t* const an_object, bool acquire)
     : m_object(an_object)
 {
     if (m_object && acquire)

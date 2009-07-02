@@ -73,8 +73,9 @@ private:
  * Базовый класс для локальных актеров.
  */
 class ACTO_API base_t : public actor_body_t {
-    friend class main_module_t;
     friend class object_processor_t;
+    friend class main_module_t;
+    friend void do_handle_message(package_t* const package);
 
     ///
     struct HandlerItem {
@@ -143,8 +144,6 @@ private:
 class main_module_t : public module_t {
     /// -
     core::object_t* create_actor(base_t* const body, const int options);
-    /// Обработать все сообщения для актера
-    void            process_actor_messages(object_t* const actor);
 
 public:
     main_module_t();
@@ -156,18 +155,20 @@ public:
         return &value;
     }
 
+    /// Определить отправителя сообщения
+    static object_t* determine_sender();
+
 public:
+    /// -
+    virtual void destroy_object_body(actor_body_t* const body);
     /// -
     virtual void handle_message(package_t* const package);
     /// Отправить сообщение соответствующему объекту
     virtual void send_message(package_t* const package);
-    ///
+    /// -
     virtual void shutdown(event_t& event);
     /// -
     virtual void startup();
-   
-    /// -
-    void process_binded_actors(bool need_delete);
 
     /// Создать экземпляр актёра
     template <typename Impl>

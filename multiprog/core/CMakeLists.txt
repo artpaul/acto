@@ -1,6 +1,6 @@
 
 ADD_LIBRARY (acto-core STATIC
-    core.cpp
+    types.cpp
     message.cpp
     runtime.cpp
     ../modules/main/worker.cpp

@@ -24,6 +24,9 @@ namespace core {
  * Данные среды выполнения
  */
 class runtime_t {
+    ///
+    void process_binded_actors(std::set<object_t*>& actors, const bool need_delete);
+
 public:
     runtime_t();
     ~runtime_t();
@@ -35,14 +38,20 @@ public:
     void        acquire(object_t* const obj);
     /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
     object_t*   create_actor(actor_body_t* const body, const int options, const ui8 module);
+    /// Создать контекст связи с текущим системным потоком
+    void        create_thread_binding();
     /// Уничтожить объект
     void        destroy_object(object_t* const object);
     /// -
     void        destroy_object_body(object_t* obj);
     ///
+    void        destroy_thread_binding();
+    ///
     void        handle_message(package_t* const package);
     /// Ждать уничтожения тела объекта
     void        join(object_t* const obj);
+    /// -
+    void        process_binded_actors();
     /// -
     void        push_deleted(object_t* const obj);
     /// -
@@ -50,7 +59,7 @@ public:
     /// Зарегистрировать новый модуль
     void        register_module(module_t* const inst, const ui8 id);
     /// Послать сообщение указанному объекту
-    void        send(object_t* const target, msg_t* const msg, const TYPEID type);
+    void        send(object_t* const sender, object_t* const target, msg_t* const msg);
     /// Завершить выполнение
     void        shutdown();
     /// Начать выполнение

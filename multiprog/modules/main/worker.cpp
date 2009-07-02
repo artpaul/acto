@@ -58,7 +58,7 @@ public:
                 bool deleting = false;
                 // -
                 {
-                    MutexLocker	lock(obj->cs);
+                    MutexLocker lock(obj->cs);
                     // -
                     if (!obj->has_messages()) {
                         // Если это динамический объект
@@ -149,8 +149,6 @@ void worker_t::wakeup() {
 }
 //-----------------------------------------------------------------------------
 void worker_t::execute(void* param) {
-    core::initialize_thread(true);
-    // -
     while (m_active) {
         //
         // 1. Если данному потоку назначен объект, то необходимо
@@ -164,8 +162,6 @@ void worker_t::execute(void* param) {
         m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
         m_event.reset();
     }
-    // -
-    core::finalize_thread();
     // -
     m_complete.signaled();
 }

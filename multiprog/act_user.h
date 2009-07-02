@@ -60,7 +60,7 @@ private:
             if (msg->meta == NULL)
                 msg->meta = core::get_metaclass< T >();
             // Отправить сообщение
-            core::runtime_t::instance()->send(m_object, msg, msg->meta->tid);
+            core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
         }
     }
 

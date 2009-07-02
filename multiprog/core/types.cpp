@@ -11,10 +11,6 @@ namespace acto {
 
 namespace core {
 
-//
-TLS_VARIABLE thread_context_t* threadCtx = NULL;
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 i_handler::i_handler(const TYPEID type_)
@@ -76,33 +72,6 @@ package_t::~package_t() {
     runtime_t::instance()->release(target);
     // Удалить данные сообщения
     delete data;
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-//                       ИНТЕРФЕЙСНЫЕ МЕТОДЫ ЯДРА                            //
-///////////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------------
-void initialize_thread(const bool isInternal) {
-    if (!threadCtx) {
-        threadCtx = new thread_context_t();
-        threadCtx->counter = 1;
-        threadCtx->sender  = 0;
-        threadCtx->is_core = isInternal;
-    }
-    else
-        atomic_increment(&threadCtx->counter);
-}
-//-----------------------------------------------------------------------------
-void finalize_thread() {
-    if (threadCtx) {
-        if (atomic_decrement(&threadCtx->counter) == 0) {
-            main_module_t::instance()->process_binded_actors(true);
-            // -
-            delete threadCtx, threadCtx = 0;
-        }
-    }
 }
 
 

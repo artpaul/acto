@@ -53,6 +53,8 @@ public:
  */
 class module_t {
 public:
+    /// -
+    virtual void destroy_object_body(actor_body_t* const /*body*/) {  }
     ///
     virtual void handle_message(package_t* const package) = 0;
     /// Отправить сообщение соответствующему объекту
@@ -88,7 +90,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     // Count of references to object
     atomic_t            references;
     /// Модуль в рамках которого создан объект
-    const ui32          module    : 5;
+    const ui32          module    : 4;
     // Флаги состояния текущего объекта
     ui32                binded    : 1;
     ui32                deleting  : 1;
@@ -123,27 +125,6 @@ public:
     package_t(msg_t* const data_, const TYPEID type_);
     ~package_t();
 };
-
-
-/** Контекс потока */
-struct thread_context_t {
-    // Список актеров ассоциированных
-    // только с текущим потоком
-    std::set< object_t* >   actors;
-    // Счетчик инициализаций
-    atomic_t                counter;
-    // -
-    bool                    is_core;
-    // Текущий активный объект в данном потоке
-    object_t*               sender;
-};
-
-extern TLS_VARIABLE thread_context_t* threadCtx;
-
-// -
-void initialize_thread(const bool isInternal);
-// -
-void finalize_thread();
 
 } // namespace core
 

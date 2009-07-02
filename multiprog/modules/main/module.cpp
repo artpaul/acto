@@ -8,7 +8,11 @@ namespace acto {
 
 namespace core {
 
-extern TLS_VARIABLE thread_context_t* threadCtx;
+/// Объект, от имени которого посылается сообщение
+TLS_VARIABLE object_t* active_actor;
+
+static void do_handle_message(package_t* const package);
+
 
 /**
  */
@@ -85,10 +89,10 @@ private:
             worker_t::Slots     slots;
             // -
             slots.deleted = fastdelegate::MakeDelegate(this, &impl::pushDelete);
-            slots.handle  = fastdelegate::MakeDelegate(this, &impl::handle_message);
             slots.idle    = fastdelegate::MakeDelegate(this, &impl::pushIdle);
             slots.push    = fastdelegate::MakeDelegate(this, &impl::push_object);
             slots.pop     = fastdelegate::MakeDelegate(this, &impl::pop_object);
+            slots.handle.bind(&do_handle_message);
             // -
             return new core::worker_t(slots, thread_pool_t::instance());
         }
@@ -257,12 +261,13 @@ public:
         // 3. Создание актера
         if (preconditions) {
             try {
-                // -
                 object_t* const result = runtime_t::instance()->create_actor(body, options, 0);
-                // -
-                result->scheduled  = (worker != NULL) ? true : false;
-                   // -
+               
                 if (worker) {
+                    result->scheduled  = true;
+                    // -
+                    body->m_thread     = worker;
+                    // -
                     atomic_increment(&m_workers.reserved);
                     // -
                     worker->assign(result, 0);
@@ -280,8 +285,13 @@ public:
         return NULL;
     }
 
-    void handle_message(package_t* const package) {
-        main_module_t::instance()->handle_message(package);
+    void destroy_object_body(actor_body_t* const body) {
+        assert(body != NULL);
+
+        base_t* const impl = static_cast<base_t*>(body);
+
+        if (impl->m_thread != NULL)
+            atomic_decrement(&m_workers.reserved);
     }
 
     object_t* pop_object() {
@@ -294,6 +304,45 @@ public:
         m_event.signaled();
     }
 };
+
+
+//-----------------------------------------------------------------------------
+void do_handle_message(package_t* const package) {
+    assert(package != NULL && package->target != NULL);
+
+    object_t* const obj = package->target;
+    i_handler* handler  = 0;
+    base_t* const impl  = static_cast<base_t*>(obj->impl);
+
+    assert(obj->module == 0);
+
+    // 1. Найти обработчик соответствующий данному сообщению
+    for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
+        if (package->type == (*i)->type) {
+            handler = (*i)->handler;
+            break;
+        }
+    }
+    // 2. Если соответствующий обработчик найден, то вызвать его
+    try {
+        if (handler) {
+            assert(active_actor == NULL);
+            // TN: Данный параметр читает только функция determine_sender,
+            //     которая всегда выполняется в контексте этого потока.
+            active_actor = obj;
+            // -
+            handler->invoke(package->sender, package->data);
+            // -
+            active_actor = NULL;
+
+            if (impl->m_terminating)
+                runtime_t::instance()->destroy_object(obj);
+        }
+    }
+    catch (...) {
+        active_actor = NULL;
+    }
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -358,41 +407,16 @@ main_module_t::~main_module_t() {
     // -
 }
 //-----------------------------------------------------------------------------
+object_t* main_module_t::determine_sender() {
+    return active_actor;
+}
+//-----------------------------------------------------------------------------
+void main_module_t::destroy_object_body(actor_body_t* const body) {
+    m_pimpl->destroy_object_body(body);
+}
+//-----------------------------------------------------------------------------
 void main_module_t::handle_message(package_t* const package) {
-    assert(package != NULL && package->target != NULL);
-
-    object_t* const obj = package->target;
-    i_handler* handler  = 0;
-    base_t* const impl  = static_cast<base_t*>(obj->impl);
-
-    assert(obj->module == 0);
-
-    // 1. Найти обработчик соответствующий данному сообщению
-    for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
-        if (package->type == (*i)->type) {
-            handler = (*i)->handler;
-            break;
-        }
-    }
-    // 2. Если соответствующий обработчик найден, то вызвать его
-    try {
-        if (handler) {
-            assert(threadCtx != NULL);
-            // TN: Данный параметр читает только функция determine_sender,
-            //     которая всегда выполняется в контексте этого потока.
-            threadCtx->sender = obj;
-            // -
-            handler->invoke(package->sender, package->data);
-            // -
-            threadCtx->sender = 0;
-
-            if (impl->m_terminating)
-                runtime_t::instance()->destroy_object(obj);
-        }
-    }
-    catch (...) {
-        // -
-    }
+    do_handle_message(package);
 }
 //-----------------------------------------------------------------------------
 void main_module_t::send_message(package_t* const package) {
@@ -432,38 +456,10 @@ void main_module_t::shutdown(event_t& event) {
 void main_module_t::startup() {
     m_pimpl.reset(new impl());
 }
-//-----------------------------------------------------------------------------
-void main_module_t::process_binded_actors(bool need_delete) {
-    if (thread_t::is_library_thread())
-        // Данная функция не предназначена для внутренних потоков,
-        // так как они управляются ядром библиотеки
-        return;
-    else {
-        if (threadCtx) {
-            std::set<object_t*>::iterator   i;
-            // -
-            for (i = threadCtx->actors.begin(); i != threadCtx->actors.end(); ++i) {
-                this->process_actor_messages(*i);
-
-                if (need_delete)
-                    runtime_t::instance()->destroy_object(*i);
-            }
-        }
-    }
-}
 
 //-----------------------------------------------------------------------------
 object_t* main_module_t::create_actor(base_t* const body, const int options) {
     return m_pimpl->create_actor(body, options);
-}
-//-----------------------------------------------------------------------------
-void main_module_t::process_actor_messages(object_t* const actor) {
-    while (package_t* const package = actor->select_message()) {
-        assert(package->target->module == 0);
-
-        this->handle_message(package);
-        delete package;
-    }
 }
 
 } // namespace core

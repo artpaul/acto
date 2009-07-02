@@ -287,10 +287,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\core\core.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\system\event.cpp"
 				>
 			</File>
@@ -320,6 +316,10 @@
 			</File>
 			<File
 				RelativePath=".\system\thread_pool.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\core\types.cpp"
 				>
 			</File>
 			<File

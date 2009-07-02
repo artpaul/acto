@@ -11,6 +11,21 @@ namespace acto {
 
 namespace core {
 
+/** Контекс потока */
+struct binding_context_t {
+    // Список актеров ассоциированных
+    // только с текущим потоком
+    std::set< object_t* >   actors;
+    // Счетчик инициализаций
+    atomic_t                counter;
+};
+
+
+/// -
+extern TLS_VARIABLE object_t*   active_actor;
+/// -
+TLS_VARIABLE binding_context_t* threadCtx = NULL;
+
 
 /**
  */
@@ -62,33 +77,11 @@ private:
         }
     }
     //-------------------------------------------------------------------------
-    // -
-    package_t* create_package(object_t* const target, msg_t* const data, const TYPEID type) {
-        assert(target != 0);
-
-        // 1. Создать экземпляр пакета
-        package_t* const result = allocator_t::allocate< package_t >(data, type);
-        // 2.
-        result->sender = determine_sender();
-        result->target = target;
-        // 3.
-        acquire(result->target);
-        // -
-        if (result->sender)
-            acquire(result->sender);
-        // -
-        return result;
-    }
-    //-------------------------------------------------------------------------
     // Деструткор для пользовательских объектов (актеров)
     void destruct_actor(object_t* const actor) {
         assert(actor != 0);
         assert(actor->impl == 0);
         assert(actor->references == 0);
-
-        // !!!
-        //if (actor->thread != 0)
-        //    atomic_decrement(&m_workers.reserved);
 
         // Удалить регистрацию объекта
         if (!actor->binded) {
@@ -103,13 +96,6 @@ private:
         }
         else
             delete actor;
-    }
-    //-------------------------------------------------------------------------
-    // Определить отправителя сообщения
-    object_t* determine_sender() {
-        if (threadCtx)
-            return threadCtx->sender;
-        return NULL;
     }
 
 public:
@@ -188,6 +174,9 @@ public:
         // TN: Эта процедура всегда должна вызываться
         //     внутри блокировки полей объекта
 
+        // -
+        m_modules[obj->module]->destroy_object_body(obj->impl);
+        // -
         obj->unimpl = true;
         delete obj->impl, obj->impl = NULL;
         obj->unimpl = false;
@@ -222,7 +211,7 @@ public:
         std::auto_ptr< object_t::waiter_t > node;
         event_t event;
 
-        if (threadCtx->sender != obj) {
+        if (active_actor != obj) {
             MutexLocker lock(obj->cs);
 
             if (obj->impl) {
@@ -238,7 +227,7 @@ public:
         if (node.get() != NULL)
             event.wait();
     }
-    //-----------------------------------------------------------------------------
+    //-------------------------------------------------------------------------
     void push_deleted(object_t* const obj) {
         assert(obj != 0);
         // -
@@ -297,12 +286,28 @@ public:
     }
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
-    void send(object_t* const target, msg_t* const msg, const TYPEID type) {
-        assert(m_modules[target->module] != NULL);
+    void send(object_t* const sender, object_t* const target, msg_t* const msg) {
+        assert(msg    != NULL && msg->meta != NULL);
+        assert(target != NULL && m_modules[target->module] != NULL);
 
+        //
         // Создать пакет
-        core::package_t* const package = create_package(target, msg, type);
+        //
+
+        // 1. Создать экземпляр пакета
+        package_t* const package = allocator_t::allocate< package_t >(msg, msg->meta->tid);
+        // 2.
+        package->sender = sender;
+        package->target = target;
+        // 3.
+        acquire(target);
         // -
+        if (sender)
+            acquire(sender);
+
+        //
+        // Отправить пакет на обработку
+        //
         m_modules[target->module]->send_message(package);
     }
     //-----------------------------------------------------------------------------
@@ -326,7 +331,7 @@ public:
                 m_modules[i]->shutdown(ev);
             }
             m_modules[i] = NULL;
-        }      
+        }
 
         // 3. Дождаться, когда все объекты будут удалены
         m_evnoactors.wait();
@@ -395,6 +400,15 @@ object_t* runtime_t::create_actor(actor_body_t* const body, const int options, c
     return m_pimpl->create_actor(body, options, module);
 }
 //-----------------------------------------------------------------------------
+void runtime_t::create_thread_binding() {
+    if (!threadCtx) {
+        threadCtx = new binding_context_t();
+        threadCtx->counter = 1;
+    }
+    else
+        atomic_increment(&threadCtx->counter);
+}
+//-----------------------------------------------------------------------------
 void runtime_t::destroy_object(object_t* const obj) {
     m_pimpl->destroy_object(obj);
 }
@@ -403,12 +417,28 @@ void runtime_t::destroy_object_body(object_t* obj) {
     m_pimpl->destroy_object_body(obj);
 }
 //-----------------------------------------------------------------------------
+void runtime_t::destroy_thread_binding() {
+    if (threadCtx) {
+        if (atomic_decrement(&threadCtx->counter) == 0) {
+            this->process_binded_actors(threadCtx->actors, true);
+            // -
+            delete threadCtx, threadCtx = 0;
+        }
+    }
+}
+//-----------------------------------------------------------------------------
 void runtime_t::handle_message(package_t* const package) {
     m_pimpl->handle_message(package);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::join(object_t* const obj) {
     m_pimpl->join(obj);
+}
+//-----------------------------------------------------------------------------
+void runtime_t::process_binded_actors() {
+    assert(threadCtx != NULL);
+
+    this->process_binded_actors(threadCtx->actors, false);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::push_deleted(object_t* const obj) {
@@ -423,16 +453,44 @@ void runtime_t::register_module(module_t* const inst, const ui8 id) {
     m_pimpl->register_module(inst, id);
 }
 //-----------------------------------------------------------------------------
-void runtime_t::send(object_t* const target, msg_t* const msg, const TYPEID type) {
-    m_pimpl->send(target, msg, type);
+void runtime_t::send(object_t* const sender, object_t* const target, msg_t* const msg) {
+    m_pimpl->send(sender, target, msg);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::shutdown() {
+    this->destroy_thread_binding();
+    // -
     m_pimpl->shutdown();
 }
 //-----------------------------------------------------------------------------
 void runtime_t::startup() {
     m_pimpl->startup();
+    // -
+    this->create_thread_binding();
+}
+
+//-----------------------------------------------------------------------------
+void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
+    if (thread_t::is_library_thread())
+        // Данная функция не предназначена для внутренних потоков,
+        // так как они управляются ядром библиотеки
+        return;
+    else {
+        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
+            object_t* const actor = *i;
+            // -
+            while (package_t* const package = actor->select_message()) {
+                this->handle_message(package);
+                delete package;
+            }
+
+            if (need_delete)
+                this->destroy_object(actor);
+        }
+        // -
+        if (need_delete)
+            actors.clear();
+    }
 }
 
 } // namespace core
