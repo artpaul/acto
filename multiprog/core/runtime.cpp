@@ -24,16 +24,14 @@ struct binding_context_t {
 /// -
 extern TLS_VARIABLE object_t*   active_actor;
 /// -
-TLS_VARIABLE binding_context_t* threadCtx = NULL;
+static TLS_VARIABLE binding_context_t* threadCtx = NULL;
 
 
 /**
  */
 class runtime_t::impl {
     /// Тип множества актеров
-    typedef std::set< object_t* >               Actors;
-    /// Стек заголовков объектов
-    typedef generics::mpsc_stack_t< object_t >  HeaderStack;
+    typedef std::set< object_t* >   Actors;
 
     /// Максимальное кол-во возможных модулей
     static const size_t     MODULES_COUNT = 8;
@@ -43,39 +41,10 @@ private:
     mutex_t             m_cs;
     // Текущее множество актеров
     Actors              m_actors;
-
     /// Список зарегистрированных модулей
     module_t*           m_modules[MODULES_COUNT];
-    // Экземпляр GC потока
-    thread_t*           m_cleaner;
-    // -
-    HeaderStack         m_deleted;
-    // -
-    event_t             m_evclean;
-    event_t             m_evnoactors;
-    // Параметры потоков
-    volatile bool       m_active;
 
 private:
-    //-------------------------------------------------------------------------
-    template <typename T>
-    inline void safe_delete(T& ptr) {
-        assert(ptr != NULL);
-        delete ptr, ptr = NULL;
-    }
-    //-------------------------------------------------------------------------
-    // Цикл выполнения планировщика
-    void cleaner(void*) {
-        while (m_active) {
-            generics::stack_t< object_t >   objects(m_deleted.extract());
-            // Удлаить заголовки объектов
-            while (object_t* const item = objects.pop())
-                destruct_actor(item);
-            // -
-            m_evclean.wait(10 * 1000);
-            m_evclean.reset();
-        }
-    }
     //-------------------------------------------------------------------------
     // Деструткор для пользовательских объектов (актеров)
     void destruct_actor(object_t* const actor) {
@@ -88,21 +57,13 @@ private:
             MutexLocker   lock(m_cs);
             // -
             m_actors.erase(actor);
-            // -
-            delete actor;
-            // -
-            if (m_actors.empty())
-                m_evnoactors.signaled();
         }
-        else
-            delete actor;
+        // -
+        delete actor;
     }
 
 public:
-    impl()
-        : m_active (false)
-        , m_cleaner(NULL)
-    {
+    impl() {
         for (size_t i = 0; i < MODULES_COUNT; ++i)
             m_modules[i] = NULL;
     }
@@ -132,7 +93,6 @@ public:
             MutexLocker  lock(m_cs);
             // -
             m_actors.insert(result);
-            m_evnoactors.reset();
         }
         // -
         return result;
@@ -171,8 +131,9 @@ public:
     void destroy_object_body(object_t* obj) {
         assert(!obj->unimpl && obj->impl);
 
-        // TN: Эта процедура всегда должна вызываться
-        //     внутри блокировки полей объекта
+        // TN: Эта процедура всегда должна вызываться внутри блокировки 
+        //     полей объекта, если ссылкой на объект могут владеть 
+        //     два и более потока
 
         // -
         m_modules[obj->module]->destroy_object_body(obj->impl);
@@ -229,11 +190,7 @@ public:
     }
     //-------------------------------------------------------------------------
     void push_deleted(object_t* const obj) {
-        assert(obj != 0);
-        // -
-        m_deleted.push(obj);
-        // -
-        m_evclean.signaled();
+        this->destruct_actor(obj);
     }
     //-----------------------------------------------------------------------------
     // -
@@ -280,9 +237,32 @@ public:
         assert(inst != NULL && m_modules[id] == NULL);
 
         m_modules[id] = inst;
+        // -
+        inst->startup();
+    }
+    //-----------------------------------------------------------------------------
+    void reset() {
+        // 1. Инициировать процедуру удаления для всех оставшихся объектов
+        {
+            MutexLocker lock(m_cs);
+            // -
+            for (Actors::iterator i = m_actors.begin(); i != m_actors.end(); ++i)
+                destroy_object(*i);
+        }
 
-        if (this->m_active)
-            inst->startup();
+        // 2.
+        for (size_t i = 0; i < MODULES_COUNT; ++i) {
+            if (m_modules[i] != NULL) {
+                event_t ev;
+
+                ev.reset();
+                m_modules[i]->shutdown(ev);
+            }
+            m_modules[i] = NULL;
+        }
+
+        // -
+        assert(m_actors.size() == 0);
     }
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
@@ -309,62 +289,6 @@ public:
         // Отправить пакет на обработку
         //
         m_modules[target->module]->send_message(package);
-    }
-    //-----------------------------------------------------------------------------
-    // Завершить выполнение
-    void shutdown() {
-        // 1. Инициировать процедуру удаления для всех оставшихся объектов
-        {
-            MutexLocker lock(m_cs);
-            // -
-            for (Actors::iterator i = m_actors.begin(); i != m_actors.end(); ++i)
-                destroy_object(*i);
-        }
-        m_evclean.signaled();
-
-        // 2.
-        for (size_t i = 0; i < MODULES_COUNT; ++i) {
-            if (m_modules[i] != NULL) {
-                event_t ev;
-
-                ev.reset();
-                m_modules[i]->shutdown(ev);
-            }
-            m_modules[i] = NULL;
-        }
-
-        // 3. Дождаться, когда все объекты будут удалены
-        m_evnoactors.wait();
-
-        // 4. Удалить системные потоки
-        m_active = false;
-        // -
-        m_evclean.signaled();
-        // -
-        m_cleaner->join();
-        // -
-        safe_delete(m_cleaner);
-
-
-
-        assert(m_actors.size() == 0);
-    }
-    //-----------------------------------------------------------------------------
-    // Начать выполнение
-    void startup() {
-        assert(m_active  == false);
-        assert(m_cleaner == NULL);
-
-        // 1.
-        m_active = true;
-        // 2.
-        m_evnoactors.signaled();
-        // 3.
-        m_cleaner = new thread_t(fastdelegate::MakeDelegate(this, &impl::cleaner), 0);
-
-        for (size_t i = 0; i < MODULES_COUNT; ++i)
-            if (m_modules[i] != NULL)
-                m_modules[i]->startup();
     }
 };
 
@@ -460,12 +384,10 @@ void runtime_t::send(object_t* const sender, object_t* const target, msg_t* cons
 void runtime_t::shutdown() {
     this->destroy_thread_binding();
     // -
-    m_pimpl->shutdown();
+    m_pimpl->reset();
 }
 //-----------------------------------------------------------------------------
 void runtime_t::startup() {
-    m_pimpl->startup();
-    // -
     this->create_thread_binding();
 }
 

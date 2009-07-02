@@ -26,7 +26,13 @@ private:
         thread_worker_t* const inst = static_cast< thread_worker_t* >(param);
 
         while (inst->m_active) {
-            inst->m_callback(inst->m_param);
+            if (!inst->m_callback.empty()) {
+                // Вызвать обработчик
+                inst->m_callback(inst->m_param);
+                // Очистить параметры
+                inst->m_param = NULL;
+                inst->m_callback.clear();
+            }
             // -
             // После выполнения пользовательского задания
             // поток должен быть возвращен обратно в пул

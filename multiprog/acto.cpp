@@ -51,8 +51,8 @@ ACTO_API void startup() {
         //
         // Инициализировать ядро
         //
-        core::runtime_t::instance()->register_module(core::main_module_t::instance(), 0);
         core::runtime_t::instance()->startup();
+        core::runtime_t::instance()->register_module(core::main_module_t::instance(), 0);
 
         // Инициализировать сервисные компоненты
         services::initialize();
