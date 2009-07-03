@@ -22,8 +22,8 @@ class event_t::impl {
     HANDLE  m_handle;
 
 public:
-    impl() {
-        m_handle = ::CreateEvent(0, TRUE, TRUE, 0);
+    impl(const bool auto_reset) {
+        m_handle = ::CreateEvent(0, (BOOL)!auto_reset, TRUE, 0);
     }
 
     ~impl() {
@@ -66,13 +66,16 @@ public:
 class event_t::impl {
     pthread_mutex_t m_mutex;
     pthread_cond_t  m_cond;
+    const bool      m_auto;
     bool            m_triggered;
 
 public:
-    impl() {
+    impl(const bool auto_reset)
+        : m_auto(auto_reset)
+        , m_triggered(false)
+    {
         pthread_mutex_init(&m_mutex, 0);
         pthread_cond_init(&m_cond, 0);
-        m_triggered = false;
     }
 
     ~impl() {
@@ -104,6 +107,8 @@ public:
             if (rval != 0)
                 result = WR_ERROR;
         }
+        if (m_auto)
+            m_triggered = false;
         pthread_mutex_unlock(&m_mutex);
 
         return result;
@@ -126,6 +131,8 @@ public:
             else if (rval != 0)
                 result = WR_ERROR;
         }
+        if (m_auto)
+            m_triggered = false;
         pthread_mutex_unlock(&m_mutex);
 
         return result;
@@ -136,8 +143,8 @@ public:
 
 
 //-----------------------------------------------------------------------------
-event_t::event_t()
-    : m_pimpl(new impl())
+event_t::event_t(const bool auto_reset)
+    : m_pimpl(new impl(auto_reset))
 {
 }
 //-----------------------------------------------------------------------------

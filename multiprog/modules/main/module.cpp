@@ -11,7 +11,7 @@ namespace core {
 /// Объект, от имени которого посылается сообщение
 TLS_VARIABLE object_t* active_actor;
 
-static void do_handle_message(package_t* const package);
+void do_handle_message(package_t* const package);
 
 
 /**
@@ -26,8 +26,6 @@ class main_module_t::impl {
     struct workers_t {
         // Текущее кол-во потоков
         atomic_t        count;
-        // Текущее кол-во удаляемых потоков
-        atomic_t        deleting;
         // Текущее кол-во эксклюзивных потоков
         atomic_t        reserved;
         // Удаленные потоки
@@ -76,8 +74,7 @@ private:
             //
             // 2.
             //
-            m_evclean.wait(10 * 1000);
-            m_evclean.reset();
+            m_evclean.wait();
         }
     }
     //-------------------------------------------------------------------------
@@ -88,8 +85,8 @@ private:
         try {
             worker_t::Slots     slots;
             // -
-            slots.deleted = fastdelegate::MakeDelegate(this, &impl::pushDelete);
-            slots.idle    = fastdelegate::MakeDelegate(this, &impl::pushIdle);
+            slots.deleted = fastdelegate::MakeDelegate(this, &impl::push_delete);
+            slots.idle    = fastdelegate::MakeDelegate(this, &impl::push_idle);
             slots.push    = fastdelegate::MakeDelegate(this, &impl::push_object);
             slots.pop     = fastdelegate::MakeDelegate(this, &impl::pop_object);
             slots.handle.bind(&do_handle_message);
@@ -103,68 +100,64 @@ private:
         }
     }
     //-------------------------------------------------------------------------
+    void dispatch_to_worker(int& wait_timeout) {
+        // Прежде чем извлекать объект из очереди, необходимо проверить,
+        // что есть вычислительные ресурсы для его обработки
+        worker_t* worker = m_workers.idle.pop();
+        // -
+        if (!worker) {
+            // Если текущее количество потоков меньше оптимального,
+            // то создать новый поток
+            if (m_workers.count < (m_workers.reserved + (m_processors << 1)))
+                worker = create_worker();
+            else {
+                // Подождать некоторое время осовобождения какого-нибудь потока
+                const WaitResult result = m_evworker.wait(wait_timeout * 1000);
+                // -
+                worker = m_workers.idle.pop();
+                // -
+                if (!worker && (result == WR_TIMEOUT)) {
+                    // -
+                    wait_timeout += 2;
+                    // -
+                    if (m_workers.count < MAX_WORKERS)
+                        worker = create_worker();
+                    else 
+                        m_evworker.wait();
+                }
+                else
+                    if (wait_timeout > 2)
+                        wait_timeout -= 2;
+            }
+        }
+        // -
+        if (worker) {
+            if (object_t* const obj = m_queue.pop())
+                worker->assign(obj, (CLOCKS_PER_SEC >> 2));
+            else
+                m_workers.idle.push(worker);
+        }
+    }
+    //-------------------------------------------------------------------------
     void execute(void*) {
         int newWorkerTimeout = 2;
         int lastCleanupTime  = clock();
 
         while (m_active) {
             while(!m_queue.empty()) {
-                // Прежде чем извлекать объект из очереди, необходимо проверить,
-                // что есть вычислительные ресурсы для его обработки
-                worker_t* worker = m_workers.idle.pop();
-                // -
-                if (!worker) {
-                    // Если текущее количество потоков меньше оптимального,
-                    // то создать новый поток
-                    if (m_workers.count < (m_workers.reserved + (m_processors << 1)))
-                        worker = create_worker();
-                    else {
-                        // Подождать некоторое время осовобождения какого-нибудь потока
-                        m_evworker.reset();
-                        // -
-                        const WaitResult result = m_evworker.wait(newWorkerTimeout * 1000);
-                        // -
-                        worker = m_workers.idle.pop();
-                        // -
-                        if (!worker && (result == WR_TIMEOUT)) {
-                            // -
-                            newWorkerTimeout += 2;
-                            // -
-                            if (m_workers.count < MAX_WORKERS)
-                                worker = create_worker();
-                            else {
-                                m_evworker.reset();
-                                m_evworker.wait();
-                            }
-                        }
-                        else
-                            if (newWorkerTimeout > 2)
-                                newWorkerTimeout -= 2;
-                    }
-                }
-                // -
-                if (worker) {
-                    if (object_t* const obj = m_queue.pop()) {
-                        worker->assign(obj, (CLOCKS_PER_SEC >> 2));
-                    }
-                    else
-                        m_workers.idle.push(worker);
-                }
-
+                dispatch_to_worker(newWorkerTimeout);
                 yield();
             }
 
             // -
-            if (m_terminating || (m_event.wait(10 * 1000) == WR_TIMEOUT)) {
-                thread_pool_t::instance()->collect_all();
+            if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
                 m_workers.deleted.push(m_workers.idle.extract());
                 m_evclean.signaled();
                 // -
                 yield();
             }
             else {
-                if ((clock() - lastCleanupTime) > (10 * CLOCKS_PER_SEC)) {
-                    thread_pool_t::instance()->collect_one();
+                if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
                     if (worker_t* const item = m_workers.idle.pop()) {
                         m_workers.deleted.push(item);
                         m_evclean.signaled();
@@ -172,30 +165,30 @@ private:
                     lastCleanupTime = clock();
                 }
             }
-            // -
-            m_event.reset();
         }
     }
     //-------------------------------------------------------------------------
-    void pushDelete(object_t* const obj) {
+    void push_delete(object_t* const obj) {
         runtime_t::instance()->push_deleted(obj);
     }
     //-------------------------------------------------------------------------
-    void pushIdle(worker_t* const worker) {
+    void push_idle(worker_t* const worker) {
         assert(worker != 0);
         // -
         m_workers.idle.push(worker);
         // -
         m_evworker.signaled();
-        m_event.signaled();
     }
 
 public:
     impl()
-        : m_active     (false)
+        : m_evclean(true)
+        , m_event(true)
+        , m_evworker(true)
         , m_processors (1)
         , m_cleaner    (NULL)
         , m_scheduler  (NULL)
+        , m_active     (false)
         , m_terminating(false)
     {
         // 1.
@@ -204,10 +197,12 @@ public:
         m_terminating = false;
 
         m_workers.count    = 0;
-        m_workers.deleting = 0;
         m_workers.reserved = 0;
 
         // 2.
+        m_event.reset();
+        m_evclean.reset();
+        m_evworker.reset();
         m_evnoworkers.signaled();
         // 3.
         m_cleaner   = new thread_t(fastdelegate::MakeDelegate(this, &impl::cleaner), 0);
@@ -215,7 +210,6 @@ public:
     }
 
     ~impl() {
-        m_event.signaled();
         m_evworker.signaled();
         m_evclean.signaled();
 
@@ -236,7 +230,7 @@ public:
         delete m_scheduler;
         delete m_cleaner;
 
-        assert(m_workers.count == 0 && m_workers.deleting == 0 && m_workers.reserved == 0);
+        assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
 
     object_t* create_actor(base_t* const body, const int options) {
@@ -262,7 +256,7 @@ public:
         if (preconditions) {
             try {
                 object_t* const result = runtime_t::instance()->create_actor(body, options, 0);
-               
+
                 if (worker) {
                     result->scheduled  = true;
                     // -

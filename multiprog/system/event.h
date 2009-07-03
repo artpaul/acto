@@ -34,7 +34,7 @@ enum WaitResult {
 /** Событие */
 class event_t {
 public:
-    event_t();
+    event_t(const bool auto_reset = false);
     ~event_t();
 
 public:
@@ -48,7 +48,7 @@ public:
 
 private:
     class impl;
-    
+
     std::auto_ptr<impl>   m_pimpl;
 };
 

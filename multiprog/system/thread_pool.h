@@ -16,7 +16,7 @@
 
 #include <generic/delegates.h>
 #include <system/atomic.h>
-#include <system/event.h>
+#include <system/mutex.h>
 
 #include <generic/queue.h>
 
@@ -42,19 +42,21 @@ public:
     static thread_pool_t* instance();
 
 public:
-    /// Удалить один простаивающий поток
-    void collect_one();
-    /// Удалить все простаивающие потоки
-    void collect_all();
     ///
     void queue_task(callback_t cb, void* param);
 
 private:
+    /// Удалить все простаивающие потоки
+    void collect_all();
+    /// Удалить неиспользуемый поток
+    bool delete_idle_worker(thread_worker_t* const ctx);
+    ///
     void delete_worker(thread_worker_t* const item);
-    // -
+    ///
     thread_worker_t* sync_allocate();
 
 private:
+    core::mutex_t   m_cs;
     idle_queue_t    m_idles;
     atomic_t        m_count;
 };

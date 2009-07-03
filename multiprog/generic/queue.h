@@ -22,14 +22,14 @@
 
 namespace acto {
 
-namespace generics { 
+namespace generics {
 
-/** 
+/**
  */
 template <typename T, typename Guard = core::mutex_t>
 class queue_t {
-    T*      m_tail;
-    Guard   m_cs;
+    T*              m_tail;
+    mutable Guard   m_cs;
 
 public:
     queue_t() {
@@ -47,6 +47,12 @@ public:
            return head;
         }
         return NULL;
+    }
+
+    T* front() const {
+        core::MutexLocker lock(m_cs);
+
+        return m_tail ? m_tail->next : NULL;
     }
 
     void push(T* const node) {

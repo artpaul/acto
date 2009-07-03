@@ -4,6 +4,7 @@
 #include <generic/intrlist.h>
 #include <generic/stack.h>
 #include <system/thread.h>
+#include <system/event.h>
 
 #include "thread_pool.h"
 
@@ -12,6 +13,8 @@ namespace acto {
 /**
  */
 class thread_worker_t : public core::intrusive_t< thread_worker_t > {
+    friend class thread_pool_t;
+
     typedef fastdelegate::FastDelegate< void (void*) >  callback_t;
 
     callback_t                      m_callback;
@@ -19,6 +22,7 @@ class thread_worker_t : public core::intrusive_t< thread_worker_t > {
     thread_pool_t* const            m_owner;
     void*                           m_param;
     std::auto_ptr<core::thread_t>   m_thread;
+    bool                            m_deleting;
     volatile bool                   m_active;
 
 private:
@@ -33,20 +37,33 @@ private:
                 inst->m_param = NULL;
                 inst->m_callback.clear();
             }
-            // -
-            // После выполнения пользовательского задания
-            // поток должен быть возвращен обратно в пул
+
+            // 1. После выполнения пользовательского задания
+            //    поток должен быть возвращен обратно в пул
             inst->m_owner->m_idles.push(inst);
-            // -
-            m_event.wait();
-            m_event.reset();
+
+            // 2. Ждать пробуждения потока и параллельно обеспечить
+            //    удаление неиспользуемых потоков
+            while (true) {
+                bool timed = true;
+                // Случайный разброс в перидах ожидания для того, чтобы уменьшить
+                // вероятность одновременного удаления нескольких потоков
+                const core::WaitResult rval = timed ? m_event.wait((60 + rand() % 30) * 1000) : m_event.wait();
+
+                if (rval != core::WR_TIMEOUT)
+                    break;
+                else
+                    timed = inst->m_owner->delete_idle_worker(inst);
+            }
         }
     }
 
 public:
     thread_worker_t(thread_pool_t* const owner)
-        : m_owner(owner)
+        : m_event(true)
+        , m_owner(owner)
         , m_param(NULL)
+        , m_deleting(false)
         , m_active(true)
     {
         m_event.reset();
@@ -97,11 +114,12 @@ thread_pool_t* thread_pool_t::instance() {
     return &value;
 }
 //-----------------------------------------------------------------------------
-void thread_pool_t::collect_one() {
-    // TN: Вызов данного метода может осуществляться из разных потоков
-    if (thread_worker_t* const item = m_idles.pop())
-        delete_worker(item);
+void thread_pool_t::queue_task(callback_t cb, void* param) {
+    thread_worker_t* const thread = this->sync_allocate();
+
+    thread->execute(cb, param);
 }
+
 //-----------------------------------------------------------------------------
 void thread_pool_t::collect_all() {
     // TN: Вызов данного метода может осуществляться из разных потоков
@@ -111,12 +129,29 @@ void thread_pool_t::collect_all() {
         delete_worker(item);
 }
 //-----------------------------------------------------------------------------
-void thread_pool_t::queue_task(callback_t cb, void* param) {
-    thread_worker_t* const thread = this->sync_allocate();
+bool thread_pool_t::delete_idle_worker(thread_worker_t* const ctx) {
+    thread_worker_t* idle = NULL;
 
-    thread->execute(cb, param);
+    {
+        core::MutexLocker lock(m_cs);
+
+        if (!ctx->m_deleting && m_idles.front() != ctx) {
+            idle = m_idles.pop();
+
+            if (idle) {
+                if (ctx == idle)
+                    m_idles.push(idle);
+                else
+                    idle->m_deleting = true;
+            }
+        }
+    }
+
+    if (idle)
+        this->delete_worker(idle);
+
+    return idle != NULL;
 }
-
 //-----------------------------------------------------------------------------
 void thread_pool_t::delete_worker(thread_worker_t* const item) {
     delete item;

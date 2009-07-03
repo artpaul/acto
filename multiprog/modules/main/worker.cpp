@@ -118,10 +118,11 @@ public:
 //-------------------------------------------------------------------------------------------------
 worker_t::worker_t(const Slots slots, thread_pool_t* const pool)
     : m_active(true)
+    , m_event(true)
     , m_slots (slots)
-    , m_system(0)
 {
     m_complete.reset();
+    m_event.reset();
     m_processor.reset(new object_processor_t(slots));
 
     pool->queue_task(fastdelegate::MakeDelegate(this, &worker_t::execute), 0);
@@ -160,7 +161,6 @@ void worker_t::execute(void* param) {
         // 2. Ждать, пока не появится новое задание для данного потока
         //
         m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
-        m_event.reset();
     }
     // -
     m_complete.signaled();

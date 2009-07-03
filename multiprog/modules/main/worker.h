@@ -63,14 +63,12 @@ private:
 
 private:
     // Флаг активности потока
-    volatile bool       m_active;
+    volatile bool   m_active;
     // -
-    event_t             m_event;
-    event_t             m_complete;
+    event_t         m_event;
+    event_t         m_complete;
     // -
-    const Slots         m_slots;
-    // Экземпляр системного потока
-    thread_worker_t*    m_system;
+    const Slots     m_slots;
 
     std::auto_ptr< class object_processor_t > m_processor;
 };
