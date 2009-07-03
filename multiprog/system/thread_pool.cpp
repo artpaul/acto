@@ -1,4 +1,5 @@
 
+#include <cstdlib>
 #include <memory>
 
 #include <generic/intrlist.h>
