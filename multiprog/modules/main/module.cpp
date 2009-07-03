@@ -28,8 +28,6 @@ class main_module_t::impl {
         atomic_t        count;
         // Текущее кол-во эксклюзивных потоков
         atomic_t        reserved;
-        // Удаленные потоки
-        WorkerStack     deleted;
         // Свободные потоки
         WorkerStack     idle;
     };
@@ -38,10 +36,7 @@ class main_module_t::impl {
     static const size_t MAX_WORKERS = 512;
 
 private:
-    // Экземпляр GC потока
-    thread_t*           m_cleaner;
-    // -
-    event_t             m_evclean;
+    ///
     event_t             m_event;
     event_t             m_evworker;
     event_t             m_evnoworkers;
@@ -58,24 +53,12 @@ private:
     volatile bool       m_terminating;
 
 private:
-    void cleaner(void*) {
-        while (m_active) {
-            //
-            // 1. Извлечение потоков, отмеченых для удаления
-            //
-            generics::stack_t< worker_t >   queue(m_workers.deleted.extract());
-            // Удалить все потоки
-            while (worker_t* const item = queue.pop()) {
-                delete item;
-                // Уведомить, что удалены все вычислительные потоки
-                if (atomic_decrement(&m_workers.count) == 0)
-                    m_evnoworkers.signaled();
-            }
-            //
-            // 2.
-            //
-            m_evclean.wait();
-        }
+    //-------------------------------------------------------------------------
+    void delete_worker(worker_t* const item) {
+        delete item;
+        // Уведомить, что удалены все вычислительные потоки
+        if (atomic_decrement(&m_workers.count) == 0)
+            m_evnoworkers.signaled();
     }
     //-------------------------------------------------------------------------
     worker_t* create_worker() {
@@ -151,17 +134,18 @@ private:
 
             // -
             if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-                m_workers.deleted.push(m_workers.idle.extract());
-                m_evclean.signaled();
+                generics::stack_t< worker_t >   queue(m_workers.idle.extract());
+                // Удалить все потоки
+                while (worker_t* const item = queue.pop())
+                    delete_worker(item);
                 // -
                 yield();
             }
             else {
                 if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
-                    if (worker_t* const item = m_workers.idle.pop()) {
-                        m_workers.deleted.push(item);
-                        m_evclean.signaled();
-                    }
+                    if (worker_t* const item = m_workers.idle.pop())
+                        delete_worker(item);
+                    // -
                     lastCleanupTime = clock();
                 }
             }
@@ -182,11 +166,9 @@ private:
 
 public:
     impl()
-        : m_evclean(true)
-        , m_event(true)
+        : m_event(true)
         , m_evworker(true)
         , m_processors (1)
-        , m_cleaner    (NULL)
         , m_scheduler  (NULL)
         , m_active     (false)
         , m_terminating(false)
@@ -201,17 +183,14 @@ public:
 
         // 2.
         m_event.reset();
-        m_evclean.reset();
         m_evworker.reset();
         m_evnoworkers.signaled();
         // 3.
-        m_cleaner   = new thread_t(fastdelegate::MakeDelegate(this, &impl::cleaner), 0);
         m_scheduler = new thread_t(fastdelegate::MakeDelegate(this, &impl::execute), 0);
     }
 
     ~impl() {
         m_evworker.signaled();
-        m_evclean.signaled();
 
         // Дождаться, когда все потоки будут удалены
         m_terminating = true;
@@ -222,13 +201,10 @@ public:
         m_active = false;
         // -
         m_event.signaled();
-        m_evclean.signaled();
         // -
         m_scheduler->join();
-        m_cleaner->join();
         // -
         delete m_scheduler;
-        delete m_cleaner;
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
@@ -271,8 +247,8 @@ public:
             }
             catch (...) {
                 // Поставить в очередь на удаление
-                if (worker != 0)
-                    m_workers.deleted.push(worker);
+                if (worker != NULL)
+                    delete_worker(worker);
                 delete body;
             }
         }
