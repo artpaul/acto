@@ -112,6 +112,7 @@
 				AdditionalIncludeDirectories="$(SolutionDir)/multiprog"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				RuntimeLibrary="0"
+				EnableEnhancedInstructionSet="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				WarnAsError="true"
@@ -391,10 +392,6 @@
 			<Filter
 				Name="core"
 				>
-				<File
-					RelativePath=".\core\alloc.h"
-					>
-				</File>
 				<File
 					RelativePath=".\core\message.h"
 					>

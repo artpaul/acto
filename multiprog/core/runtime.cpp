@@ -4,7 +4,6 @@
 
 #include <system/thread.h>
 
-#include "alloc.h"
 #include "runtime.h"
 
 namespace acto {
@@ -275,7 +274,7 @@ public:
         //
 
         // 1. Создать экземпляр пакета
-        package_t* const package = allocator_t::allocate< package_t >(msg, msg->meta->tid);
+        package_t* const package = new package_t(msg, msg->meta->tid);
         // 2.
         package->sender = sender;
         package->target = target;
