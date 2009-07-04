@@ -8,3 +8,6 @@ ADD_LIBRARY (acto-system STATIC
 
 SET_TARGET_PROPERTIES(acto-system PROPERTIES
     COMPILE_FLAGS "-pthread")
+
+SET_TARGET_PROPERTIES(acto-system PROPERTIES
+    LINK_FLAGS "-pthread")

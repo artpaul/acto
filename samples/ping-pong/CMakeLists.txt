@@ -5,9 +5,6 @@ ADD_EXECUTABLE (ping-pong
 TARGET_LINK_LIBRARIES (ping-pong
     acto-lib
     acto-ext
-    acto-core
-    acto-system
-    rt
 )
 
 SET_TARGET_PROPERTIES(ping-pong PROPERTIES

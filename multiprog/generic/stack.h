@@ -84,14 +84,15 @@ public:
     }
 };
 
-/** 
+
+/**
  * Простой интрузивный стек без каких-либо блокировок
  */
 template <typename T>
 class stack_t {
     T*     m_head;
 public:
-    stack_t() 
+    stack_t()
         : m_head(NULL)
     {
     }
