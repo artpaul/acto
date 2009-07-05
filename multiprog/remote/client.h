@@ -26,7 +26,7 @@ public:
 
 /**
  */
-class client_t : public core::module_t {
+class remote_module_t : public core::module_t {
     struct remote_host_t {
         std::string name;
         int         fd;
@@ -49,7 +49,7 @@ class client_t : public core::module_t {
 
 private:
     static void read_actor_connect(int s, SOEVENT* const ev) {
-        client_t* const pthis = static_cast<client_t*>(ev->param);
+        remote_module_t* const pthis = static_cast<remote_module_t*>(ev->param);
 
         switch (ev->type) {
         case SOEVENT_CLOSED:
@@ -109,17 +109,17 @@ private:
     }
 
 public:
-    client_t() {
+    remote_module_t() {
         so_init();
         core::runtime_t::instance()->register_module(this, 1);
     }
 
-    ~client_t() {
+    ~remote_module_t() {
         so_terminate();
     }
 
-    static client_t* instance() {
-        static client_t value;
+    static remote_module_t* instance() {
+        static remote_module_t value;
 
         return &value;
     }
@@ -149,7 +149,7 @@ public:
     virtual void shutdown(core::event_t& event) {
         event.signaled();
     }
-    
+
     virtual void startup() {
     }
 

@@ -19,6 +19,7 @@
 #include <generic/intrlist.h>
 #include <generic/delegates.h>
 
+#include <system/atomic.h>
 #include <system/thread_pool.h>
 
 namespace acto {
@@ -60,17 +61,23 @@ public:
 
 private:
     void execute(void*);
+    ///
+    /// \return true  - если есть возможность обработать следующие сообщения
+    ///         false - если сообщений больше нет
+    bool process();
 
 private:
     // Флаг активности потока
-    volatile bool   m_active;
+    atomic_t            m_active;
+    object_t* volatile  m_object;
     // -
-    event_t         m_event;
-    event_t         m_complete;
+    event_t             m_event;
+    event_t             m_complete;
     // -
-    const Slots     m_slots;
-
-    std::auto_ptr< class object_processor_t > m_processor;
+    clock_t             m_start;
+    clock_t             m_time;
+    // -
+    const Slots         m_slots;
 };
 
 } // namespace core

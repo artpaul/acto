@@ -42,7 +42,10 @@ public:
     }
     ///
     T* pop() {
-        return this->remove(m_head, NULL);
+        T* const result = this->remove(m_head, NULL);
+        if (result)
+            result->next = NULL;
+        return result;
     }
     ///
     void push(T* item) {

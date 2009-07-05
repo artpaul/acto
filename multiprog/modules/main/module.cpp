@@ -49,8 +49,8 @@ private:
     /// -
     workers_t           m_workers;
     /// -
-    volatile bool       m_active;
-    volatile bool       m_terminating;
+    atomic_t            m_active;
+    atomic_t            m_terminating;
 
 private:
     //-------------------------------------------------------------------------
@@ -105,7 +105,7 @@ private:
                     // -
                     if (m_workers.count < MAX_WORKERS)
                         worker = create_worker();
-                    else 
+                    else
                         m_evworker.wait();
                 }
                 else
@@ -173,40 +173,11 @@ public:
         , m_active     (false)
         , m_terminating(false)
     {
-        // 1.
-        m_active      = true;
-        m_processors  = NumberOfProcessors();
-        m_terminating = false;
-
-        m_workers.count    = 0;
-        m_workers.reserved = 0;
-
-        // 2.
-        m_event.reset();
-        m_evworker.reset();
-        m_evnoworkers.signaled();
-        // 3.
-        m_scheduler = new thread_t(fastdelegate::MakeDelegate(this, &impl::execute), 0);
+        // -
     }
 
     ~impl() {
-        m_evworker.signaled();
-
-        // Дождаться, когда все потоки будут удалены
-        m_terminating = true;
         // -
-        m_event.signaled();
-        m_evnoworkers.wait();
-
-        m_active = false;
-        // -
-        m_event.signaled();
-        // -
-        m_scheduler->join();
-        // -
-        delete m_scheduler;
-
-        assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
 
     object_t* create_actor(base_t* const body, const int options) {
@@ -272,6 +243,44 @@ public:
         m_queue.push(obj);
 
         m_event.signaled();
+    }
+
+    void startup() {
+        assert(!m_active && !m_scheduler);
+        // 1.
+        m_active      = true;
+        m_processors  = NumberOfProcessors();
+        m_terminating = false;
+
+        m_workers.count    = 0;
+        m_workers.reserved = 0;
+
+        // 2.
+        m_event.reset();
+        m_evworker.reset();
+        m_evnoworkers.signaled();
+        // 3.
+        m_scheduler = new thread_t(fastdelegate::MakeDelegate(this, &impl::execute), 0);
+    }
+
+    void shutdown() {
+        m_evworker.signaled();
+
+        // Дождаться, когда все потоки будут удалены
+        m_terminating = true;
+        // -
+        m_event.signaled();
+        m_evnoworkers.wait();
+
+        m_active = false;
+        // -
+        m_event.signaled();
+        // -
+        m_scheduler->join();
+        // -
+        delete m_scheduler, m_scheduler = NULL;
+
+        assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
 };
 
@@ -368,7 +377,7 @@ void base_t::set_handler(i_handler* const handler, const TYPEID type) {
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 main_module_t::main_module_t()
-    : m_pimpl(NULL)
+    : m_pimpl(new impl())
 {
 
 }
@@ -419,12 +428,12 @@ void main_module_t::send_message(package_t* const package) {
 }
 //-----------------------------------------------------------------------------
 void main_module_t::shutdown(event_t& event) {
-    m_pimpl.reset(NULL);
+    m_pimpl->shutdown();
     event.signaled();
 }
 //-----------------------------------------------------------------------------
 void main_module_t::startup() {
-    m_pimpl.reset(new impl());
+    m_pimpl->startup();
 }
 
 //-----------------------------------------------------------------------------

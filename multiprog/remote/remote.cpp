@@ -144,7 +144,7 @@ public:
 // Подключиться к серверу
 // Вызывается на стороне клиента
 actor_t connect(const char* path, unsigned int port) {
-    return client_t::instance()->connect(path, port);
+    return remote_module_t::instance()->connect(path, port);
 }
 
 // Зарегистрировать актера в словаре.

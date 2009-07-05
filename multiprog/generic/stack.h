@@ -77,8 +77,10 @@ public:
             else {
                 T* const next = top->next;
 
-                if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)next))
+                if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)next)) {
+                    top->next = NULL;
                     return top;
+                }
             }
         }
     }
@@ -129,8 +131,10 @@ public:
     T* pop() {
         T* const result = m_head;
         // -
-        if (result)
+        if (result) {
             m_head = result->next;
+            result->next = NULL;
+        }
         return result;
     }
 };
