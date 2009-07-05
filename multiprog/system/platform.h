@@ -73,6 +73,7 @@
     // -
 #   include <windows.h>
 
+#   define FORCE_INLINE     inline
 #   define TLS_VARIABLE     __declspec (thread)
 
     /* Целые со знаком */
@@ -99,7 +100,7 @@ namespace core {
         return si.dwNumberOfProcessors;
     }
 
-    inline void Sleep(unsigned int milliseconds) {
+    inline void sleep(unsigned int milliseconds) {
         ::Sleep( milliseconds );
     }
 
@@ -112,6 +113,7 @@ namespace core {
 
 #elif defined (ACTO_LINUX)
 
+#   define FORCE_INLINE     __inline__ __attribute__((always_inline))
 #   define TLS_VARIABLE     __thread
 
 #   include <pthread.h>
@@ -139,7 +141,7 @@ namespace core {
         return sysconf(_SC_NPROCESSORS_CONF);
     }
 
-    inline void Sleep(unsigned int milliseconds) {
+    inline void sleep(unsigned int milliseconds) {
         ::sleep(milliseconds / 1000);
     }
 
@@ -151,6 +153,7 @@ namespace core {
 }
 
 #else
+#   define FORCE_INLINE
 #   define TLS_VARIABLE
 #endif
 

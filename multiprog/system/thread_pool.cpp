@@ -23,12 +23,12 @@ class thread_worker_t : public core::intrusive_t< thread_worker_t > {
     thread_pool_t* const            m_owner;
     void*                           m_param;
     std::auto_ptr<core::thread_t>   m_thread;
+    atomic_t                        m_active;
     bool                            m_deleting;
-    volatile bool                   m_active;
 
 private:
     void execute_loop(void* param) {
-        thread_worker_t* const inst = static_cast< thread_worker_t* >(param);
+        thread_worker_t* const volatile inst = static_cast< thread_worker_t* >(param);
 
         while (inst->m_active) {
             if (!inst->m_callback.empty()) {
@@ -64,14 +64,15 @@ public:
         : m_event(true)
         , m_owner(owner)
         , m_param(NULL)
+        , m_active(1)
         , m_deleting(false)
-        , m_active(true)
     {
+        next = NULL;
         m_event.reset();
     }
 
     ~thread_worker_t() {
-        m_active = false;
+        m_active = 0;
         // -
         if (m_thread.get() != NULL) {
             m_event.signaled();

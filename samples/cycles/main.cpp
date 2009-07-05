@@ -59,7 +59,7 @@ acto::message_class_t< msg_loop >   msg_loop_class;
 //    который в цикле проверяет какие-то значения.
 class Listener : public acto::implementation_t {
 public:
-    Listener() 
+    Listener()
         : m_active(false)
         , m_counter(0)
     {
@@ -162,7 +162,7 @@ int main() {
         // Запустить выполнение примера
         analizer.send(msg_start());
         // -
-        acto::core::Sleep(5 * 1000);
+        acto::core::sleep(5 * 1000);
         // Оставноваить выполнение и собрать статистику
         analizer.send(msg_stop());
         // -

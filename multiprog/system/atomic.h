@@ -10,23 +10,23 @@
     namespace acto {
         typedef volatile long   atomic_t;
 
-        inline long atomic_add(atomic_t* a, long b) {
+        FORCE_INLINE long atomic_add(atomic_t* a, long b) throw () {
             return InterlockedExchangeAdd(a, b) + b;
         }
 
-        inline long atomic_increment(atomic_t* const a) {
+        FORCE_INLINE long atomic_increment(atomic_t* const a) throw () {
             return InterlockedIncrement(a);
         }
 
-        inline long atomic_decrement(atomic_t* const a) {
+        FORCE_INLINE long atomic_decrement(atomic_t* const a) throw () {
             return InterlockedDecrement(a);
         }
 
-        inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
+        FORCE_INLINE bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) throw () {
             return InterlockedCompareExchange(a, val, compare) == compare;
         }
 
-        inline long atomic_swap(atomic_t* const a, long b) {
+        FORCE_INLINE long atomic_swap(atomic_t* const a, long b) throw () {
             return InterlockedExchange(a, b);
         }
 
@@ -38,23 +38,23 @@
         namespace acto {
             typedef volatile long   atomic_t;
 
-            inline long atomic_add(atomic_t* const a, long b) {
+            static FORCE_INLINE long atomic_add(atomic_t* const a, long b) throw () {
                 return __sync_add_and_fetch(a, b);
             }
 
-            inline long atomic_increment(atomic_t* const a) {
+            static FORCE_INLINE long atomic_increment(atomic_t* const a)  throw () {
                 return __sync_add_and_fetch(a, 1);
             }
 
-            inline long atomic_decrement(atomic_t* const a) {
+            static FORCE_INLINE long atomic_decrement(atomic_t* const a)  throw () {
                 return __sync_sub_and_fetch(a, 1);
             }
 
-            inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
+            static FORCE_INLINE bool atomic_compare_and_swap(atomic_t* const a, long compare, long val)  throw () {
                 return __sync_bool_compare_and_swap(a, compare, val);
             }
 
-            inline long atomic_swap(atomic_t* const a, long b) {
+            static FORCE_INLINE long atomic_swap(atomic_t* const a, long b)  throw () {
                 return __sync_lock_test_and_set(a, b);
             }
         } // namespace acto
@@ -64,7 +64,7 @@
         namespace acto {
             typedef volatile long   atomic_t;
 
-             inline long atomic_add(atomic_t* const a, long b) {
+             inline long atomic_add(atomic_t* const a, long b) throw () {
                   long temp = b;
                   __asm__ __volatile__("lock; xadd" ATOMICOPS_WORD_SUFFIX " %0,%1"
                                        : "+r" (b), "+m" (*a)
@@ -73,15 +73,15 @@
                   return temp + b;
             }
 
-            inline long atomic_increment(atomic_t* const a) {
+            inline long atomic_increment(atomic_t* const a) throw () {
                 return atomic_add(a, 1);
             }
 
-            inline long atomic_decrement(atomic_t* const a) {
+            inline long atomic_decrement(atomic_t* const a) throw () {
                 return atomic_add(a, -1);
             }
 
-            inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) {
+            inline bool atomic_compare_and_swap(atomic_t* const a, long compare, long val) throw () {
                 char ret;
 
                 __asm__ __volatile__ (
@@ -95,7 +95,7 @@
                 return ret;
             }
 
-            inline long atomic_swap(atomic_t* const a, long b) {
+            inline long atomic_swap(atomic_t* const a, long b) throw () {
                 __asm__ __volatile__("xchg" ATOMICOPS_WORD_SUFFIX " %1,%0"  // The lock prefix
                                    : "=r" (b)                               // is implicit for
                                    : "m" (*a), "0" (b)                      // xchg.

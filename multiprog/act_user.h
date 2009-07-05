@@ -67,7 +67,7 @@ private:
 public:
     actor_t();
     // -
-    explicit actor_t(core::object_t* const an_object, bool acquire = true);
+    explicit actor_t(core::object_t* const an_object, const bool acquire = true);
     // -
     actor_t(const actor_t& rhs);
 

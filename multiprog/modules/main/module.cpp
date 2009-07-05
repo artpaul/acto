@@ -294,6 +294,7 @@ void do_handle_message(package_t* const package) {
     base_t* const impl  = static_cast<base_t*>(obj->impl);
 
     assert(obj->module == 0);
+    assert(obj->impl   != 0);
 
     // 1. Найти обработчик соответствующий данному сообщению
     for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
@@ -321,6 +322,14 @@ void do_handle_message(package_t* const package) {
     catch (...) {
         active_actor = NULL;
     }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+i_handler::i_handler(const TYPEID type_)
+    : m_type(type_)
+{
 }
 
 

@@ -38,7 +38,7 @@ class dumy_serializer_t : public serializer_t {
 
 
 // Идентификатор типов
-typedef long    TYPEID;
+typedef atomic_t    TYPEID;
 
 
 /**
@@ -113,11 +113,11 @@ public:
 
 private:
     /// Критическая секция для доступа к полям
-    mutex_t             m_cs;
+    mutex_t     m_cs;
     /// Генератор идентификаторов
-    volatile TYPEID     m_counter;
+    TYPEID      m_counter;
     /// Типы сообщений
-    Types               m_types;
+    Types       m_types;
 };
 
 ///
@@ -155,7 +155,7 @@ class message_class_t {
     }
 
 public:
-    message_class_t() 
+    message_class_t()
         : m_meta(message_map_t::instance()->get_metaclass< Serializer >(typeid(MsgT).name()))
     {
         // -

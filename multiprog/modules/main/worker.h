@@ -68,16 +68,16 @@ private:
 
 private:
     // Флаг активности потока
-    atomic_t            m_active;
-    object_t* volatile  m_object;
+    atomic_t        m_active;
+    object_t*       m_object;
     // -
-    event_t             m_event;
-    event_t             m_complete;
+    event_t         m_event;
+    event_t         m_complete;
     // -
-    clock_t             m_start;
-    clock_t             m_time;
+    clock_t         m_start;
+    clock_t         m_time;
     // -
-    const Slots         m_slots;
+    const Slots     m_slots;
 };
 
 } // namespace core

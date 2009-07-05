@@ -64,12 +64,12 @@ public:
     }
 
     // Текущий поток для вызываемого метода
-    static bool is_library_thread() {
+    static bool is_library_thread() throw() {
         return instance != NULL;
     }
 
 public:
-    void join() {
+    void join() throw() {
         ::WaitForSingleObject(m_handle, INFINITE);
     }
 };
@@ -115,12 +115,12 @@ public:
     }
 
     // Текущий поток для вызываемого метода
-    static bool is_library_thread() {
+    static bool is_library_thread() throw() {
         return instance != NULL;
     }
 
 public:
-    void join() {
+    void join() throw() {
         pthread_join(m_handle, 0);
     }
 };

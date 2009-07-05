@@ -22,24 +22,24 @@ class event_t::impl {
     HANDLE  m_handle;
 
 public:
-    impl(const bool auto_reset) {
+    impl(const bool auto_reset) throw () {
         m_handle = ::CreateEvent(0, (BOOL)!auto_reset, TRUE, 0);
     }
 
-    ~impl() {
+    ~impl() throw () {
         ::CloseHandle(m_handle);
     }
 
 public:
-    void reset() {
+    void reset() throw () {
         ::ResetEvent(m_handle);
     }
 
-    void signaled() {
+    void signaled() throw () {
         ::SetEvent(m_handle);
     }
 
-    WaitResult wait() {
+    WaitResult wait() throw () {
         switch (::WaitForSingleObject(m_handle, INFINITE)) {
         case WAIT_OBJECT_0 :
             return WR_SIGNALED;
@@ -49,7 +49,7 @@ public:
         return WR_ERROR;
     }
 
-    WaitResult wait(const unsigned int msec) {
+    WaitResult wait(const unsigned int msec) throw () {
         switch (::WaitForSingleObject(m_handle, msec)) {
         case WAIT_OBJECT_0 :
             return WR_SIGNALED;
@@ -85,26 +85,26 @@ public:
         pthread_mutexattr_destroy(&attr);
     }
 
-    ~impl() {
+    ~impl() throw () {
         pthread_cond_destroy(&m_cond);
         pthread_mutex_destroy(&m_mutex);
     }
 
 public:
-    void reset() {
+    void reset() throw () {
         pthread_mutex_lock(&m_mutex);
         m_triggered = false;
         pthread_mutex_unlock(&m_mutex);
     }
 
-    void signaled() {
+    void signaled() throw () {
         pthread_mutex_lock(&m_mutex);
         m_triggered = true;
         pthread_cond_signal(&m_cond);
         pthread_mutex_unlock(&m_mutex);
     }
 
-    WaitResult wait() {
+    WaitResult wait() throw () {
         WaitResult  result = WR_SIGNALED;
 
         pthread_mutex_lock(&m_mutex);
@@ -121,7 +121,7 @@ public:
         return result;
     }
 
-    WaitResult wait(const unsigned int msec) {
+    WaitResult wait(const unsigned int msec) throw () {
         WaitResult  result = WR_SIGNALED;
         timespec    time;
 

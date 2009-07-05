@@ -28,12 +28,14 @@ namespace generics {
  */
 template <typename T, typename Guard = core::mutex_t>
 class queue_t {
-    T*              m_tail;
+    T* volatile     m_tail;
     mutable Guard   m_cs;
 
 public:
-    queue_t() {
-        m_tail = NULL;
+    queue_t()
+        : m_tail(NULL)
+    {
+        // -
     }
 
     sequence_t<T> extract() {

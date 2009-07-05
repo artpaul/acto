@@ -19,20 +19,20 @@ class mutex_t::impl {
     CRITICAL_SECTION    m_section;
 
 public:
-    impl() {
+    impl() throw () {
         ::InitializeCriticalSection(&m_section);
     }
 
-    ~impl() {
+    ~impl() throw () {
         ::DeleteCriticalSection(&m_section);
     }
 
 public:
-    void acquire() {
+    void acquire() throw () {
         ::EnterCriticalSection(&m_section);
     }
 
-    void release() {
+    void release() throw () {
         ::LeaveCriticalSection(&m_section);
     }
 };
@@ -44,7 +44,7 @@ class mutex_t::impl {
     pthread_mutex_t     m_section;
 
 public:
-    impl() {
+    impl() throw () {
         pthread_mutexattr_t attr;
 
         pthread_mutexattr_init(&attr);
@@ -55,16 +55,16 @@ public:
         pthread_mutexattr_destroy(&attr);
     }
 
-    ~impl() {
+    ~impl() throw () {
         pthread_mutex_destroy(&m_section);
     }
 
 public:
-    void acquire() {
+    void acquire() throw () {
         pthread_mutex_lock(&m_section);
     }
 
-    void release() {
+    void release() throw () {
         pthread_mutex_unlock(&m_section);
     }
 };
@@ -73,7 +73,7 @@ public:
 
 
 //-----------------------------------------------------------------------------
-mutex_t::mutex_t() 
+mutex_t::mutex_t()
     : m_pimpl(new impl())
 {
 }

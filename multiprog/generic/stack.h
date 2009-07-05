@@ -114,7 +114,7 @@ public:
 
     sequence_t<T> extract() {
         sequence_t<T> top = sequence_t<T>(m_head);
-        m_head = 0;
+        m_head = NULL;
         return top;
     }
 

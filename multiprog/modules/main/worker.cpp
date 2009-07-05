@@ -19,6 +19,8 @@ worker_t::worker_t(const Slots slots, thread_pool_t* const pool)
     , m_time(0)
     , m_slots (slots)
 {
+    next = NULL;
+    // -
     m_complete.reset();
     m_event.reset();
 
