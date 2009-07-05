@@ -138,7 +138,9 @@ namespace acto {
 namespace core {
     /// Количетсов физически процессоров (ядер) в системе
     inline unsigned int NumberOfProcessors() {
-        return sysconf(_SC_NPROCESSORS_CONF);
+        static long n_cpu = ::sysconf(_SC_NPROCESSORS_CONF);
+
+        return n_cpu;
     }
 
     inline void sleep(unsigned int milliseconds) {

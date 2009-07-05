@@ -27,21 +27,19 @@ class thread_worker_t : public core::intrusive_t< thread_worker_t > {
     bool                            m_deleting;
 
 private:
-    void execute_loop(void* param) {
-        thread_worker_t* const volatile inst = static_cast< thread_worker_t* >(param);
-
-        while (inst->m_active) {
-            if (!inst->m_callback.empty()) {
+    void execute_loop(void*) {
+        while (m_active) {
+            if (!m_callback.empty()) {
                 // Вызвать обработчик
-                inst->m_callback(inst->m_param);
+                m_callback(m_param);
                 // Очистить параметры
-                inst->m_param = NULL;
-                inst->m_callback.clear();
+                m_param = NULL;
+                m_callback.clear();
             }
 
             // 1. После выполнения пользовательского задания
             //    поток должен быть возвращен обратно в пул
-            inst->m_owner->m_idles.push(inst);
+            m_owner->m_idles.push(this);
 
             // 2. Ждать пробуждения потока и параллельно обеспечить
             //    удаление неиспользуемых потоков
@@ -54,7 +52,7 @@ private:
                 if (rval != core::WR_TIMEOUT)
                     break;
                 else
-                    timed = inst->m_owner->delete_idle_worker(inst);
+                    timed = m_owner->delete_idle_worker(this);
             }
         }
     }
@@ -88,7 +86,7 @@ public:
         m_param    = param;
 
         if (m_thread.get() == NULL) {
-            m_thread.reset(new core::thread_t(fastdelegate::MakeDelegate(this, &thread_worker_t::execute_loop), this));
+            m_thread.reset(new core::thread_t(fastdelegate::MakeDelegate(this, &thread_worker_t::execute_loop), NULL));
         }
         else {
             m_event.signaled();
