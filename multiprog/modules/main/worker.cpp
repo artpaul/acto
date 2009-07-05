@@ -13,7 +13,10 @@ namespace core {
 //-------------------------------------------------------------------------------------------------
 worker_t::worker_t(const Slots slots, thread_pool_t* const pool)
     : m_active(true)
+    , m_object(NULL)
     , m_event(true)
+    , m_start(0)
+    , m_time(0)
     , m_slots (slots)
 {
     m_complete.reset();
