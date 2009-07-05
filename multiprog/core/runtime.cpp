@@ -392,26 +392,20 @@ void runtime_t::startup() {
 
 //-----------------------------------------------------------------------------
 void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
-    if (thread_t::is_library_thread())
-        // Данная функция не предназначена для внутренних потоков,
-        // так как они управляются ядром библиотеки
-        return;
-    else {
-        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
-            object_t* const actor = *i;
-            // -
-            while (package_t* const package = actor->select_message()) {
-                this->handle_message(package);
-                delete package;
-            }
-
-            if (need_delete)
-                this->destroy_object(actor);
-        }
+    for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
+        object_t* const actor = *i;
         // -
+        while (package_t* const package = actor->select_message()) {
+            this->handle_message(package);
+            delete package;
+        }
+
         if (need_delete)
-            actors.clear();
+            this->destroy_object(actor);
     }
+    // -
+    if (need_delete)
+        actors.clear();
 }
 
 } // namespace core

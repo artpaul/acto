@@ -27,18 +27,12 @@ class thread_t::impl {
     void*       m_param;
     proc_t      m_proc;
 
-    static TLS_VARIABLE impl*  instance;
-
 private:
     static DWORD WINAPI thread_proc(void* param) {
         if (impl* const p_impl = static_cast< impl* >(param)) {
             if (!p_impl->m_proc.empty()) {
-                // Связать экземпляр с потоком
-                instance = p_impl;
                 // Вызвать процедуру потока
                 p_impl->m_proc(p_impl->m_param);
-                // Обнулить связь
-                instance = NULL;
             }
         }
         ::ExitThread(0);
@@ -63,11 +57,6 @@ public:
         }
     }
 
-    // Текущий поток для вызываемого метода
-    static bool is_library_thread() throw() {
-        return instance != NULL;
-    }
-
 public:
     void join() throw() {
         ::WaitForSingleObject(m_handle, INFINITE);
@@ -83,18 +72,12 @@ class thread_t::impl {
     void*       m_param;
     proc_t      m_proc;
 
-    static TLS_VARIABLE impl*  instance;
-
 private:
     static void* thread_proc(void* param) {
         if (impl* const p_impl = static_cast<impl*>(param)) {
             if (!p_impl->m_proc.empty()) {
-                // Связать экземпляр с потоком
-                instance = p_impl;
                 // Вызвать процедуру потока
                 p_impl->m_proc(p_impl->m_param);
-                // Обнулить связь
-                instance = NULL;
             }
         }
         pthread_exit(NULL);
@@ -111,12 +94,7 @@ public:
     }
 
     inline ~impl() throw() {
-        // -
-    }
-
-    // Текущий поток для вызываемого метода
-    static bool is_library_thread() throw() {
-        return instance != NULL;
+        this->join();
     }
 
 public:
@@ -126,9 +104,6 @@ public:
 };
 
 #endif
-
-/// -
-TLS_VARIABLE thread_t::impl*  thread_t::impl::instance = NULL;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,10 +120,6 @@ thread_t::thread_t(const proc_t& proc, void* const param) :
 //-----------------------------------------------------------------------------
 thread_t::~thread_t() {
     // must be defined for delete m_pimpl
-}
-//-----------------------------------------------------------------------------
-bool thread_t::is_library_thread() {
-    return impl::is_library_thread();
 }
 //-----------------------------------------------------------------------------
 void thread_t::join() {

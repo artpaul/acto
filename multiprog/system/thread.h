@@ -31,9 +31,6 @@ public:
     thread_t(const proc_t& proc, void* const param = 0);
     ~thread_t();
 
-    // Создан ли текущий системный поток библиотекой acto
-    static bool is_library_thread();
-
 public:
     /// Ждать завершения текущего потока
     void join();
