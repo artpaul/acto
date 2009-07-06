@@ -173,7 +173,7 @@ public:
         fds.count = 0;
     }
     //-------------------------------------------------------------------------
-    void execute(void* param) {
+    void execute(void* /*param*/) {
        //int epfd = epoll_create(10);
         // -
         while (m_active) {
@@ -288,15 +288,17 @@ class so_runtime_t {
 
 private:
     //-------------------------------------------------------------------------
-    void execute(void* param) {
-        m_cluster.execute(param);
-        m_cluster.clear();
+    static void execute(void* param) {
+        so_runtime_t* const pthis = static_cast< so_runtime_t* >(param);
+
+        pthis->m_cluster.execute(NULL);
+        pthis->m_cluster.clear();
     }
 
 public:
     so_runtime_t()
     {
-        m_thread.reset(new ThreadType(fastdelegate::MakeDelegate(this, &so_runtime_t::execute), NULL));
+        m_thread.reset(new ThreadType(&so_runtime_t::execute, this));
     }
 
     static so_runtime_t* instance() {

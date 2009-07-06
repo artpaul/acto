@@ -16,7 +16,7 @@ void do_handle_message(package_t* const package);
 
 /**
  */
-class main_module_t::impl {
+class main_module_t::impl : private worker_t::worker_callback_i {
     // -
     typedef generics::queue_t< object_t >       HeaderQueue;
     // -
@@ -66,6 +66,7 @@ private:
             m_evnoworkers.reset();
         // -
         try {
+            /*
             worker_t::Slots     slots;
             // -
             slots.deleted = fastdelegate::MakeDelegate(this, &impl::push_delete);
@@ -73,8 +74,9 @@ private:
             slots.push    = fastdelegate::MakeDelegate(this, &impl::push_object);
             slots.pop     = fastdelegate::MakeDelegate(this, &impl::pop_object);
             slots.handle.bind(&do_handle_message);
+            */
             // -
-            return new core::worker_t(slots, thread_pool_t::instance());
+            return new core::worker_t(this, thread_pool_t::instance());
         }
         catch (...) {
             if (atomic_decrement(&m_workers.count) == 0)
@@ -122,29 +124,31 @@ private:
         }
     }
     //-------------------------------------------------------------------------
-    void execute(void*) {
+    static void execute(void* param) {
+        impl* const pthis = static_cast< impl* >(param);
+
         int newWorkerTimeout = 2;
         int lastCleanupTime  = clock();
 
-        while (m_active) {
-            while(!m_queue.empty()) {
-                dispatch_to_worker(newWorkerTimeout);
+        while (pthis->m_active) {
+            while(!pthis->m_queue.empty()) {
+                pthis->dispatch_to_worker(newWorkerTimeout);
                 yield();
             }
 
             // -
-            if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-                generics::stack_t< worker_t >   queue(m_workers.idle.extract());
+            if (pthis->m_terminating || (pthis->m_event.wait(60 * 1000) == WR_TIMEOUT)) {
+                generics::stack_t< worker_t >   queue(pthis->m_workers.idle.extract());
                 // Удалить все потоки
                 while (worker_t* const item = queue.pop())
-                    delete_worker(item);
+                    pthis->delete_worker(item);
                 // -
                 yield();
             }
             else {
                 if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
-                    if (worker_t* const item = m_workers.idle.pop())
-                        delete_worker(item);
+                    if (worker_t* const item = pthis->m_workers.idle.pop())
+                        pthis->delete_worker(item);
                     // -
                     lastCleanupTime = clock();
                 }
@@ -235,11 +239,15 @@ public:
             atomic_decrement(&m_workers.reserved);
     }
 
+    void handle_message(package_t* const package) {
+        do_handle_message(package);
+    }
+
     object_t* pop_object() {
         return m_queue.pop();
     }
 
-    void push_object(object_t* obj) {
+    void push_object(object_t* const obj) {
         m_queue.push(obj);
 
         m_event.signaled();
@@ -260,7 +268,7 @@ public:
         m_evworker.reset();
         m_evnoworkers.signaled();
         // 3.
-        m_scheduler = new thread_t(fastdelegate::MakeDelegate(this, &impl::execute), 0);
+        m_scheduler = new thread_t(&impl::execute, this);
     }
 
     void shutdown() {
@@ -404,7 +412,7 @@ void main_module_t::destroy_object_body(actor_body_t* const body) {
 }
 //-----------------------------------------------------------------------------
 void main_module_t::handle_message(package_t* const package) {
-    do_handle_message(package);
+    m_pimpl->handle_message(package);
 }
 //-----------------------------------------------------------------------------
 void main_module_t::send_message(package_t* const package) {

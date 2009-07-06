@@ -16,30 +16,32 @@ namespace acto {
 class thread_worker_t : public core::intrusive_t< thread_worker_t > {
     friend class thread_pool_t;
 
-    typedef fastdelegate::FastDelegate< void (void*) >  callback_t;
+    typedef void (*callback_t)(void*);
 
     callback_t                      m_callback;
     core::event_t                   m_event;
     thread_pool_t* const            m_owner;
     void*                           m_param;
-    std::auto_ptr<core::thread_t>   m_thread;
+    std::auto_ptr< core::thread_t > m_thread;
     atomic_t                        m_active;
     bool                            m_deleting;
 
 private:
-    void execute_loop(void*) {
-        while (m_active) {
-            if (!m_callback.empty()) {
+    static void execute_loop(void* param) {
+        thread_worker_t* const pthis = static_cast< thread_worker_t* >(param);
+
+        while (pthis->m_active) {
+            if (pthis->m_callback != NULL) {
                 // Вызвать обработчик
-                m_callback(m_param);
+                pthis->m_callback(pthis->m_param);
                 // Очистить параметры
-                m_param = NULL;
-                m_callback.clear();
+                pthis->m_param    = NULL;
+                pthis->m_callback = NULL;
             }
 
             // 1. После выполнения пользовательского задания
             //    поток должен быть возвращен обратно в пул
-            m_owner->m_idles.push(this);
+            pthis->m_owner->m_idles.push(pthis);
 
             // 2. Ждать пробуждения потока и параллельно обеспечить
             //    удаление неиспользуемых потоков
@@ -47,12 +49,12 @@ private:
                 bool timed = true;
                 // Случайный разброс в перидах ожидания для того, чтобы уменьшить
                 // вероятность одновременного удаления нескольких потоков
-                const core::WaitResult rval = timed ? m_event.wait((60 + rand() % 30) * 1000) : m_event.wait();
+                const core::WaitResult rval = timed ? pthis->m_event.wait((60 + rand() % 30) * 1000) : pthis->m_event.wait();
 
                 if (rval != core::WR_TIMEOUT)
                     break;
                 else
-                    timed = m_owner->delete_idle_worker(this);
+                    timed = pthis->m_owner->delete_idle_worker(pthis);
             }
         }
     }
@@ -66,7 +68,6 @@ public:
         , m_deleting(false)
     {
         next = NULL;
-        m_event.reset();
     }
 
     ~thread_worker_t() {
@@ -86,7 +87,7 @@ public:
         m_param    = param;
 
         if (m_thread.get() == NULL) {
-            m_thread.reset(new core::thread_t(fastdelegate::MakeDelegate(this, &thread_worker_t::execute_loop), NULL));
+            m_thread.reset(new core::thread_t(&thread_worker_t::execute_loop, this));
         }
         else {
             m_event.signaled();

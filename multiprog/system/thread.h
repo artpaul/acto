@@ -16,8 +16,6 @@
 
 #include <memory>
 
-#include <generic/delegates.h>
-
 namespace acto {
 
 namespace core {
@@ -26,9 +24,9 @@ namespace core {
  */
 class thread_t {
 public:
-    typedef fastdelegate::FastDelegate< void (void*) >   proc_t;
+    typedef void (*callback_t)(void*);
 
-    thread_t(const proc_t& proc, void* const param = 0);
+    thread_t(const callback_t proc, void* const param = 0);
     ~thread_t();
 
 public:
@@ -40,7 +38,6 @@ public:
 private:
     class impl;
 
-    void* const         m_param;
     std::auto_ptr<impl> m_pimpl;
 };
 

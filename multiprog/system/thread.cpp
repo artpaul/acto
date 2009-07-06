@@ -1,6 +1,4 @@
 
-#include <generic/delegates.h>
-
 #include "platform.h"
 #include "thread.h"
 
@@ -25,21 +23,21 @@ class thread_t::impl {
     DWORD       m_id;
     // -
     void*       m_param;
-    proc_t      m_proc;
+    callback_t  m_proc;
 
 private:
     static DWORD WINAPI thread_proc(void* param) {
-        if (impl* const p_impl = static_cast< impl* >(param)) {
-            if (!p_impl->m_proc.empty()) {
+        if (impl* const pthis = static_cast< impl* >(param)) {
+            if (pthis->m_proc != NULL) {
                 // Вызвать процедуру потока
-                p_impl->m_proc(p_impl->m_param);
+                pthis->m_proc(pthis->m_param);
             }
         }
         ::ExitThread(0);
     }
 
 public:
-    impl(const proc_t& proc, void* param)
+    impl(const callback_t proc, void* param)
         : m_handle(0)
         , m_id    (0)
         , m_param (param)
@@ -61,6 +59,10 @@ public:
     void join() throw() {
         ::WaitForSingleObject(m_handle, INFINITE);
     }
+
+    void* param() const {
+        return m_param;
+    }
 };
 
 #elif defined (ACTO_UNIX)
@@ -70,21 +72,21 @@ class thread_t::impl {
     // Дескриптор потока
     pthread_t   m_handle;
     void*       m_param;
-    proc_t      m_proc;
+    callback_t  m_proc;
 
 private:
     static void* thread_proc(void* param) {
-        if (impl* const p_impl = static_cast<impl*>(param)) {
-            if (!p_impl->m_proc.empty()) {
+        if (impl* const pthis = static_cast< impl* >(param)) {
+            if (pthis->m_proc != NULL) {
                 // Вызвать процедуру потока
-                p_impl->m_proc(p_impl->m_param);
+                pthis->m_proc(pthis->m_param);
             }
         }
         pthread_exit(NULL);
     }
 
 public:
-    impl(const proc_t& proc, void* param)
+    impl(const callback_t proc, void* param)
         : m_handle(0)
         , m_param(param)
         , m_proc(proc)
@@ -101,6 +103,10 @@ public:
     void join() throw() {
         pthread_join(m_handle, 0);
     }
+
+    void* param() const {
+        return m_param;
+    }
 };
 
 #endif
@@ -111,9 +117,8 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------------
-thread_t::thread_t(const proc_t& proc, void* const param) :
-    m_param(param),
-    m_pimpl(new impl(proc, param))
+thread_t::thread_t(const callback_t proc, void* const param)
+    : m_pimpl(new impl(proc, param))
 {
     // -
 }
@@ -127,7 +132,7 @@ void thread_t::join() {
 }
 //-----------------------------------------------------------------------------
 void* thread_t::param() const {
-    return m_param;
+    return m_pimpl->param();
 }
 
 } // namespace core

@@ -23,7 +23,7 @@ class event_t::impl {
 
 public:
     impl(const bool auto_reset) throw () {
-        m_handle = ::CreateEvent(0, (BOOL)!auto_reset, TRUE, 0);
+        m_handle = ::CreateEvent(0, (BOOL)!auto_reset, FALSE, 0);
     }
 
     ~impl() throw () {

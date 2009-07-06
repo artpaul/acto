@@ -14,7 +14,6 @@
 #ifndef acot_thread_pool_h_425878588d2e4b6cade43cf0383690b4
 #define acot_thread_pool_h_425878588d2e4b6cade43cf0383690b4
 
-#include <generic/delegates.h>
 #include <system/atomic.h>
 #include <system/mutex.h>
 
@@ -32,7 +31,7 @@ class thread_worker_t;
 class thread_pool_t {
     friend class thread_worker_t;
 
-    typedef fastdelegate::FastDelegate< void (void*) >  callback_t;
+    typedef void (*callback_t)(void*);
     typedef generics::queue_t< thread_worker_t >        idle_queue_t;
 
 public:

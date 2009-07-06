@@ -11,7 +11,7 @@ namespace core {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
-worker_t::worker_t(const Slots slots, thread_pool_t* const pool)
+worker_t::worker_t(worker_callback_i* const slots, thread_pool_t* const pool)
     : m_active(true)
     , m_object(NULL)
     , m_event(true)
@@ -22,9 +22,8 @@ worker_t::worker_t(const Slots slots, thread_pool_t* const pool)
     next = NULL;
     // -
     m_complete.reset();
-    m_event.reset();
 
-    pool->queue_task(fastdelegate::MakeDelegate(this, &worker_t::execute), 0);
+    pool->queue_task(&worker_t::execute, this);
 }
 //-----------------------------------------------------------------------------
 worker_t::~worker_t() {
@@ -51,20 +50,22 @@ void worker_t::wakeup() {
 }
 //-----------------------------------------------------------------------------
 void worker_t::execute(void* param) {
-    while (m_active) {
+    worker_t* const pthis = static_cast< worker_t* >(param);
+
+    while (pthis->m_active) {
         //
         // 1. Если данному потоку назначен объект, то необходимо
         //    обрабатывать сообщения, ему поступившие
         //
-        if (!this->process())
-            m_slots.idle(this);
+        if (!pthis->process())
+            pthis->m_slots->push_idle(pthis);
         //
         // 2. Ждать, пока не появится новое задание для данного потока
         //
-        m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
+        pthis->m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
     }
     // -
-    m_complete.signaled();
+    pthis->m_complete.signaled();
 }
 //-----------------------------------------------------------------------------
 bool worker_t::process() {
@@ -73,7 +74,7 @@ bool worker_t::process() {
         // -
         if (package_t* const package = obj->select_message()) {
             // Обработать сообщение
-            m_slots.handle(package);
+            m_slots->handle_message(package);
             // -
             delete package;
 
@@ -81,7 +82,7 @@ bool worker_t::process() {
             // обработки для данного объекта
             if (obj->impl && !static_cast<base_t*>(obj->impl)->m_thread) {
                 if ((clock() - m_start) > m_time) {
-                    m_slots.push(obj);
+                    m_slots->push_object(obj);
                     m_object = NULL;
                 }
             }
@@ -125,13 +126,13 @@ bool worker_t::process() {
             }
             // -
             if (deleting)
-                m_slots.deleted(obj);
+                m_slots->push_delete(obj);
         }
 
         // Получить новый объект для обработки,
         // если он есть в очереди
-         if (m_object == NULL) {
-            m_object = m_slots.pop();
+        if (m_object == NULL) {
+            m_object = m_slots->pop_object();
             // -
             if (m_object)
                 m_start = clock();

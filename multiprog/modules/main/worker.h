@@ -17,7 +17,6 @@
 #include <ctime>
 
 #include <generic/intrlist.h>
-#include <generic/delegates.h>
 
 #include <system/atomic.h>
 #include <system/thread_pool.h>
@@ -35,22 +34,17 @@ struct package_t;
  */
 class worker_t : public intrusive_t< worker_t > {
 public:
-    typedef fastdelegate::FastDelegate< void (object_t* const) >    PushDelete;
-    typedef fastdelegate::FastDelegate< void (worker_t* const) >    PushIdle;
-    typedef fastdelegate::FastDelegate< void (package_t *const package) >    HandlePackage;
-    typedef fastdelegate::FastDelegate< void (object_t* const) >    PushObject;
-    typedef fastdelegate::FastDelegate< object_t* () >              PopObject;
-
-    struct Slots {
-        PushDelete      deleted;
-        HandlePackage   handle;
-        PushIdle        idle;
-        PopObject       pop;
-        PushObject      push;
+    class worker_callback_i {
+    public:
+        virtual void        handle_message(package_t* const) = 0;
+        virtual void        push_delete(object_t* const) = 0;
+        virtual void        push_idle  (worker_t* const) = 0;
+        virtual void        push_object(object_t* const) = 0;
+        virtual object_t*   pop_object() = 0;
     };
 
 public:
-    worker_t(const Slots slots, thread_pool_t* const pool);
+    worker_t(worker_callback_i* const slots, thread_pool_t* const pool);
     ~worker_t();
 
 public:
@@ -60,7 +54,7 @@ public:
     void wakeup();
 
 private:
-    void execute(void*);
+    static void execute(void* param);
     ///
     /// \return true  - если есть возможность обработать следующие сообщения
     ///         false - если сообщений больше нет
@@ -77,7 +71,7 @@ private:
     clock_t         m_start;
     clock_t         m_time;
     // -
-    const Slots     m_slots;
+    worker_callback_i* const    m_slots;
 };
 
 } // namespace core
