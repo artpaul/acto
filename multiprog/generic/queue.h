@@ -46,7 +46,7 @@ public:
 
            m_tail->next = NULL;
            m_tail       = NULL;
-           return head;
+           return sequence_t<T>(head);
         }
         return NULL;
     }
@@ -87,6 +87,7 @@ public:
     }
 
     bool empty() const {
+        core::MutexLocker lock(m_cs);
         return (m_tail == NULL);
     }
 };

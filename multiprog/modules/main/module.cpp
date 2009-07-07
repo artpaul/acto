@@ -162,7 +162,6 @@ public:
         , m_active     (true)
         , m_terminating(false)
     {
-        assert(!m_active && !m_scheduler);
         // 1.
         m_workers.count    = 0;
         m_workers.reserved = 0;
