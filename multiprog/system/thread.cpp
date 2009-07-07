@@ -49,7 +49,7 @@ public:
     inline ~impl() throw() {
         if (m_handle != 0) {
             // Дождаться завершения потока
-            ::WaitForSingleObject(m_handle, 1000);
+            ::WaitForSingleObject(m_handle, INFINITE);
             // Закрыть дескриптор потока
             ::CloseHandle(m_handle);
         }
