@@ -41,7 +41,7 @@ class thread_pool_t {
         void*       param;
 
     public:
-        task_t() { }
+        task_t() : callback(NULL), param(NULL) { }
         task_t(callback_t cb, void* p) : callback(cb), param(p) { }
     };
 
@@ -56,8 +56,6 @@ public:
     void queue_task(callback_t cb, void* param);
 
 private:
-    /// Получить поток для выполнения задания
-    thread_data_t* allocate_thread();
     /// Удалить все простаивающие потоки
     void collect_all();
     /// Удалить неиспользуемый поток

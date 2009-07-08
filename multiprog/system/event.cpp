@@ -127,7 +127,7 @@ public:
 
         clock_gettime(CLOCK_REALTIME, &time);
 
-        time.tv_sec += msec / float(1000);
+        time.tv_sec += int(msec / 1000);
 
         pthread_mutex_lock(&m_mutex);
         while (!m_triggered && (result != WR_TIMEOUT && result != WR_ERROR)) {

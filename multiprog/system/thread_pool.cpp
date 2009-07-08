@@ -22,16 +22,14 @@ struct thread_pool_t::thread_data_t : public core::intrusive_t< thread_data_t > 
     bool                            deleting;
 
 public:
-    thread_data_t(thread_pool_t* const owner_)
+    thread_data_t(thread_pool_t* const owner_, const task_t ut)
         : active(1)
         , owner(owner_)
+        , task(ut)
         , event(true)
         , deleting(false)
     {
-        task.callback = NULL;
-        task.param    = NULL;
-        // -
-        next          = NULL;
+        next = NULL;
         // Создать поток
         thread.reset(new core::thread_t(&thread_pool_t::execute_loop, this));
     }
@@ -47,7 +45,7 @@ thread_pool_t::thread_pool_t()
 //-----------------------------------------------------------------------------
 thread_pool_t::~thread_pool_t() {
     this->collect_all();
-    //printf("%i\n", (int)m_count);
+
     assert(m_count == 0);
 }
 //-----------------------------------------------------------------------------
@@ -58,34 +56,23 @@ thread_pool_t* thread_pool_t::instance() {
 }
 //-----------------------------------------------------------------------------
 void thread_pool_t::queue_task(callback_t cb, void* param) {
-    if (thread_data_t* const data = allocate_thread()) {
+    if (thread_data_t* const data = m_idles.pop()) {
         data->task = task_t(cb, param);
         data->event.signaled();
     }
     else {
-        //printf("queue task!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-        m_tasks.push(new task_t(cb, param));
-    }
-}
-
-//-----------------------------------------------------------------------------
-thread_pool_t::thread_data_t* thread_pool_t::allocate_thread() {
-    if (thread_data_t* const thread = m_idles.pop())
-        return thread;
-    else {
         try {
-            thread_data_t* const thread = new thread_data_t(this);
+            new thread_data_t(this, task_t(cb, param));
             // -
             atomic_increment(&m_count);
-            // -
-            return thread;
         }
         catch (core::thread_exception&) {
             // Не возможно создать поток
-            return NULL;
+            m_tasks.push(new task_t(cb, param));
         }
     }
 }
+
 //-----------------------------------------------------------------------------
 void thread_pool_t::collect_all() {
     // TN: Вызов данного метода может осуществляться из разных потоков
@@ -101,21 +88,6 @@ bool thread_pool_t::delete_idle_worker(thread_data_t* const ctx) {
     {
         core::MutexLocker lock(m_cs);
         // -
-        /*
-        printf("count: %i\n", (int)m_count);
-        if (m_tasks.front() != NULL)
-            printf("has messages\n");
-        else
-        printf("no  messages\n");
-        */
-/*
-        if (task_t* const task = m_tasks.pop()) {
-            ctx->task = *task;
-            delete task;
-            ctx->event.signaled();
-        }
-        else
-*/
         {
             // -
             if (!ctx->deleting && m_idles.front() != ctx) {
@@ -140,7 +112,6 @@ bool thread_pool_t::delete_idle_worker(thread_data_t* const ctx) {
 void thread_pool_t::delete_worker(thread_data_t* const item) {
     item->active = 0;
     // -
-    //printf("deleting...\n");
     if (item->thread.get() != NULL) {
         item->event.signaled();
         // Дождаться завершения системного потока
@@ -150,7 +121,6 @@ void thread_pool_t::delete_worker(thread_data_t* const item) {
     delete item;
     // -
     atomic_decrement(&m_count);
-    //printf("deleted\n");
 }
 
 //-----------------------------------------------------------------------------
@@ -168,11 +138,11 @@ void thread_pool_t::execute_loop(void* param) {
             if (task_t* const task = powner->m_tasks.pop()) {
                 pthis->task = *task;
                 delete task;
-                //printf("from queue ###################################\n");
             }
             else
                 // Очистить параметры
                 pthis->task = task_t(NULL, NULL);
+
         }
 
         //
@@ -189,10 +159,8 @@ void thread_pool_t::execute_loop(void* param) {
             const core::WaitResult rval = timed ? pthis->event.wait((60 + rand() % 30) * 1000) : pthis->event.wait();
             if (rval != core::WR_TIMEOUT)
                 break;
-            else {
-                //printf("timeout\n");
+            else
                 timed = powner->delete_idle_worker(pthis);
-            }
         }
     }
 }
