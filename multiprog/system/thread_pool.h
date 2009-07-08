@@ -16,23 +16,34 @@
 
 #include <system/atomic.h>
 #include <system/mutex.h>
+#include <system/event.h>
 
+#include <generic/intrlist.h>
 #include <generic/queue.h>
 
 namespace acto {
-
-class thread_worker_t;
-
 
 /**
  * Пул потоков - разделяемый ресурс между несколькими
  *               подсистемами библиотеки
  */
 class thread_pool_t {
-    friend class thread_worker_t;
+    struct thread_data_t;
+    struct task_t;
 
     typedef void (*callback_t)(void*);
-    typedef generics::queue_t< thread_worker_t >        idle_queue_t;
+    typedef generics::queue_t< thread_data_t > idle_queue_t;
+    typedef generics::queue_t< task_t >        task_queue_t;
+
+    ///
+    struct task_t : public core::intrusive_t< task_t > {
+        callback_t  callback;
+        void*       param;
+
+    public:
+        task_t() { }
+        task_t(callback_t cb, void* p) : callback(cb), param(p) { }
+    };
 
 public:
     thread_pool_t();
@@ -45,18 +56,25 @@ public:
     void queue_task(callback_t cb, void* param);
 
 private:
+    /// Получить поток для выполнения задания
+    thread_data_t* allocate_thread();
     /// Удалить все простаивающие потоки
     void collect_all();
     /// Удалить неиспользуемый поток
-    bool delete_idle_worker(thread_worker_t* const ctx);
+    bool delete_idle_worker(thread_data_t* const ctx);
     ///
-    void delete_worker(thread_worker_t* const item);
-    ///
-    thread_worker_t* sync_allocate();
+    void delete_worker(thread_data_t* const item);
+
+    /// -
+    static void execute_loop(void* param);
 
 private:
     core::mutex_t   m_cs;
+    /// Очередь незадействованных потоков
     idle_queue_t    m_idles;
+    /// Очередь заданий, которые еще не обработаны
+    task_queue_t    m_tasks;
+    /// Текущее количество потоков
     atomic_t        m_count;
 };
 

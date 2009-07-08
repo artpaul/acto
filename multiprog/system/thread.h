@@ -15,10 +15,15 @@
 #define acto_thread_h_274B1DD8BD844a7dAABB1218F394DC83
 
 #include <memory>
+#include <exception>
 
 namespace acto {
 
 namespace core {
+
+/** */
+class thread_exception : public std::exception {
+};
 
 /**
  */

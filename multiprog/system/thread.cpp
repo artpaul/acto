@@ -44,6 +44,9 @@ public:
         , m_proc  (proc)
     {
         m_handle = ::CreateThread(0, 0, &impl::thread_proc, this, 0, &m_id);
+        // -
+        if (m_handle == NULL)
+            throw thread_exception();
     }
 
     inline ~impl() throw() {
@@ -86,17 +89,21 @@ private:
     }
 
 public:
-    impl(const callback_t proc, void* param)
+    impl(const callback_t proc, void* param) throw (thread_exception)
         : m_handle(0)
         , m_param(param)
         , m_proc(proc)
     {
-        if (pthread_create(&m_handle, 0, &impl::thread_proc, this) != 0)
-            throw "pthread creation error";
+        if (pthread_create(&m_handle, 0, &impl::thread_proc, this) != 0) {
+            m_handle = 0;
+            // -
+            throw thread_exception();
+        }
     }
 
     inline ~impl() throw() {
-        this->join();
+        if (m_handle)
+            this->join();
     }
 
 public:
