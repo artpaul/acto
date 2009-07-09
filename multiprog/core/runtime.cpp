@@ -112,6 +112,8 @@ public:
                 obj->deleting = true;
                 // Если объект не обрабатывается, то его можно начать разбирать
                 if (!obj->scheduled) {
+                    assert(!obj->has_messages());
+
                     if (obj->impl)
                         destroy_object_body(obj);
                     // -
@@ -130,8 +132,8 @@ public:
     void destroy_object_body(object_t* obj) {
         assert(!obj->unimpl && obj->impl);
 
-        // TN: Эта процедура всегда должна вызываться внутри блокировки 
-        //     полей объекта, если ссылкой на объект могут владеть 
+        // TN: Эта процедура всегда должна вызываться внутри блокировки
+        //     полей объекта, если ссылкой на объект могут владеть
         //     два и более потока
 
         // -
@@ -395,10 +397,8 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
     for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
         object_t* const actor = *i;
         // -
-        while (package_t* const package = actor->select_message()) {
+        while (package_t* const package = actor->select_message())
             this->handle_message(package);
-            delete package;
-        }
 
         if (need_delete)
             this->destroy_object(actor);

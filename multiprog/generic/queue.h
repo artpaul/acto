@@ -26,9 +26,11 @@ namespace generics {
 
 /**
  */
-template <typename T, typename Guard = core::mutex_t>
+template <typename T>
 class queue_t {
-    T* volatile     m_tail;
+    typedef core::mutex_t   Guard;
+
+    T*              m_tail;
     mutable Guard   m_cs;
 
 public:

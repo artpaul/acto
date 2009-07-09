@@ -8,15 +8,14 @@ namespace acto {
 
 namespace core {
 
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
 worker_t::worker_t(worker_callback_i* const slots, thread_pool_t* const pool)
     : m_active(true)
     , m_object(NULL)
+    , m_start (0)
+    , m_time  (0)
     , m_event(true)
-    , m_start(0)
-    , m_time(0)
     , m_slots (slots)
 {
     next = NULL;
@@ -36,13 +35,13 @@ worker_t::~worker_t() {
 }
 //-----------------------------------------------------------------------------
 void worker_t::assign(object_t* const obj, const clock_t slice) {
-    if (obj) {
-        m_object = obj;
-        m_start  = clock();
-        m_time   = slice;
-        // Активировать поток
-        m_event.signaled();
-    }
+    assert(m_object == NULL && obj != NULL);
+
+    m_object = obj;
+    m_start  = clock();
+    m_time   = slice;
+    // Активировать поток
+    m_event.signaled();
 }
 //-----------------------------------------------------------------------------
 void worker_t::wakeup() {
@@ -72,22 +71,26 @@ bool worker_t::process() {
     while (object_t* const obj = m_object) {
         assert(obj != NULL);
         // -
-        if (package_t* const package = obj->select_message()) {
+        while (package_t* const package = obj->select_message()) {
+            assert(obj->impl);
+
             // Обработать сообщение
             m_slots->handle_message(package);
-            // -
-            delete package;
 
             // Проверить истечение лимита времени
             // обработки для данного объекта
             if (obj->impl && !static_cast<base_t*>(obj->impl)->m_thread) {
                 if ((clock() - m_start) > m_time) {
-                    m_slots->push_object(obj);
-                    m_object = NULL;
+                    if (!obj->deleting) {
+                        m_slots->push_object(obj);
+                        m_object = NULL;
+                        break;
+                    }
                 }
             }
         }
-        else {
+
+        {
             bool deleting = false;
             // -
             {
@@ -101,8 +104,6 @@ bool worker_t::process() {
                         m_object = NULL;
                     }
                     else { // Если это эксклюзивный объект
-                        assert(obj->impl && static_cast<base_t*>(obj->impl)->m_thread == this);
-                        // -
                         if (obj->deleting) {
                             // -
                             obj->scheduled = false;
@@ -144,6 +145,7 @@ bool worker_t::process() {
     }
     return true;
 }
+
 }; // namespace core
 
 }; // namespace acto

@@ -65,11 +65,11 @@ private:
     atomic_t        m_active;
     object_t*       m_object;
     // -
-    event_t         m_event;
-    event_t         m_complete;
-    // -
     clock_t         m_start;
     clock_t         m_time;
+    // -
+    event_t         m_event;
+    event_t         m_complete;
     // -
     worker_callback_i* const    m_slots;
 };

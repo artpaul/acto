@@ -16,7 +16,7 @@ void do_handle_message(package_t* const package);
 
 /**
  */
-class main_module_t::impl : private worker_t::worker_callback_i {
+class main_module_t::impl : public worker_t::worker_callback_i {
     // -
     typedef generics::queue_t< object_t >       HeaderQueue;
     // -
@@ -213,8 +213,12 @@ public:
 
         base_t* const impl = static_cast<base_t*>(body);
 
-        if (impl->m_thread != NULL)
+        if (impl->m_thread != NULL) {
             atomic_decrement(&m_workers.reserved);
+            
+            //delete_worker(impl->m_thread);
+            //impl->m_thread = NULL;
+        }
     }
 
     void handle_message(package_t* const package) {
@@ -270,6 +274,8 @@ void do_handle_message(package_t* const package) {
         if (impl->m_terminating)
             runtime_t::instance()->destroy_object(obj);
     }
+
+    delete package;
 }
 
 
@@ -291,9 +297,6 @@ base_t::base_t()
 }
 //-----------------------------------------------------------------------------
 base_t::~base_t() {
-    if (m_thread != NULL)
-        m_thread->wakeup();
-
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
         // Удалить обработчик
         if ((*i)->handler)
