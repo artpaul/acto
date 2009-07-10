@@ -1,0 +1,18 @@
+
+ADD_EXECUTABLE (cycles
+    main.cpp)
+
+TARGET_LINK_LIBRARIES (cycles
+    acto-lib
+    acto-ext
+    acto-core
+    acto-system
+    rt
+)
+
+SET_TARGET_PROPERTIES(cycles PROPERTIES
+    COMPILE_FLAGS "-pthread")
+
+
+SET_TARGET_PROPERTIES(cycles PROPERTIES
+    LINK_FLAGS "-pthread")
