@@ -28,12 +28,4 @@
 // Интерфейс библиотеки (пользовательский уровень)
 #include "act_user.h"
 
-// Дополнительные сервисы (пользовательский уровень)
-#include "extension/services.h"
-
-// Подсистема сетевого взаимодействия актеров
-#ifndef ACTO_EXCLUDE_REMOTE
-#   include "remote/remote.h"
-#endif
-
 #endif // acto_h_73A5B4AE25EE4295BD7B080FBD29FFC0

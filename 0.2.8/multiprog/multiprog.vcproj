@@ -308,10 +308,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\extension\services.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\system\thread.cpp"
 				>
 			</File>
@@ -414,14 +410,6 @@
 				</File>
 				<File
 					RelativePath=".\modules\main\worker.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="extension"
-				>
-				<File
-					RelativePath=".\extension\services.h"
 					>
 				</File>
 			</Filter>

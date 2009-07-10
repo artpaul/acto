@@ -4,10 +4,6 @@ ADD_EXECUTABLE (cycles
 
 TARGET_LINK_LIBRARIES (cycles
     acto-lib
-    acto-ext
-    acto-core
-    acto-system
-    rt
 )
 
 SET_TARGET_PROPERTIES(cycles PROPERTIES
