@@ -84,10 +84,10 @@ public:
 
 public:
     //-------------------------------------------------------------------------
-    void acquire(object_t* const obj) {
+    long acquire(object_t* const obj) {
         assert(obj != NULL && obj->references > 0);
         // -
-        atomic_increment(&obj->references);
+        return atomic_increment(&obj->references);
     }
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
@@ -128,12 +128,12 @@ public:
             //    ведет к невозможности послать сообщения данному объекту
             if (!obj->deleting)
                 obj->deleting = true;
-            // 3. 
+            // 3.
             if (!obj->scheduled && !obj->unimpl && !obj->has_messages()) {
                 if (obj->impl)
                     destroy_object_body(obj);
                 // -
-                if (!obj->freeing && (obj->references == 0)) {
+                if (!obj->freeing && (0 == obj->references)) {
                     obj->freeing = true;
                     deleting     = true;
                 }
@@ -206,7 +206,9 @@ public:
         {
             MutexLocker lock(m_cs);
             // -
-            for (Actors::iterator i = m_actors.begin(); i != m_actors.end(); ++i)
+            Actors  temporary(m_actors);
+            // -
+            for (Actors::iterator i = temporary.begin(); i != temporary.end(); ++i)
                 deconstruct_object(*i);
         }
 
@@ -276,8 +278,8 @@ runtime_t* runtime_t::instance() {
 ///////////////////////////////////////////////////////////////////////////////
 
 //-----------------------------------------------------------------------------
-void runtime_t::acquire(object_t* const obj) {
-    m_pimpl->acquire(obj);
+long runtime_t::acquire(object_t* const obj) {
+    return m_pimpl->acquire(obj);
 }
 //-----------------------------------------------------------------------------
 object_t* runtime_t::create_actor(actor_body_t* const body, const int options, const ui8 module) {

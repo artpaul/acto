@@ -54,6 +54,39 @@ private:
 
 private:
     //-------------------------------------------------------------------------
+    static void execute(void* param) {
+        impl* const pthis = static_cast< impl* >(param);
+
+        int newWorkerTimeout = 2;
+        int lastCleanupTime  = clock();
+
+        while (pthis->m_active) {
+            while(!pthis->m_queue.empty()) {
+                pthis->dispatch_to_worker(newWorkerTimeout);
+                yield();
+            }
+
+            // -
+            if (pthis->m_terminating || (pthis->m_event.wait(60 * 1000) == WR_TIMEOUT)) {
+                generics::stack_t< worker_t >   queue(pthis->m_workers.idle.extract());
+                // Удалить все потоки
+                while (worker_t* const item = queue.pop())
+                    pthis->delete_worker(item);
+                // -
+                yield();
+            }
+            else {
+                if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
+                    if (worker_t* const item = pthis->m_workers.idle.pop())
+                        pthis->delete_worker(item);
+                    // -
+                    lastCleanupTime = clock();
+                }
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------
     void delete_worker(worker_t* const item) {
         delete item;
         // Уведомить, что удалены все вычислительные потоки
@@ -108,50 +141,6 @@ private:
                 m_workers.idle.push(worker);
         }
     }
-    //-------------------------------------------------------------------------
-    static void execute(void* param) {
-        impl* const pthis = static_cast< impl* >(param);
-
-        int newWorkerTimeout = 2;
-        int lastCleanupTime  = clock();
-
-        while (pthis->m_active) {
-            while(!pthis->m_queue.empty()) {
-                pthis->dispatch_to_worker(newWorkerTimeout);
-                yield();
-            }
-
-            // -
-            if (pthis->m_terminating || (pthis->m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-                generics::stack_t< worker_t >   queue(pthis->m_workers.idle.extract());
-                // Удалить все потоки
-                while (worker_t* const item = queue.pop())
-                    pthis->delete_worker(item);
-                // -
-                yield();
-            }
-            else {
-                if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
-                    if (worker_t* const item = pthis->m_workers.idle.pop())
-                        pthis->delete_worker(item);
-                    // -
-                    lastCleanupTime = clock();
-                }
-            }
-        }
-    }
-    //-------------------------------------------------------------------------
-    void push_delete(object_t* const obj) {
-        runtime_t::instance()->deconstruct_object(obj);
-    }
-    //-------------------------------------------------------------------------
-    void push_idle(worker_t* const worker) {
-        assert(worker != 0);
-        // -
-        m_workers.idle.push(worker);
-        // -
-        m_evworker.signaled();
-    }
 
 public:
     impl()
@@ -187,6 +176,8 @@ public:
         assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
 
+public:
+    //-------------------------------------------------------------------------
     object_t* create_actor(base_t* const body, const int options) {
         assert(body != NULL);
 
@@ -207,24 +198,39 @@ public:
 
         return result;
     }
-
+    //-------------------------------------------------------------------------
     void destroy_object_body(actor_body_t* const body) {
         assert(body != NULL);
 
         base_t* const impl = static_cast<base_t*>(body);
 
-        if (impl->m_thread != NULL)
+        if (impl->m_thread != NULL) {
             atomic_decrement(&m_workers.reserved);
+            // -
+            impl->m_thread->wakeup();
+        }
     }
-
+    //-------------------------------------------------------------------------
     void handle_message(package_t* const package) {
         do_handle_message(package);
     }
-
+    //-------------------------------------------------------------------------
+    void push_delete(object_t* const obj) {
+        runtime_t::instance()->deconstruct_object(obj);
+    }
+    //-------------------------------------------------------------------------
+    void push_idle(worker_t* const worker) {
+        assert(worker != 0);
+        // -
+        m_workers.idle.push(worker);
+        // -
+        m_evworker.signaled();
+    }
+    //-------------------------------------------------------------------------
     object_t* pop_object() {
         return m_queue.pop();
     }
-
+    //-------------------------------------------------------------------------
     void push_object(object_t* const obj) {
         m_queue.push(obj);
 

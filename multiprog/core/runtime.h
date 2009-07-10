@@ -35,7 +35,7 @@ public:
 
 public:
     /// Захватить ссылку на объект
-    void        acquire(object_t* const obj);
+    long        acquire(object_t* const obj);
     /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
     object_t*   create_actor(actor_body_t* const body, const int options, const ui8 module);
     /// Создать контекст связи с текущим системным потоком

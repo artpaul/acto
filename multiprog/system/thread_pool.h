@@ -68,6 +68,8 @@ private:
 
 private:
     core::mutex_t   m_cs;
+    ///
+    core::event_t   m_clean;
     /// Очередь незадействованных потоков
     idle_queue_t    m_idles;
     /// Очередь заданий, которые еще не обработаны

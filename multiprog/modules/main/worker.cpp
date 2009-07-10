@@ -40,6 +40,10 @@ void worker_t::assign(object_t* const obj, const clock_t slice) {
     m_object = obj;
     m_start  = clock();
     m_time   = slice;
+    // Так как поток оперирует объектом, то необходимо захватить
+    // ссылку на объект, иначе объект может быть удален
+    // во время обработки сообщений
+    runtime_t::instance()->acquire(obj);
     // Активировать поток
     m_event.signaled();
 }
@@ -87,15 +91,16 @@ bool worker_t::check_deleting(object_t* const obj) {
 bool worker_t::process() {
     while (object_t* const obj = m_object) {
         assert(obj != NULL);
+        //
         // -
+        //
         while (package_t* const package = obj->select_message()) {
             assert(obj->impl);
 
             // Обработать сообщение
             m_slots->handle_message(package);
 
-            // Проверить истечение лимита времени
-            // обработки для данного объекта
+            // Проверить истечение лимита времени обработки для данного объекта
             if (obj->impl && !obj->deleting && !obj->exclusive) {
                 if ((clock() - m_start) > m_time) {
                     m_slots->push_object(obj);
@@ -105,17 +110,31 @@ bool worker_t::process() {
             }
         }
 
+        //
         // -
+        //
         if (check_deleting(obj))
             m_slots->push_delete(obj);
 
-        // Получить новый объект для обработки,
-        // если он есть в очереди
-        if (m_object == NULL) {
+        //
+        // Получить новый объект для обработки, если он есть в очереди
+        //
+        if (m_object != NULL) {
+            if (m_object->exclusive)
+                return true;
+        }
+        else {
+            // 1. Освободить ссылку на предыдущий объект
+            runtime_t::instance()->release(obj);
+
+            // 2.
             m_object = m_slots->pop_object();
             // -
-            if (m_object)
+            if (m_object) {
                 m_start = clock();
+                // -
+                runtime_t::instance()->acquire(m_object);
+            }
             else {
                 // Поместить текущий поток в список свободных
                 return false;
