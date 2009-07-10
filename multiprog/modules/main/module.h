@@ -73,7 +73,6 @@ private:
  * Базовый класс для локальных актеров.
  */
 class ACTO_API base_t : public actor_body_t {
-    friend class worker_t;
     friend class main_module_t;
     friend void do_handle_message(package_t* const package);
 

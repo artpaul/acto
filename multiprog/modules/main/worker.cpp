@@ -67,6 +67,23 @@ void worker_t::execute(void* param) {
     pthis->m_complete.signaled();
 }
 //-----------------------------------------------------------------------------
+bool worker_t::check_deleting(object_t* const obj) {
+    // TN: В контексте рабочего потока
+    MutexLocker lock(obj->cs);
+    // -
+    if (!obj->has_messages()) {
+        // -
+        if (!obj->exclusive || obj->deleting) {
+            obj->scheduled = false;
+            m_object       = NULL;
+        }
+        // Если текущий объект необходимо удалить
+        if (obj->deleting)
+            return true;
+    }
+    return false;
+}
+//-----------------------------------------------------------------------------
 bool worker_t::process() {
     while (object_t* const obj = m_object) {
         assert(obj != NULL);
@@ -79,56 +96,18 @@ bool worker_t::process() {
 
             // Проверить истечение лимита времени
             // обработки для данного объекта
-            if (obj->impl && !static_cast<base_t*>(obj->impl)->m_thread) {
+            if (obj->impl && !obj->deleting && !obj->exclusive) {
                 if ((clock() - m_start) > m_time) {
-                    if (!obj->deleting) {
-                        m_slots->push_object(obj);
-                        m_object = NULL;
-                        break;
-                    }
+                    m_slots->push_object(obj);
+                    m_object = NULL;
+                    break;
                 }
             }
         }
 
-        {
-            bool deleting = false;
-            // -
-            {
-                MutexLocker lock(obj->cs);
-                // -
-                if (!obj->has_messages()) {
-                    // Если это динамический объект
-                    if (obj->impl && static_cast<base_t*>(obj->impl)->m_thread == NULL) {
-                        // -
-                        obj->scheduled = false;
-                        m_object = NULL;
-                    }
-                    else { // Если это эксклюзивный объект
-                        if (obj->deleting) {
-                            // -
-                            obj->scheduled = false;
-                            m_object = NULL;
-                        }
-                    }
-                    //
-                    // 2. Если текущий объект необходимо удалить
-                    //
-                    if (obj->deleting) {
-                        assert(!obj->scheduled);
-                        // -
-                        runtime_t::instance()->destroy_object_body(obj);
-                        // -
-                        if (!obj->freeing && (obj->references == 0)) {
-                            obj->freeing = true;
-                            deleting     = true;
-                        }
-                    }
-                }
-            }
-            // -
-            if (deleting)
-                m_slots->push_delete(obj);
-        }
+        // -
+        if (check_deleting(obj))
+            m_slots->push_delete(obj);
 
         // Получить новый объект для обработки,
         // если он есть в очереди

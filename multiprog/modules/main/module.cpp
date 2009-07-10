@@ -142,7 +142,7 @@ private:
     }
     //-------------------------------------------------------------------------
     void push_delete(object_t* const obj) {
-        runtime_t::instance()->push_deleted(obj);
+        runtime_t::instance()->deconstruct_object(obj);
     }
     //-------------------------------------------------------------------------
     void push_idle(worker_t* const worker) {
@@ -213,12 +213,8 @@ public:
 
         base_t* const impl = static_cast<base_t*>(body);
 
-        if (impl->m_thread != NULL) {
+        if (impl->m_thread != NULL)
             atomic_decrement(&m_workers.reserved);
-            
-            //delete_worker(impl->m_thread);
-            //impl->m_thread = NULL;
-        }
     }
 
     void handle_message(package_t* const package) {
@@ -272,7 +268,7 @@ void do_handle_message(package_t* const package) {
         }
         // -
         if (impl->m_terminating)
-            runtime_t::instance()->destroy_object(obj);
+            runtime_t::instance()->deconstruct_object(obj);
     }
 
     delete package;

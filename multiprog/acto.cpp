@@ -14,7 +14,7 @@ ACTO_API void destroy(actor_t& object) {
         object.m_object = NULL;
         // Освободить ссылку на объект и удалить его
         if (core::runtime_t::instance()->release(obj) > 0)
-            core::runtime_t::instance()->destroy_object(obj);
+            core::runtime_t::instance()->deconstruct_object(obj);
     }
 }
 //-----------------------------------------------------------------------------

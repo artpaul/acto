@@ -94,6 +94,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     // Флаги состояния текущего объекта
     ui32                binded    : 1;
     ui32                deleting  : 1;
+    ui32                exclusive : 1;
     ui32                freeing   : 1;
     ui32                scheduled : 1;
     ui32                unimpl    : 1;

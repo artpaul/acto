@@ -45,20 +45,35 @@ private:
 
 private:
     //-------------------------------------------------------------------------
-    // Деструткор для пользовательских объектов (актеров)
-    void destruct_actor(object_t* const actor) {
-        assert(actor != 0);
-        assert(actor->impl == 0);
-        assert(actor->references == 0);
+    void destroy_object_body(object_t* obj) {
+        assert(!obj->unimpl && obj->impl);
 
-        // Удалить регистрацию объекта
-        if (!actor->binded) {
-            MutexLocker   lock(m_cs);
-            // -
-            m_actors.erase(actor);
-        }
+        // TN: Эта процедура всегда должна вызываться внутри блокировки
+        //     полей объекта, если ссылкой на объект могут владеть
+        //     два и более потока
+
         // -
-        delete actor;
+        m_modules[obj->module]->destroy_object_body(obj->impl);
+        // -
+        obj->unimpl = true;
+        delete obj->impl, obj->impl = NULL;
+        obj->unimpl = false;
+
+        if (obj->waiters) {
+            object_t::waiter_t* next = NULL;
+            object_t::waiter_t* it   = obj->waiters;
+
+            while (it) {
+                // TN: Необходимо читать значение следующего указателя
+                //     заранее, так как пробуждение ждущего потока
+                //     приведет к удалению текущего узла списка
+                next = it->next;
+                it->event->signaled();
+                it   = next;
+            }
+
+            obj->waiters = NULL;
+        }
     }
 
 public:
@@ -91,72 +106,49 @@ public:
         else {
             MutexLocker  lock(m_cs);
             // -
+            result->exclusive = options & acto::aoExclusive;
+            // -
             m_actors.insert(result);
         }
         // -
         return result;
     }
     //-------------------------------------------------------------------------
-    // Уничтожить объект
-    void destroy_object(object_t* const obj) {
+    void deconstruct_object(object_t* const obj) {
         assert(obj != 0);
 
-        // -
         bool deleting = false;
-        // -
         {
             MutexLocker lock(obj->cs);
-            // Если объект уже удаляется, то делать более ничего не надо.
-            if (!obj->deleting) {
-                // Запретить более посылать сообщения объекту
+            // 1. Если объект уже находится в состоянии "осовобождаемы",
+            //    то он будет неминуемо удален и более ничего делать не нежно
+            if (obj->freeing)
+                return;
+            // 2. Перевести объект в состояние "удаляемый", что в частности
+            //    ведет к невозможности послать сообщения данному объекту
+            if (!obj->deleting)
                 obj->deleting = true;
-                // Если объект не обрабатывается, то его можно начать разбирать
-                if (!obj->scheduled) {
-                    assert(!obj->has_messages());
-
-                    if (obj->impl)
-                        destroy_object_body(obj);
-                    // -
-                    if (!obj->freeing && (obj->references == 0)) {
-                        obj->freeing = true;
-                        deleting     = true;
-                    }
+            // 3. 
+            if (!obj->scheduled && !obj->unimpl && !obj->has_messages()) {
+                if (obj->impl)
+                    destroy_object_body(obj);
+                // -
+                if (!obj->freeing && (obj->references == 0)) {
+                    obj->freeing = true;
+                    deleting     = true;
                 }
             }
         }
-        // Объект полностью разобран и не имеет ссылок - удалить его
-        if (deleting)
-            push_deleted(obj);
-    }
-    //-----------------------------------------------------------------------------
-    void destroy_object_body(object_t* obj) {
-        assert(!obj->unimpl && obj->impl);
 
-        // TN: Эта процедура всегда должна вызываться внутри блокировки
-        //     полей объекта, если ссылкой на объект могут владеть
-        //     два и более потока
-
-        // -
-        m_modules[obj->module]->destroy_object_body(obj->impl);
-        // -
-        obj->unimpl = true;
-        delete obj->impl, obj->impl = NULL;
-        obj->unimpl = false;
-
-        if (obj->waiters) {
-            object_t::waiter_t* next = NULL;
-            object_t::waiter_t* it   = obj->waiters;
-
-            while (it) {
-                // TN: Необходимо читать значение следующего указателя
-                //     заранее, так как пробуждение ждущего потока
-                //     приведет к удалению текущего узла списка
-                next = it->next;
-                it->event->signaled();
-                it   = next;
+        if (deleting) {
+            // Удалить регистрацию объекта
+            if (!obj->binded) {
+                MutexLocker   lock(m_cs);
+                // -
+                m_actors.erase(obj);
             }
-
-            obj->waiters = NULL;
+            // -
+            delete obj;
         }
     }
     //-------------------------------------------------------------------------
@@ -168,7 +160,6 @@ public:
         m_modules[id]->handle_message(package);
     }
     //-----------------------------------------------------------------------------
-    // -
     void join(object_t* const obj) {
         std::auto_ptr< object_t::waiter_t > node;
         event_t event;
@@ -189,47 +180,15 @@ public:
         if (node.get() != NULL)
             event.wait();
     }
-    //-------------------------------------------------------------------------
-    void push_deleted(object_t* const obj) {
-        this->destruct_actor(obj);
-    }
     //-----------------------------------------------------------------------------
-    // -
     long release(object_t* const obj) {
         assert(obj != 0);
         assert(obj->references > 0);
         // -
-        bool       deleting = false;
-        const long result   = atomic_decrement(&obj->references);
+        const long result = atomic_decrement(&obj->references);
 
-        if (result == 0) {
-            // TN: Если ссылок на объект более нет, то только один поток имеет
-            //     доступ к объекту - тот, кто осовбодил последнюю ссылку.
-            //     Поэтому блокировку можно не использовать.
-            if (obj->deleting) {
-                // -
-                if (!obj->scheduled && !obj->freeing && !obj->unimpl) {
-                    obj->freeing = true;
-                    deleting     = true;
-                }
-            }
-            else {
-                // Ссылок на объект более нет и его необходимо удалить
-                obj->deleting = true;
-                // -
-                if (!obj->scheduled) {
-                    assert(obj->impl != 0);
-                    // -
-                    destroy_object_body(obj);
-                    // -
-                    obj->freeing = true;
-                    deleting     = true;
-                }
-            }
-        }
-        // Окончательное удаление объекта
-        if (deleting)
-            push_deleted(obj);
+        if (result == 0)
+            deconstruct_object(obj);
         // -
         return result;
     }
@@ -248,7 +207,7 @@ public:
             MutexLocker lock(m_cs);
             // -
             for (Actors::iterator i = m_actors.begin(); i != m_actors.end(); ++i)
-                destroy_object(*i);
+                deconstruct_object(*i);
         }
 
         // 2.
@@ -334,12 +293,8 @@ void runtime_t::create_thread_binding() {
         atomic_increment(&threadCtx->counter);
 }
 //-----------------------------------------------------------------------------
-void runtime_t::destroy_object(object_t* const obj) {
-    m_pimpl->destroy_object(obj);
-}
-//-----------------------------------------------------------------------------
-void runtime_t::destroy_object_body(object_t* obj) {
-    m_pimpl->destroy_object_body(obj);
+void runtime_t::deconstruct_object(object_t* const obj) {
+    m_pimpl->deconstruct_object(obj);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::destroy_thread_binding() {
@@ -364,10 +319,6 @@ void runtime_t::process_binded_actors() {
     assert(threadCtx != NULL);
 
     this->process_binded_actors(threadCtx->actors, false);
-}
-//-----------------------------------------------------------------------------
-void runtime_t::push_deleted(object_t* const obj) {
-    m_pimpl->push_deleted(obj);
 }
 //-----------------------------------------------------------------------------
 long runtime_t::release(object_t* const obj) {
@@ -401,7 +352,7 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
             this->handle_message(package);
 
         if (need_delete)
-            this->destroy_object(actor);
+            this->deconstruct_object(actor);
     }
     // -
     if (need_delete)

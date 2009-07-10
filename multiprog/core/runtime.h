@@ -41,9 +41,7 @@ public:
     /// Создать контекст связи с текущим системным потоком
     void        create_thread_binding();
     /// Уничтожить объект
-    void        destroy_object(object_t* const object);
-    /// -
-    void        destroy_object_body(object_t* obj);
+    void        deconstruct_object(object_t* const object);
     ///
     void        destroy_thread_binding();
     ///
@@ -52,8 +50,6 @@ public:
     void        join(object_t* const obj);
     /// -
     void        process_binded_actors();
-    /// -
-    void        push_deleted(object_t* const obj);
     /// -
     long        release(object_t* const obj);
     /// Зарегистрировать новый модуль

@@ -56,6 +56,8 @@ public:
 private:
     static void execute(void* param);
     ///
+    bool check_deleting(object_t* const obj);
+    ///
     /// \return true  - если есть возможность обработать следующие сообщения
     ///         false - если сообщений больше нет
     bool process();
