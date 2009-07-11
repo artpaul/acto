@@ -2,7 +2,6 @@
 #include <core/runtime.h>
 
 #include "worker.h"
-#include "module.h"
 
 namespace acto {
 
@@ -91,6 +90,9 @@ bool worker_t::check_deleting(object_t* const obj) {
 bool worker_t::process() {
     while (object_t* const obj = m_object) {
         assert(obj != NULL);
+
+        bool released = false;
+
         //
         // -
         //
@@ -101,19 +103,32 @@ bool worker_t::process() {
             m_slots->handle_message(package);
 
             // Проверить истечение лимита времени обработки для данного объекта
-            if (obj->impl && !obj->deleting && !obj->exclusive) {
-                if ((clock() - m_start) > m_time) {
-                    m_slots->push_object(obj);
+            if (!obj->exclusive && ((clock() - m_start) > m_time)) {
+                MutexLocker lock(obj->cs);
+                // -
+                if (!obj->deleting) {
+                    assert(obj->impl != 0);
+                    // -
+                    if (obj->has_messages()) {
+                        runtime_t::instance()->release(obj);
+                        // -
+                        m_slots->push_object(obj);
+                        // -
+                        released = true;
+                    }
+                    else
+                        obj->scheduled = false;
+                    // -
                     m_object = NULL;
                     break;
                 }
-            }
+            }            
         }
 
         //
         // -
         //
-        if (check_deleting(obj))
+        if (!released && check_deleting(obj))
             m_slots->push_delete(obj);
 
         //
@@ -125,7 +140,8 @@ bool worker_t::process() {
         }
         else {
             // 1. Освободить ссылку на предыдущий объект
-            runtime_t::instance()->release(obj);
+            if (!released)
+                runtime_t::instance()->release(obj);
 
             // 2.
             m_object = m_slots->pop_object();

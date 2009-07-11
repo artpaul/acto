@@ -36,9 +36,11 @@ class runtime_t::impl {
     static const size_t     MODULES_COUNT = 8;
 
 private:
-    // Критическая секция для доступа к полям
+    /// Критическая секция для доступа к полям
     mutex_t             m_cs;
-    // Текущее множество актеров
+    ///
+    event_t             m_clean;
+    /// Текущее множество актеров
     Actors              m_actors;
     /// Список зарегистрированных модулей
     module_t*           m_modules[MODULES_COUNT];
@@ -78,6 +80,8 @@ private:
 
 public:
     impl() {
+        m_clean.signaled();
+        // -
         for (size_t i = 0; i < MODULES_COUNT; ++i)
             m_modules[i] = NULL;
     }
@@ -99,7 +103,8 @@ public:
         result->references = 1;
         // Зарегистрировать объект в системе
         if (options & acto::aoBindToThread) {
-            result->binded = true;
+            result->references += 1;
+            result->binded      = true;
             // -
             threadCtx->actors.insert(result);
         }
@@ -109,6 +114,8 @@ public:
             result->exclusive = options & acto::aoExclusive;
             // -
             m_actors.insert(result);
+            // -
+            m_clean.reset();
         }
         // -
         return result;
@@ -129,7 +136,9 @@ public:
             if (!obj->deleting)
                 obj->deleting = true;
             // 3.
-            if (!obj->scheduled && !obj->unimpl && !obj->has_messages()) {
+            if (!obj->scheduled && !obj->unimpl) {
+                assert(!obj->has_messages());
+
                 if (obj->impl)
                     destroy_object_body(obj);
                 // -
@@ -146,6 +155,9 @@ public:
                 MutexLocker   lock(m_cs);
                 // -
                 m_actors.erase(obj);
+                // -
+                if (m_actors.size() == 0)
+                    m_clean.signaled();
             }
             // -
             delete obj;
@@ -211,6 +223,8 @@ public:
             for (Actors::iterator i = temporary.begin(); i != temporary.end(); ++i)
                 deconstruct_object(*i);
         }
+        // -
+        m_clean.wait();
 
         // 2.
         for (size_t i = 0; i < MODULES_COUNT; ++i) {
@@ -357,8 +371,12 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
             this->deconstruct_object(actor);
     }
     // -
-    if (need_delete)
+    if (need_delete) {
+        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) 
+            this->release(*i);
+        // -
         actors.clear();
+    }
 }
 
 } // namespace core
