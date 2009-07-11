@@ -369,17 +369,22 @@ void main_module_t::send_message(package_t* const package) {
 
     // Если объект отмечен для удалдения,
     // то ему более нельзя посылать сообщения
-    if (!target->deleting && target->impl) {
+    if (!target->deleting) {
+        assert(target->impl && target->module == 0);
         // 1. Поставить сообщение в очередь объекта
         target->enqueue(package);
         // 2. Подобрать для него необходимый поток
-        if (static_cast<base_t*>(target->impl)->m_thread != NULL)
-            static_cast<base_t*>(target->impl)->m_thread->wakeup();
-        else {
-            if (!target->binded && !target->scheduled) {
-                target->scheduled = true;
-                // Добавить объект в очередь
-                m_pimpl->push_object(target);
+        if (!target->binded) {
+            worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
+            // -
+            if (thread != NULL)
+                thread->wakeup();
+            else {
+                if (!target->scheduled) {
+                    target->scheduled = true;
+                    // Добавить объект в очередь
+                    m_pimpl->push_object(target);
+                }
             }
         }
         undelivered = false;
