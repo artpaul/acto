@@ -1,25 +1,37 @@
 
-#include <memory.h>
-#include <stdio.h>
 
 #include <acto.h>
+
+#ifdef ACTO_WIN
+#   include <conio.h>
+#else
+#   include <stdio.h>
+#endif
 
 #define CLIENTPORT    25121
 
 struct msg_get : public acto::msg_t {
     std::string     content;
 
+    msg_get() { }
     msg_get(const std::string c) : content(c) { }
 
 public:
     class metainfo_t : public acto::serializer_t {
     public:
-        metainfo_t() {
-            printf("serializer_t\n");
+        virtual void read(msg_t* const msg, void* const s, size_t size) {
+            msg_get* const ptr = static_cast< msg_get* >(msg);
+            const char* p = (const char*)s;
+            ui32 len = *(ui32*)p; p += sizeof(ui32);
+            ptr->content = std::string(p, len);
         }
 
-        void read(msg_get* const msg, void* s) {
+        virtual void write(const msg_t* const msg, acto::stream_t* const s) {
+            const msg_get* const ptr = static_cast< const msg_get* >(msg);
             // -
+            ui32 len = ptr->content.size();
+            s->write(&len, sizeof(len));
+            s->write(ptr->content.c_str(), len);
         }
     };
 };
@@ -67,16 +79,17 @@ public:
 
 int main(int argc, char* argv[]) {
     acto::startup();
+    {
+        // Локальный объект
+        acto::actor_t serv = acto::instance< Server >();
+        // Зарегистрировать в словаре
+        acto::remote::register_actor(serv, "server");
 
-    acto::actor_t serv = acto::instance< Server >();
+        // Эмуляция клиента
+        acto::actor_t cl = acto::instance< Client >();
 
-    acto::remote::register_actor(serv, "server");
-
-
-    acto::actor_t cl = acto::instance< Client >();
-
-    acto::join(serv);
-
+        acto::join(serv);
+    }
     acto::shutdown();
     return 0;
 }

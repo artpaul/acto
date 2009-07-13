@@ -26,18 +26,7 @@
 
 namespace acto {
 
-namespace core {
-
-namespace detail {
-
-/** */
-class dumy_serializer_t : public serializer_t {
-};
-
-} // namespace detail
-
-
-// Идентификатор типов
+/// Идентификатор типов
 typedef atomic_t    TYPEID;
 
 
@@ -45,8 +34,12 @@ typedef atomic_t    TYPEID;
  * Метакласс классов сообщений
  */
 struct msg_metaclass_t {
+    typedef msg_t* (*instance_constructor)();
+
     TYPEID                      tid;
     std::auto_ptr<serializer_t> serializer;
+
+    instance_constructor        make_instance;
 };
 
 
@@ -62,6 +55,21 @@ public:
 };
 
 
+namespace core {
+
+namespace detail {
+
+/** */
+class dumy_serializer_t : public serializer_t {
+public:
+    virtual void write(const msg_t* const msg, stream_t* const s) {
+        // -
+    }
+};
+
+} // namespace detail
+
+
 /**
  * Таблица классов сообщений
  */
@@ -73,13 +81,12 @@ public:
     message_map_t();
     ~message_map_t();
 
-    static message_map_t* instance() {
-        static message_map_t value;
-
-        return &value;
-    }
+    static message_map_t* instance();
 
 public:
+    /// Найти метакласс по его идентификатору
+    /// \return Если класса не существует, то возвращается 0
+    msg_metaclass_t* find_metaclass(const TYPEID tid);
     /// Получить уникальный идентификатор типа для сообщения по его имени
     inline TYPEID  get_typeid(const char* const type_name) {
         return this->get_metaclass< detail::dumy_serializer_t >(type_name)->tid;
@@ -154,11 +161,18 @@ class message_class_t {
         return msg_box_t< MsgT >(msg);
     }
 
+    static msg_t* instance_constructor() {
+        msg_t* const result = new MsgT();
+        result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).name());
+        return result;
+    }
+
 public:
     message_class_t()
         : m_meta(message_map_t::instance()->get_metaclass< Serializer >(typeid(MsgT).name()))
     {
-        // -
+        if (m_meta->make_instance == NULL)
+            m_meta->make_instance = &message_class_t::instance_constructor;
     }
 
     inline msg_box_t< MsgT > create() const {

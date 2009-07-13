@@ -81,6 +81,45 @@ private:
                             }
                         }
                         break;
+                    case SEND_MESSAGE:
+                        {
+                            printf("SEND_MESSAGE\n");
+
+                            ui64        len;
+                            so_readsync(s, &len, sizeof(len), 5);
+                            {
+                                ui64    oid;
+                                ui64    tid;
+                                size_t  size = len - 2 * sizeof(ui64);
+
+                                so_readsync(s, &oid, sizeof(oid), 5);
+                                so_readsync(s, &tid, sizeof(tid), 5);
+
+                                generics::array_ptr< char >   buf(new char[size + 1]);
+
+                                so_readsync(s, buf.get(), size, 5);
+                                buf[len] = '\0';
+                                //name = buf.get();
+
+                                // 1. По коду сообщения получить класс сообщения
+                                msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
+                                if (meta != NULL && meta->make_instance != NULL) {
+                                    msg_t* const msg = meta->make_instance();
+                                    meta->serializer->read(msg, buf.get(), size);
+
+                                    for (global_t::iterator i = pthis->m_actors.begin(); i != pthis->m_actors.end(); ++i) {
+                                        if ((*i).second.id == oid) {
+                                            printf("finded\n");
+                                            core::runtime_t::instance()->send(0, (*i).second.actor.data(), msg);
+                                            break;
+                                        }
+                                    }
+                                }
+                                // 2. Получить экземпляр объекта
+                                // 3. Создать экземпляр сообщения
+                            }
+                        }
+                        break;
                 }
             }
             break;

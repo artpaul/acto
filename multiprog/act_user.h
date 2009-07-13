@@ -32,7 +32,6 @@ inline core::object_t* make_instance(const actor_t& context, const int options) 
 //                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
 ///////////////////////////////////////////////////////////////////////////////
 
-using core::msg_t;
 using core::message_class_t;
 
 
@@ -40,7 +39,6 @@ using core::message_class_t;
  * Пользовательский объект (актер)
  */
 class actor_t {
-    friend inline core::object_t* dereference(actor_t& object);
     friend void join(actor_t& obj);
     friend void destroy(actor_t& object);
 
@@ -76,6 +74,10 @@ public:
 public:
     /// Инициализирован ли текущий объект
     bool assigned() const;
+
+    core::object_t* data() const {
+        return m_object;
+    }
 
     // Послать сообщение объекту
     template <typename MsgT>

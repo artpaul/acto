@@ -124,6 +124,25 @@ public:
         return &value;
     }
 
+    class mem_stream_t : public stream_t {
+    public:
+        size_t                      m_size;
+        generics::array_ptr< char > m_buf;
+
+    public:
+        mem_stream_t()
+            : m_size(0)
+            , m_buf(new char[1024])
+        {
+        }
+
+        virtual void write(const void* buf, size_t size) {
+            char* ptr = m_buf.get() + m_size;
+            memcpy(ptr, buf, size);
+            m_size += size;
+        }
+    };
+
 public:
     /// -
     virtual void handle_message(core::package_t* const package) {
@@ -132,15 +151,32 @@ public:
     /// Отправить сообщение соответствующему объекту
     virtual void send_message(core::package_t* const package) {
         core::object_t* const target = package->target;
-        remote_base_t*  const impl   = static_cast<remote_base_t*>(target->impl);
+        remote_base_t*  const impl   = static_cast< remote_base_t* >(target->impl);
+        const msg_t*    const msg    = package->data;
         // -
         assert(target->module == 1);
 
         // 1. преобразовать текущее сообщение в байтовый поток
-        // 2. передать по сети
+        acto::serializer_t* const s = msg->meta->serializer.get();
+        // -
+        mem_stream_t    mem;
 
-        //package->data;
-        //package->type;
+        s->write(msg, &mem);
+
+        // 2. передать по сети
+        // добавить заголовок к данным сообщения
+        //  id-объекта, id-сообщения, длинна данных
+        ui64    len = (2 * sizeof(ui64)) + mem.m_size;
+        ui16    cmd = SEND_MESSAGE;
+        ui64    tid = msg->meta->tid;
+
+        printf("%i\n", (int)mem.m_size);
+
+        so_sendsync(impl->m_fd, &cmd, sizeof(cmd));
+        so_sendsync(impl->m_fd, &len, sizeof(len));
+        so_sendsync(impl->m_fd, &impl->m_id, sizeof(impl->m_id));
+        so_sendsync(impl->m_fd, &tid, sizeof(tid));
+        so_sendsync(impl->m_fd, mem.m_buf.get(), mem.m_size);
 
         printf("sending remote message\n");
         delete package;

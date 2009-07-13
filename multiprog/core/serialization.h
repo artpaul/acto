@@ -4,11 +4,25 @@
 
 namespace acto {
 
+struct msg_t;
+
+/**
+ */
+class stream_t {
+public:
+    virtual void write(const void* buf, size_t size) = 0;
+};
+
 /**
  */
 class serializer_t {
 public:
     virtual ~serializer_t() { }
+
+public:
+    virtual void read(msg_t* const msg, void* const s, size_t size) { }
+    ///
+    virtual void write(const msg_t* const msg, stream_t* const s) = 0;
 };
 
 } // namepsace acto
