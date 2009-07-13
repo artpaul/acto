@@ -39,6 +39,9 @@ public:
 struct msg_answer : public acto::msg_t {
 };
 
+struct msg_start : public acto::msg_t {
+};
+
 
 acto::message_class_t< msg_get, msg_get::metainfo_t >    msg_get_class;
 
@@ -63,17 +66,21 @@ public:
 class Client : public acto::implementation_t {
     void do_answer(acto::actor_t& sender, const msg_answer& msg) {
         printf("MSG ANSWER:\n");
+        terminate();
     }
 
-public:
-    Client() {
-        Handler< msg_answer >(&Client::do_answer);
-
+    void do_start(acto::actor_t& sender, const msg_start& msg) {
         acto::actor_t serv = acto::remote::connect("acto://127.0.0.1/server", CLIENTPORT);
 
         if (serv.assigned()) {
             serv.send< msg_get >("test message data via message");
         }
+    }
+
+public:
+    Client() {
+        Handler< msg_answer >(&Client::do_answer);
+        Handler< msg_start  >(&Client::do_start);
     }
 };
 
@@ -88,7 +95,9 @@ int main(int argc, char* argv[]) {
         // Эмуляция клиента
         acto::actor_t cl = acto::instance< Client >();
 
-        acto::join(serv);
+        cl.send< msg_start >();
+
+        acto::join(cl);
     }
     acto::shutdown();
     return 0;

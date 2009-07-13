@@ -2,6 +2,8 @@
 #ifndef acto_remote_protocol_h_3a1c8c8c2409448281fb26af4cbce57a
 #define acto_remote_protocol_h_3a1c8c8c2409448281fb26af4cbce57a
 
+#include <system/platform.h>
+
 namespace acto {
 
 namespace remote {

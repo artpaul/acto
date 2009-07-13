@@ -45,7 +45,7 @@ private:
             break;
         case SOEVENT_READ:
             {
-                uint16_t    id = 0;
+                ui16    id = 0;
 
                 so_readsync(s, &id, sizeof(id), 5);
 
@@ -59,7 +59,7 @@ private:
 
                             so_readsync(s, &len, sizeof(len), 5);
                             {
-                                generics::array_ptr<char>   buf(new char[len + 1]);
+                                generics::array_ptr< char > buf(new char[len + 1]);
 
                                 so_readsync(s, buf.get(), len, 5);
                                 buf[len] = '\0';
@@ -88,10 +88,12 @@ private:
                             ui64        len;
                             so_readsync(s, &len, sizeof(len), 5);
                             {
+                                ui64    sid;
                                 ui64    oid;
                                 ui64    tid;
-                                size_t  size = len - 2 * sizeof(ui64);
+                                size_t  size = len - 3 * sizeof(ui64);
 
+                                so_readsync(s, &sid, sizeof(sid), 5);
                                 so_readsync(s, &oid, sizeof(oid), 5);
                                 so_readsync(s, &tid, sizeof(tid), 5);
 

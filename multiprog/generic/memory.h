@@ -2,6 +2,8 @@
 #ifndef acto_generic_memory_h_36143943703c4264bd0fdc0812683f37
 #define acto_generic_memory_h_36143943703c4264bd0fdc0812683f37
 
+#include <cstddef>
+
 namespace acto {
 
 namespace generics {

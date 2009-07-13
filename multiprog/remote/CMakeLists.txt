@@ -1,5 +1,6 @@
 
 ADD_LIBRARY (acto-remote STATIC
+    client.cpp
     remote.cpp
 )
 
