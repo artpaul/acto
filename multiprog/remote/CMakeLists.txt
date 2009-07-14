@@ -2,6 +2,7 @@
 ADD_LIBRARY (acto-remote STATIC
     client.cpp
     remote.cpp
+    transport.cpp
 )
 
 TARGET_LINK_LIBRARIES(acto-remote

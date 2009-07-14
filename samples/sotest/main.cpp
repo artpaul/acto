@@ -37,14 +37,25 @@ public:
 };
 
 struct msg_answer : public acto::msg_t {
+public:
+    class metainfo_t : public acto::serializer_t {
+    public:
+        virtual void read(msg_t* const msg, void* const s, size_t size) {
+            // -
+        }
+
+        virtual void write(const msg_t* const msg, acto::stream_t* const s) {
+            // -
+        }
+    };
 };
 
 struct msg_start : public acto::msg_t {
 };
 
 
-acto::message_class_t< msg_get, msg_get::metainfo_t >    msg_get_class;
-
+acto::message_class_t< msg_get,    msg_get::metainfo_t >    msg_get_class;
+acto::message_class_t< msg_answer, msg_answer::metainfo_t > msg_answer_class;
 
 /**
  */
@@ -87,6 +98,7 @@ public:
 int main(int argc, char* argv[]) {
     acto::startup();
     {
+        acto::remote::enable();
         // Локальный объект
         acto::actor_t serv = acto::instance< Server >();
         // Зарегистрировать в словаре

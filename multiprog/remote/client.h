@@ -11,7 +11,7 @@
 #include <core/types.h>
 
 #include "protocol.h"
-
+#include "transport.h"
 
 namespace acto {
 
@@ -32,19 +32,16 @@ public:
 /**
  */
 class remote_module_t : public core::module_t {
-    struct remote_host_t {
-        std::string name;
-        int         fd;
-        int         port;
-    };
-
+    /// Регистрационная информация об объекте
+    /// который выступает в роли сервера
     struct actor_info_t {
+        actor_t     actor;
         ui64        id;
-        actor_t     ref;
     };
 
-    typedef std::map<std::string, remote_host_t>    host_map_t;
     typedef std::map<ui64, actor_info_t>            actors_t;
+
+    typedef std::map< std::string, actor_info_t >   global_t;
 
     typedef std::map< ui64, core::object_t* >       senders_t;
 
@@ -66,19 +63,26 @@ public:
     virtual void startup();
 
     actor_t      connect(const char* path, unsigned int port);
+    /// -
+    void         enable_server();
+    /// -
+    void         register_actor(const actor_t& actor, const char* path);
 
 private:
-    static void read_actor_connect(int s, SOEVENT* const ev);
-
-    int get_host_connection(const char* host, unsigned int port);
+    static void do_client_commands(const ui16 cmd, stream_t* s, void* param);
+    static void do_server_commands(const ui16 cmd, stream_t* s, void* param);
 
 private:
     core::mutex_t   m_cs;
-    host_map_t      m_hosts;
     actors_t        m_actors;
+    global_t        m_registered;
     senders_t       m_senders;
     core::event_t   m_event_getid;
     volatile ui64   m_last;
+    /// Генератор идентификаторов для объектов
+    ui64            m_counter;
+
+    transport_t     m_transport;
 
 };
 

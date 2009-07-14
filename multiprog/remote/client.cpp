@@ -4,6 +4,8 @@
 
 #include "client.h"
 
+#define CLIENTPORT    25121
+
 namespace acto {
 
 namespace remote {
@@ -29,11 +31,16 @@ public:
 };
 
 
-
 //-----------------------------------------------------------------------------
-remote_module_t::remote_module_t() {
+remote_module_t::remote_module_t()
+    : m_last(0)
+    , m_counter(0)
+{
     so_init();
     core::runtime_t::instance()->register_module(this, 1);
+
+    m_transport.client_handler(&remote_module_t::do_client_commands, this);
+    m_transport.server_handler(&remote_module_t::do_server_commands, this);
 }
 //-----------------------------------------------------------------------------
 remote_module_t::~remote_module_t() {
@@ -52,6 +59,8 @@ void remote_module_t::handle_message(core::package_t* const package) {
 }
 //-----------------------------------------------------------------------------
 void remote_module_t::send_message(core::package_t* const package) {
+    printf("send_message\n");
+
     core::object_t* const sender = package->sender;
     core::object_t* const target = package->target;
     remote_base_t*  const impl   = static_cast< remote_base_t* >(target->impl);
@@ -107,21 +116,26 @@ void remote_module_t::startup() {
 }
 //-----------------------------------------------------------------------------
 actor_t remote_module_t::connect(const char* path, unsigned int port) {
-    int fd = get_host_connection("127.0.0.1", port);
+    const int fd = m_transport.connect("127.0.0.1", port);
 
     if (fd > 0) {
         m_event_getid.reset();
         // -
-        so_pending(fd, SOEVENT_READ, 100, &read_actor_connect, this);
         // !!! Получить данные об актёре
-        {
-            ui16    id  = ACTOR_REFERENCE;
-            ui32    len = strlen("server");
 
-            so_sendsync(fd, &id,  sizeof(id));
-            so_sendsync(fd, &len, sizeof(len));
-            so_sendsync(fd, "server", len);
-        }
+        /*
+        data = m_transport.prepare_command(fd, ACTOR_REFERENCE);
+        data.write(&len, sizeof(len));
+        data.write("server", len);
+        data.commit();
+        */
+
+        ui32      len = strlen("server");
+        channel_t ch  = m_transport.send_command(fd, ACTOR_REFERENCE);
+        // -
+        ch.write(&len, sizeof(len));
+        ch.write("server", len);
+
         m_event_getid.wait(); // timed-wait
         // -
         {
@@ -138,66 +152,142 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
     return actor_t();
 }
 //-----------------------------------------------------------------------------
-void remote_module_t::read_actor_connect(int s, SOEVENT* const ev) {
-    remote_module_t* const pthis = static_cast<remote_module_t*>(ev->param);
+void remote_module_t::enable_server() {
+    m_transport.open_server(CLIENTPORT);
+}
+//-----------------------------------------------------------------------------
+void remote_module_t::register_actor(const actor_t& actor, const char* path) {
+    if (actor.assigned()) {
+        core::MutexLocker lock(m_cs);
+        actor_info_t      info;
 
-    switch (ev->type) {
-    case SOEVENT_CLOSED:
-        // Соединение с сервером было закрыто
-        printf("closed\n");
-        return;
-    case SOEVENT_READ:
-        {
-            // code, len|name, id,
-            ui16    cmd = 0;
-            ui64    id  = 0;
+        info.actor = actor;
+        info.id    = ++m_counter;
 
-            so_readsync(s, &cmd, sizeof(cmd), 5);
-            so_readsync(s, &id,  sizeof(id),  5);
-
-            if (cmd == ACTOR_REFERENCE && id > 0) {
-                actor_info_t    info;
-
-                info.id  = id;
-                info.ref = actor_t();
-
-                pthis->m_last       = id;
-                pthis->m_actors[id] = info;
-                pthis->m_event_getid.signaled();
-            }
-        }
-        break;
+        m_registered[std::string(path)] = info;
     }
 }
 //-----------------------------------------------------------------------------
-int remote_module_t::get_host_connection(const char* host, unsigned int port) {
-    const std::string    host_str = std::string(host);
-    host_map_t::iterator i        = m_hosts.find(host_str);
+void remote_module_t::do_client_commands(const ui16 cmd, stream_t* s, void* param) {
+    remote_module_t* const pthis = static_cast< remote_module_t* >(param);
 
-    if (i != m_hosts.end()) {
-        return (*i).second.fd;
-    }
-    else {
-        // Установить подключение
-        int fd = so_socket(SOCK_STREAM);
+    switch (cmd) {
+        // Получение идентификатора объекта, для которого
+        // был отправлен именнованный запрос
+        case ACTOR_REFERENCE:
+            {
+                ui64 id = 0;
 
-        if (fd != -1) {
-            if (so_connect(fd, inet_addr("127.0.0.1"), port) != 0)
-                so_close(fd);
-            else {
-                remote_host_t data;
+                s->read(&id, sizeof(id));
 
-                data.name = host_str;
-                data.fd   = fd;
-                data.port = port;
-                m_hosts[host_str] = data;
+                if (id > 0) {
+                    actor_info_t    info;
 
-                return fd;
+                    info.id    = id;
+                    info.actor = actor_t();
+
+                    pthis->m_last       = id;
+                    pthis->m_actors[id] = info;
+                    pthis->m_event_getid.signaled();
+                }
             }
-        }
+            break;
+        case SEND_MESSAGE:
+            break;
     }
-    return 0;
 }
+//-----------------------------------------------------------------------------
+void remote_module_t::do_server_commands(const ui16 cmd, stream_t* s, void* param) {
+    remote_module_t* const pthis = static_cast< remote_module_t* >(param);
+
+    switch (cmd) {
+        case ACTOR_REFERENCE:
+            {
+                printf("ACTOR_REFERENCE\n");
+
+                ui32        len;
+                std::string name;
+                // получить запрос о ссылке на объект
+                s->read(&len, sizeof(len));
+                {
+                    generics::array_ptr< char > buf(new char[len + 1]);
+
+                    s->read(buf.get(), len);
+                    buf[len] = '\0';
+                    name = buf.get();
+                }
+
+                {
+                    ui16    cmd = ACTOR_REFERENCE;
+                    ui64    aid = 0;
+
+                    global_t::iterator i = pthis->m_registered.find(name);
+                    if (i != pthis->m_registered.end()) {
+                        printf("has: %s\n", name.c_str());
+                        aid = (*i).second.id;
+                    }
+
+                    s->write(&cmd, sizeof(cmd));
+                    s->write(&aid, sizeof(aid));
+                }
+            }
+            break;
+        case SEND_MESSAGE:
+            {
+                printf("SEND_MESSAGE\n");
+
+                ui64        len;
+                s->read(&len, sizeof(len));
+                {
+                    ui64    sid;
+                    ui64    oid;
+                    ui64    tid;
+                    size_t  size = len - 3 * sizeof(ui64);
+
+                    s->read(&sid, sizeof(sid));
+                    s->read(&oid, sizeof(oid));
+                    s->read(&tid, sizeof(tid));
+
+                    generics::array_ptr< char >   buf(new char[size + 1]);
+
+                    s->read(buf.get(), size);
+                    buf[len] = '\0';
+
+                    // 1. По коду сообщения получить класс сообщения
+                    msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
+                    if (meta != NULL && meta->make_instance != NULL) {
+                        msg_t* const msg = meta->make_instance();
+                        meta->serializer->read(msg, buf.get(), size);
+
+                        for (global_t::iterator i = pthis->m_registered.begin(); i != pthis->m_registered.end(); ++i) {
+                            if ((*i).second.id == oid) {
+                                // Сформировать заглушку для удалённого объекта
+                                actor_t sender;
+                                {
+                                    remote_base_t* const value = new remote_base_t();
+                                    // 1.
+                                    value->m_id = ++pthis->m_last;
+                                    value->m_fd = 0;//s;
+                                    // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+                                    core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
+
+                                    sender = actor_t(result);
+                                }
+                                // -
+                                printf("finded\n");
+                                core::runtime_t::instance()->send(sender.data(), (*i).second.actor.data(), msg);
+                                break;
+                            }
+                        }
+                    }
+                    // 2. Получить экземпляр объекта
+                    // 3. Создать экземпляр сообщения
+                }
+            }
+            break;
+    }
+}
+
 
 } // namespace remote
 

@@ -10,6 +10,11 @@ struct msg_t;
  */
 class stream_t {
 public:
+    ///
+    virtual size_t read (void* buf, size_t size) {
+        return 0;
+    }
+    ///
     virtual void write(const void* buf, size_t size) = 0;
 };
 

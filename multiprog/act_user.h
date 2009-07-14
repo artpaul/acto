@@ -170,6 +170,25 @@ ACTO_API void shutdown();
 ACTO_API void startup();
 
 
+#ifndef ACTO_EXCLUDE_REMOTE
+
+namespace remote {
+
+/// Получить ссылку на удаленный объект
+ACTO_API actor_t connect(const char* path, unsigned int port);
+
+/// Активировать возможность подключения с других хотов
+ACTO_API void    enable();
+
+/// Зарегистрировать объект в глобальном каталоге
+ACTO_API void    register_actor(const actor_t& actor, const char* path);
+
+} // namespace remote
+
+
+#endif // ACTO_EXCLUDE_REMOTE
+
+
 //-----------------------------------------------------------------------------
 template <typename T>
 inline actor_t instance() {
