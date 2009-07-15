@@ -111,6 +111,7 @@ int main(int argc, char* argv[]) {
 
         acto::join(cl);
     }
+    printf("shutdown\n");
     acto::shutdown();
     return 0;
 }

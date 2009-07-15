@@ -23,9 +23,9 @@ namespace remote {
  */
 class remote_base_t : public core::actor_body_t {
 public:
-    ui64    m_id;
+    ui64            m_id;
     /// Сокет взаимодействия с удаленным хостом
-    int     m_fd;
+    network_node_t* m_node;
 };
 
 
@@ -39,11 +39,9 @@ class remote_module_t : public core::module_t {
         ui64        id;
     };
 
-    typedef std::map<ui64, actor_info_t>            actors_t;
+    typedef std::map< ui64, actor_t >               actors_t;
 
     typedef std::map< std::string, actor_info_t >   global_t;
-
-    typedef std::map< ui64, core::object_t* >       senders_t;
 
 public:
     remote_module_t();
@@ -69,14 +67,15 @@ public:
     void         register_actor(const actor_t& actor, const char* path);
 
 private:
-    static void do_client_commands(const ui16 cmd, stream_t* s, void* param);
-    static void do_server_commands(const ui16 cmd, stream_t* s, void* param);
+    static void do_client_commands(command_event_t* const ev);
+    static void do_server_commands(command_event_t* const ev);
+
+    void do_send_message(command_event_t* const ev, bool is_client);
 
 private:
     core::mutex_t   m_cs;
     actors_t        m_actors;
     global_t        m_registered;
-    senders_t       m_senders;
     core::event_t   m_event_getid;
     volatile ui64   m_last;
     /// Генератор идентификаторов для объектов

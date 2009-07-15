@@ -14,23 +14,45 @@ namespace acto {
 
 namespace remote {
 
+class transport_t;
+
+
 /**
  */
-class channel_t {
+class channel_t : public stream_t {
     int m_fd;
 
 public:
     channel_t(int fd) : m_fd(fd) { }
 
 public:
-    void write(const void* data, const size_t size);
+    virtual void write(const void* data, size_t size);
+
+    void commit() { }
 };
 
+
+/** */
+struct network_node_t {
+    transport_t*    owner;
+    int             fd;
+};
+
+
+struct command_event_t {
+    ui16            cmd;
+    /// Узел, который инициировал событие
+    network_node_t* node;
+    // -
+    stream_t*       stream;
+    // -
+    void*           param;
+};
 
 /**
  */
 class transport_t {
-    typedef void (*handler_t)(const ui16, stream_t*, void*);
+    typedef void (*handler_t)(command_event_t* const);
 
     /// -
     struct handler_data_t {
@@ -40,24 +62,25 @@ class transport_t {
 
     /// Параметры соединения с удаленным хостом
     struct remote_host_t {
-        std::string name;
-        int         fd;
-        int         port;
+        std::string     name;
+        network_node_t* node;
+        int             fd;
+        int             port;
     };
 
     typedef std::map< std::string, remote_host_t >  host_map_t;
 
 public:
     /// Установить обработчик команды
-    void      client_handler(handler_t callback, void* param);
+    void            client_handler(handler_t callback, void* param);
     /// -
-    void      server_handler(handler_t callback, void* param);
-    ///
-    int       connect(const char* host, const int port);
+    void            server_handler(handler_t callback, void* param);
+    /// Установить соединение с удаленным узлом
+    network_node_t* connect(const char* host, const int port);
+    /// Открыть узел для доступа из сети
+    void            open_node(int port);
     /// -
-    void      open_server(int port);
-    ///
-    channel_t send_command(int fd, const ui16 cmd);
+    channel_t create_message(network_node_t* const node, const ui16 cmd);
 
 private:
     /// -
