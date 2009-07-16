@@ -5,8 +5,9 @@
 #include <map>
 #include <string>
 
+#include <generic/memory.h>
+
 #include <system/platform.h>
-#include <system/mutex.h>
 #include <core/serialization.h>
 
 
@@ -14,28 +15,45 @@ namespace acto {
 
 namespace remote {
 
-class transport_t;
+class  transport_t;
+struct network_node_t;
+
+//
+class write_buffer_t {
+    generics::array_ptr< char > m_data;
+    size_t                      m_pos;
+    int                         m_fd;
+    const ui16                  m_cmd;
+
+public:
+    write_buffer_t(int fd, const ui16 cmd)
+        : m_data(new char[1024])
+        , m_pos(0)
+        , m_fd(fd)
+        , m_cmd(cmd)
+    {
+    }
+
+public:
+    void write(const void* data, size_t size);
+
+    void commit();
+};
 
 
 /**
  */
-class channel_t : public stream_t {
-    int m_fd;
+class transaction_t : public stream_t {
+    write_buffer_t* const m_writer;
 
 public:
-    channel_t(int fd) : m_fd(fd) { }
+    transaction_t(write_buffer_t* const buf);
 
 public:
+    ///
     virtual void write(const void* data, size_t size);
-
-    void commit() { }
-};
-
-
-/** */
-struct network_node_t {
-    transport_t*    owner;
-    int             fd;
+    ///
+    void commit();
 };
 
 
@@ -71,8 +89,14 @@ class transport_t {
     typedef std::map< std::string, remote_host_t >  host_map_t;
 
 public:
+    transport_t();
+    ~transport_t();
+
+public:
     /// Установить обработчик команды
     void            client_handler(handler_t callback, void* param);
+    /// Получить поток входных данных для сообщения
+    // stream_t* get_package_stream(command_event_t* ev);
     /// -
     void            server_handler(handler_t callback, void* param);
     /// Установить соединение с удаленным узлом
@@ -80,22 +104,12 @@ public:
     /// Открыть узел для доступа из сети
     void            open_node(int port);
     /// -
-    channel_t create_message(network_node_t* const node, const ui16 cmd);
+    transaction_t   start_transaction(network_node_t* const node, const ui16 cmd);
 
 private:
-    /// -
-    static void do_client_input  (int s, SOEVENT* const ev);
-    /// -
-    static void do_host_connected(int s, SOEVENT* const ev);
-    /// -
-    static void do_server_input  (int s, SOEVENT* const ev);
+    class impl;
 
-private:
-    core::mutex_t   m_cs;
-    host_map_t      m_hosts;
-    handler_data_t  m_client_handler;
-    handler_data_t  m_server_handler;
-    int             m_fd_server;
+    std::auto_ptr< impl >   m_pimpl;
 };
 
 } // namespace remote

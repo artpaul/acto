@@ -6,7 +6,6 @@
 
 #include <system/mutex.h>
 #include <system/event.h>
-#include <remote/libsocket/libsocket.h>
 
 #include <core/types.h>
 
@@ -39,9 +38,16 @@ class remote_module_t : public core::module_t {
         ui64        id;
     };
 
+    struct ask_data_t {
+        core::event_t   event;
+        ui64            oid;
+    };
+
     typedef std::map< ui64, actor_t >               actors_t;
 
     typedef std::map< std::string, actor_info_t >   global_t;
+
+    typedef std::map< ui64, ask_data_t* >           ask_map_t;
 
 public:
     remote_module_t();
@@ -75,6 +81,7 @@ private:
 private:
     core::mutex_t   m_cs;
     actors_t        m_actors;
+    ask_map_t       m_asks;
     global_t        m_registered;
     core::event_t   m_event_getid;
     volatile ui64   m_last;

@@ -36,7 +36,6 @@ remote_module_t::remote_module_t()
     : m_last(0)
     , m_counter(0)
 {
-    so_init();
     core::runtime_t::instance()->register_module(this, 1);
 
     m_transport.client_handler(&remote_module_t::do_client_commands, this);
@@ -44,7 +43,7 @@ remote_module_t::remote_module_t()
 }
 //-----------------------------------------------------------------------------
 remote_module_t::~remote_module_t() {
-    so_terminate();
+    // -
 }
 //-----------------------------------------------------------------------------
 remote_module_t* remote_module_t::instance() {
@@ -88,31 +87,14 @@ void remote_module_t::send_message(core::package_t* const package) {
         }
     }
 
-    /*
-    {
-        for (senders_t::iterator i = m_senders.begin(); i != m_senders.end(); ++i) {
-            if ((*i).second == sender) {
-                sid = (*i).first;
-                break;
-            }
-        }
-        if (sid == 0) {
-            sid = ++m_last;
-            m_senders[sid] = sender;
-        }
-    }
-    */
-
     // 2. передать по сети
     // добавить заголовок к данным сообщения
     //  id-объекта, id-сообщения, длинна данных
     ui64    len = (3 * sizeof(ui64)) + mem.m_size;
-    ui16    cmd = SEND_MESSAGE;
     ui64    tid = msg->meta->tid;
 
-    channel_t ch = m_transport.create_message(impl->m_node, cmd);
+    transaction_t ch = m_transport.start_transaction(impl->m_node, SEND_MESSAGE);
 
-    ch.write(&cmd, sizeof(cmd));
     ch.write(&len, sizeof(len));
     ch.write(&sid, sizeof(sid));
     ch.write(&impl->m_id, sizeof(impl->m_id));
@@ -136,31 +118,30 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
     network_node_t* const node = m_transport.connect("127.0.0.1", port);
 
     if (node != NULL) {
-        m_event_getid.reset();
+        ask_data_t* const ask = new ask_data_t();
+        ui64    aid = ++m_last;
+
+        ask->oid = 0;
+        ask->event.reset();
+        m_asks[aid] = ask;
+
         // -
         // !!! Получить данные об актёре
 
-        /*
-        data = m_transport.prepare_command(fd, ACTOR_REFERENCE);
-        data.write(&len, sizeof(len));
-        data.write("server", len);
-        data.commit();
-        */
-
-        ui32      len = strlen("server");
-        ui16      cmd = ACTOR_REFERENCE;
-        channel_t ch  = m_transport.create_message(node, ACTOR_REFERENCE);
+        ui32          len = strlen("server");
+        transaction_t ch  = m_transport.start_transaction(node, ACTOR_REFERENCE);
         // -
-        ch.write(&cmd, sizeof(cmd));
+        ch.write(&aid, sizeof(aid));
         ch.write(&len, sizeof(len));
         ch.write("server", len);
+        ch.commit();
 
-        m_event_getid.wait(); // timed-wait
+        ask->event.wait(); // timed-wait
         // -
-        {
-            remote_base_t* const value  = new remote_base_t();
+        if (ask->oid != 0) {
+            remote_base_t* const value = new remote_base_t();
             // 1.
-            value->m_id   = m_last;
+            value->m_id   = ask->oid;
             value->m_node = node;
             // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
             core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
@@ -169,6 +150,9 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
             // -
             return actor_t(result);
         }
+
+        m_asks.erase(aid);
+        delete ask;
     }
     return actor_t();
 }
@@ -259,14 +243,20 @@ void remote_module_t::do_client_commands(command_event_t* const ev) {
         // был отправлен именнованный запрос
         case ACTOR_REFERENCE:
             {
-                ui64 id = 0;
+                ui64 oid = 0;
+                ui64 aid = 0;
 
-                ev->stream->read(&id, sizeof(id));
+                ev->stream->read(&aid, sizeof(aid));
+                ev->stream->read(&oid, sizeof(oid));
 
-                if (id > 0) {
-                    pthis->m_last       = id;
-                    pthis->m_actors[id] = actor_t();
-                    pthis->m_event_getid.signaled();
+                if (oid > 0 && aid > 0) {
+                    core::MutexLocker   lock(pthis->m_cs);
+                    ask_map_t::iterator i = pthis->m_asks.find(aid);
+
+                    if (i != pthis->m_asks.end()) {
+                        (*i).second->oid = oid;
+                        (*i).second->event.signaled();
+                    }
                 }
             }
             break;
@@ -282,11 +272,18 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
     switch (ev->cmd) {
         case ACTOR_REFERENCE:
             {
-                printf("ACTOR_REFERENCE\n");
-
                 ui32        len;
+                ui64        aid;
                 std::string name;
+
+                /*
+                    stream_t* s = m_transport.get_package_stream(ev);
+
+                    s->read();
+                */
+
                 // получить запрос о ссылке на объект
+                ev->stream->read(&aid, sizeof(aid));
                 ev->stream->read(&len, sizeof(len));
                 {
                     generics::array_ptr< char > buf(new char[len + 1]);
@@ -297,17 +294,17 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
                 }
 
                 {
-                    ui16    cmd = ACTOR_REFERENCE;
-                    ui64    aid = 0;
+                    ui64 oid = 0;
 
                     global_t::iterator i = pthis->m_registered.find(name);
-                    if (i != pthis->m_registered.end()) {
-                        printf("has: %s\n", name.c_str());
-                        aid = (*i).second.id;
-                    }
+                    if (i != pthis->m_registered.end())
+                        oid = (*i).second.id;
 
-                    ev->stream->write(&cmd, sizeof(cmd));
-                    ev->stream->write(&aid, sizeof(aid));
+                    transaction_t ch = pthis->m_transport.start_transaction(ev->node, ACTOR_REFERENCE);
+
+                    ch.write(&aid, sizeof(aid));
+                    ch.write(&oid, sizeof(oid));
+                    ch.commit();
                 }
             }
             break;
