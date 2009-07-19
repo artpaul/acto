@@ -23,6 +23,10 @@ public:
     {
     }
 
+    size_t size() const {
+        return m_size;
+    }
+
     virtual void write(const void* buf, size_t size) {
         char* ptr = m_buf.get() + m_size;
         memcpy(ptr, buf, size);
@@ -92,16 +96,18 @@ void remote_module_t::send_message(core::package_t* const package) {
     //  id-объекта, id-сообщения, длинна данных
     ui64    len = (3 * sizeof(ui64)) + mem.m_size;
     ui64    tid = msg->meta->tid;
+    ui16    cmd = SEND_MESSAGE;
 
-    transaction_t ch = m_transport.start_transaction(impl->m_node, SEND_MESSAGE);
+    transport_msg_t ch;
 
+    ch.write(&cmd, sizeof(cmd));
     ch.write(&len, sizeof(len));
     ch.write(&sid, sizeof(sid));
     ch.write(&impl->m_id, sizeof(impl->m_id));
     ch.write(&tid, sizeof(tid));
     // - запись данных напрямую в поток
     s->write(package->data, &ch);
-    ch.commit();
+    m_transport.send_message(impl->m_node, ch);
 
     delete package;
 }
@@ -128,13 +134,15 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
         // -
         // !!! Получить данные об актёре
 
-        ui32          len = strlen("server");
-        transaction_t ch  = m_transport.start_transaction(node, ACTOR_REFERENCE);
+        ui32            len = strlen("server");
+        ui16            cmd = ACTOR_REFERENCE;
+        transport_msg_t ch;
         // -
+        ch.write(&cmd, sizeof(cmd));
         ch.write(&aid, sizeof(aid));
         ch.write(&len, sizeof(len));
         ch.write("server", len);
-        ch.commit();
+        m_transport.send_message(node, ch);
 
         ask->event.wait(); // timed-wait
         // -
@@ -295,16 +303,18 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
 
                 {
                     ui64 oid = 0;
+                    ui16 cmd = ACTOR_REFERENCE;
 
                     global_t::iterator i = pthis->m_registered.find(name);
                     if (i != pthis->m_registered.end())
                         oid = (*i).second.id;
 
-                    transaction_t ch = pthis->m_transport.start_transaction(ev->node, ACTOR_REFERENCE);
+                    transport_msg_t ch;
 
+                    ch.write(&cmd, sizeof(cmd));
                     ch.write(&aid, sizeof(aid));
                     ch.write(&oid, sizeof(oid));
-                    ch.commit();
+                    pthis->m_transport.send_message(ev->node, ch);
                 }
             }
             break;

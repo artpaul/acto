@@ -18,42 +18,21 @@ namespace remote {
 class  transport_t;
 struct network_node_t;
 
-//
-class write_buffer_t {
-    generics::array_ptr< char > m_data;
-    size_t                      m_pos;
-    int                         m_fd;
-    const ui16                  m_cmd;
-
-public:
-    write_buffer_t(int fd, const ui16 cmd)
-        : m_data(new char[1024])
-        , m_pos(0)
-        , m_fd(fd)
-        , m_cmd(cmd)
-    {
-    }
-
-public:
-    void write(const void* data, size_t size);
-
-    void commit();
-};
-
-
 /**
  */
-class transaction_t : public stream_t {
-    write_buffer_t* const m_writer;
+class transport_msg_t : public stream_t {
+    generics::array_ptr< char > m_data;
+    size_t                      m_size;
 
 public:
-    transaction_t(write_buffer_t* const buf);
+    transport_msg_t();
+    ~transport_msg_t();
 
 public:
+    ///
+    void         send(network_node_t* target) const;
     ///
     virtual void write(const void* data, size_t size);
-    ///
-    void commit();
 };
 
 
@@ -104,7 +83,7 @@ public:
     /// Открыть узел для доступа из сети
     void            open_node(int port);
     /// -
-    transaction_t   start_transaction(network_node_t* const node, const ui16 cmd);
+    void            send_message(network_node_t* const target, const transport_msg_t& msg);
 
 private:
     class impl;

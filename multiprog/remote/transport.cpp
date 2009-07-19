@@ -204,44 +204,30 @@ public:
             }
         }
     }
-    /// -
-    transaction_t start_transaction(network_node_t* const node, const ui16 cmd) {
-        assert(node != NULL);
-
-        return transaction_t(new write_buffer_t(node->fd, cmd));
-    }
 };
 
 
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-void write_buffer_t::write(const void* data, size_t size) {
-    memcpy(m_data.get() + m_pos, data, size);
-    m_pos += size;
-}
-
-void write_buffer_t::commit() {
-    so_sendsync(m_fd, &m_cmd,       sizeof(m_cmd));
-    so_sendsync(m_fd, m_data.get(), m_pos);
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
-transaction_t::transaction_t(write_buffer_t* const buf)
-    : m_writer(buf)
+transport_msg_t::transport_msg_t()
+    : m_data(new char[1024])
+    , m_size(0)
 {
+    // -
+}
+
+transport_msg_t::~transport_msg_t() {
+    // -
 }
 //-----------------------------------------------------------------------------
-void transaction_t::write(const void* data, size_t size) {
-    m_writer->write(data, size);
+void transport_msg_t::write(const void* data, size_t size) {
+    memcpy(m_data.get() + m_size, data, size);
+    m_size += size;
 }
 //-----------------------------------------------------------------------------
-void transaction_t::commit() {
-    m_writer->commit();
-    // !!!
-    delete m_writer;
+void transport_msg_t::send(network_node_t* const target) const {
+    so_sendsync(target->fd, m_data.get(), m_size);
 }
 
 
@@ -274,10 +260,9 @@ void transport_t::open_node(int port) {
     m_pimpl->open_node(port);
 }
 //-----------------------------------------------------------------------------
-transaction_t transport_t::start_transaction(network_node_t* const node, const ui16 cmd) {
-    return m_pimpl->start_transaction(node, cmd);
+void transport_t::send_message(network_node_t* const target, const transport_msg_t& msg) {
+    msg.send(target);
 }
-
 
 } // namespace remote
 
