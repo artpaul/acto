@@ -62,6 +62,10 @@ namespace detail {
 /** */
 class dumy_serializer_t : public serializer_t {
 public:
+    virtual void read(msg_t* const msg, stream_t* const s) {
+        // -
+    }
+
     virtual void write(const msg_t* const msg, stream_t* const s) {
         // -
     }

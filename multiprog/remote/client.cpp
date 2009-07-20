@@ -10,31 +10,6 @@ namespace acto {
 
 namespace remote {
 
-/** */
-class mem_stream_t : public stream_t {
-public:
-    size_t                      m_size;
-    generics::array_ptr< char > m_buf;
-
-public:
-    mem_stream_t()
-        : m_size(0)
-        , m_buf(new char[1024])
-    {
-    }
-
-    size_t size() const {
-        return m_size;
-    }
-
-    virtual void write(const void* buf, size_t size) {
-        char* ptr = m_buf.get() + m_size;
-        memcpy(ptr, buf, size);
-        m_size += size;
-    }
-};
-
-
 //-----------------------------------------------------------------------------
 remote_module_t::remote_module_t()
     : m_last(0)
@@ -72,10 +47,6 @@ void remote_module_t::send_message(core::package_t* const package) {
     // 1. преобразовать текущее сообщение в байтовый поток
     serializer_t* const s = msg->meta->serializer.get();
     // -
-    mem_stream_t    mem;
-
-    s->write(msg, &mem);
-
     ui64    sid = 0;
 
     {
@@ -93,15 +64,13 @@ void remote_module_t::send_message(core::package_t* const package) {
 
     // 2. передать по сети
     // добавить заголовок к данным сообщения
-    //  id-объекта, id-сообщения, длинна данных
-    ui64    len = (3 * sizeof(ui64)) + mem.m_size;
+    //  id-объекта, id-сообщения
     ui64    tid = msg->meta->tid;
     ui16    cmd = SEND_MESSAGE;
 
     transport_msg_t ch;
 
     ch.write(&cmd, sizeof(cmd));
-    ch.write(&len, sizeof(len));
     ch.write(&sid, sizeof(sid));
     ch.write(&impl->m_id, sizeof(impl->m_id));
     ch.write(&tid, sizeof(tid));
@@ -121,6 +90,8 @@ void remote_module_t::startup() {
 }
 //-----------------------------------------------------------------------------
 actor_t remote_module_t::connect(const char* path, unsigned int port) {
+    // !!! Parse path
+
     network_node_t* const node = m_transport.connect("127.0.0.1", port);
 
     if (node != NULL) {
@@ -183,59 +154,46 @@ void remote_module_t::register_actor(const actor_t& actor, const char* path) {
 
 //-----------------------------------------------------------------------------
 void remote_module_t::do_send_message(command_event_t* const ev, bool is_client) {
-    ui64        len;
+    ui64    sid;
+    ui64    oid;
+    ui64    tid;
+    size_t  size = ev->data_size - 3 * sizeof(ui64);
 
-    ev->stream->read(&len, sizeof(len));
-    {
-        ui64    sid;
-        ui64    oid;
-        ui64    tid;
-        size_t  size = len - 3 * sizeof(ui64);
+    ev->stream->read(&sid, sizeof(sid));
+    ev->stream->read(&oid, sizeof(oid));
+    ev->stream->read(&tid, sizeof(tid));
 
-        ev->stream->read(&sid, sizeof(sid));
-        ev->stream->read(&oid, sizeof(oid));
-        ev->stream->read(&tid, sizeof(tid));
-
-        generics::array_ptr< char >   buf(new char[size + 1]);
-
+    // 1. По коду сообщения получить класс сообщения
+    msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
+    if (meta != NULL && meta->make_instance != NULL) {
+        msg_t* const msg = meta->make_instance();
         if (size > 0)
-            ev->stream->read(buf.get(), size);
-        // -
-        buf[size] = '\0';
+            meta->serializer->read(msg, ev->stream);
 
-        // 1. По коду сообщения получить класс сообщения
-        msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
-        if (meta != NULL && meta->make_instance != NULL) {
-            msg_t* const msg = meta->make_instance();
-            if (size > 0)
-                meta->serializer->read(msg, buf.get(), size);
+        if (is_client) {
+            actors_t::iterator i = m_actors.find(oid);
 
-            if (is_client) {
-                actors_t::iterator i = m_actors.find(oid);
+            if (i != m_actors.end())
+                core::runtime_t::instance()->send(0, (*i).second.data(), msg);
+        }
+        else {
+            for (global_t::iterator i = m_registered.begin(); i != m_registered.end(); ++i) {
+                if ((*i).second.id == oid) {
+                    // Сформировать заглушку для удалённого объекта
+                    actor_t sender;
+                    {
+                        remote_base_t* const value = new remote_base_t();
+                        // 1.
+                        value->m_id   = sid;
+                        value->m_node = ev->node;
+                        // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
+                        core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
 
-                if (i != m_actors.end())
-                    core::runtime_t::instance()->send(0, (*i).second.data(), msg);
-            }
-            else {
-                for (global_t::iterator i = m_registered.begin(); i != m_registered.end(); ++i) {
-                    if ((*i).second.id == oid) {
-                        // Сформировать заглушку для удалённого объекта
-                        actor_t sender;
-                        {
-                            remote_base_t* const value = new remote_base_t();
-                            // 1.
-                            value->m_id   = sid;
-                            value->m_node = ev->node;
-                            // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
-                            core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
-
-                            sender = actor_t(result);
-                        }
-                        // -
-                        printf("finded\n");
-                        core::runtime_t::instance()->send(sender.data(), (*i).second.actor.data(), msg);
-                        break;
+                        sender = actor_t(result);
                     }
+                    // -
+                    core::runtime_t::instance()->send(sender.data(), (*i).second.actor.data(), msg);
+                    break;
                 }
             }
         }
@@ -283,12 +241,6 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
                 ui32        len;
                 ui64        aid;
                 std::string name;
-
-                /*
-                    stream_t* s = m_transport.get_package_stream(ev);
-
-                    s->read();
-                */
 
                 // получить запрос о ссылке на объект
                 ev->stream->read(&aid, sizeof(aid));

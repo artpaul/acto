@@ -19,20 +19,32 @@ struct network_node_t {
 };
 
 /** */
-class socket_stream_t : public stream_t {
-    int m_fd;
+class mem_stream_t : public stream_t {
+    generics::array_ptr< char >     m_data;
+    size_t                          m_size;
+    size_t                          m_pos;
 
 public:
-    socket_stream_t(int fd) : m_fd(fd) {
+    mem_stream_t(char* data, size_t size)
+        : m_data(data)
+        , m_size(size)
+        , m_pos(0)
+    {
     }
 
 public:
+    void copy(int fd) {
+        so_readsync(fd, m_data.get(), m_size, 15);
+    }
+
     virtual size_t read (void* buf, size_t size) {
-        return so_readsync(m_fd, buf, size, 60);
+        memcpy(buf, m_data.get() + m_pos, size);
+        m_pos += size;
+        return size;
     }
 
     virtual void write(const void* buf, size_t size) {
-        so_sendsync(m_fd, buf, size);
+        // -
     }
 };
 
@@ -60,10 +72,15 @@ private:
         case SOEVENT_READ:
             {
                 ui16 cmd = 0;
+                ui32 len = 0;
 
+                so_readsync(s, &len, sizeof(len), 15);
                 if (so_readsync(s, &cmd, sizeof(cmd), 15) == sizeof(cmd)) {
+                    mem_stream_t ms(new char[len], len - sizeof(cmd));
+
+                    ms.copy(s);
+
                     if (pthis->m_client_handler.callback != 0) {
-                        socket_stream_t stream(s);
                         network_node_t* node = NULL;
                         {
                             for (host_map_t::iterator i = pthis->m_hosts.begin(); i != pthis->m_hosts.end(); ++i) {
@@ -75,10 +92,11 @@ private:
                         }
 
                         command_event_t ev;
-                        ev.cmd    = cmd;
-                        ev.node   = node;
-                        ev.stream = &stream;
-                        ev.param  = pthis->m_client_handler.param;
+                        ev.cmd       = cmd;
+                        ev.node      = node;
+                        ev.data_size = len - sizeof(cmd);
+                        ev.stream    = &ms;
+                        ev.param     = pthis->m_client_handler.param;
 
                         pthis->m_client_handler.callback(&ev);
                     }
@@ -124,16 +142,21 @@ private:
         case SOEVENT_READ:
             {
                 ui16 cmd = 0;
+                ui32 len = 0;
 
+                so_readsync(s, &len, sizeof(len), 15);
                 if (so_readsync(s, &cmd, sizeof(cmd), 15) == sizeof(cmd)) {
-                    if (pthis->m_server_handler.callback != 0) {
-                        socket_stream_t stream(s);
+                    mem_stream_t ms(new char[len], len - sizeof(cmd));
 
+                    ms.copy(s);
+
+                    if (pthis->m_server_handler.callback != 0) {
                         command_event_t ev;
-                        ev.cmd    = cmd;
-                        ev.node   = pnode;
-                        ev.stream = &stream;
-                        ev.param  = pthis->m_server_handler.param;
+                        ev.cmd       = cmd;
+                        ev.node      = pnode;
+                        ev.data_size = len - sizeof(cmd);
+                        ev.stream    = &ms;
+                        ev.param     = pthis->m_server_handler.param;
 
                         pthis->m_server_handler.callback(&ev);
                     }
@@ -227,6 +250,8 @@ void transport_msg_t::write(const void* data, size_t size) {
 }
 //-----------------------------------------------------------------------------
 void transport_msg_t::send(network_node_t* const target) const {
+    ui32 size = m_size;
+    so_sendsync(target->fd, &size, sizeof(size));
     so_sendsync(target->fd, m_data.get(), m_size);
 }
 

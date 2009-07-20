@@ -40,6 +40,8 @@ struct command_event_t {
     ui16            cmd;
     /// Узел, который инициировал событие
     network_node_t* node;
+    /// Размер потока данных
+    size_t          data_size;
     // -
     stream_t*       stream;
     // -

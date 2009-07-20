@@ -1,6 +1,7 @@
 
 
 #include <acto.h>
+#include <generic/memory.h>
 
 #ifdef ACTO_WIN
 #   include <conio.h>
@@ -19,11 +20,19 @@ struct msg_get : public acto::msg_t {
 public:
     class metainfo_t : public acto::serializer_t {
     public:
-        virtual void read(msg_t* const msg, void* const s, size_t size) {
+        virtual void read(msg_t* const msg, acto::stream_t* const s) {
             msg_get* const ptr = static_cast< msg_get* >(msg);
-            const char* p = (const char*)s;
-            ui32 len = *(ui32*)p; p += sizeof(ui32);
-            ptr->content = std::string(p, len);
+            ui32           len = 0;
+
+            s->read(&len, sizeof(len));
+            {
+                acto::generics::array_ptr< char > buf(new char[len + 1]);
+
+                s->read(buf.get(), len);
+                buf[len] = '\0';
+
+                ptr->content = std::string(buf.get(), len);
+            }
         }
 
         virtual void write(const msg_t* const msg, acto::stream_t* const s) {
@@ -40,7 +49,7 @@ struct msg_answer : public acto::msg_t {
 public:
     class metainfo_t : public acto::serializer_t {
     public:
-        virtual void read(msg_t* const msg, void* const s, size_t size) {
+        virtual void read(msg_t* const msg, acto::stream_t* const s) {
             // -
         }
 

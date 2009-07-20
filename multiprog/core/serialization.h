@@ -25,7 +25,7 @@ public:
     virtual ~serializer_t() { }
 
 public:
-    virtual void read(msg_t* const msg, void* const s, size_t size) { }
+    virtual void read(msg_t* const msg, stream_t* const s) = 0;
     ///
     virtual void write(const msg_t* const msg, stream_t* const s) = 0;
 };
