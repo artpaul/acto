@@ -13,8 +13,6 @@
 
 #include "master.h"
 
-//#include <zfslib.h>
-
 #define CLIENTPORT  21581
 #define CHUNKPORT   32541
 #define SERVERIP    "127.0.0.1"
@@ -55,8 +53,10 @@ static TChunk* chunkById(const __uint64_t uid) {
 }
 //------------------------------------------------------------------------------
 static void sendOpenError(int s, int error) {
-    OpenResponse  rsp = {0, error};
-    send(s, &rsp, sizeof(rsp), 0);
+    OpenResponse  rsp;
+    rsp.stream = 0;
+    rsp.err    = error;
+    so_sendsync(s, &rsp, sizeof(rsp));
 }
 
 static void SendCommonResponse(int s, uint8_t cmd, uint32_t err) {
@@ -68,9 +68,9 @@ static void SendCommonResponse(int s, uint8_t cmd, uint32_t err) {
     so_sendsync(s, &resp, sizeof(resp));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//                    ВЗАИМОДЕЙСТВИЕ С CHUNK-СЕРВЕРАМИ                        //
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                    ВЗАИМОДЕЙСТВИЕ С CHUNK-СЕРВЕРАМИ                       //
+///////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
 static bool SendChunkAllocate(TChunk* const chunk, sid_t client, fileid_t fid, uint32_t lease) {
@@ -158,7 +158,7 @@ static void DoChunkConnected(int s, SOEVENT* const ev) {
     if (ev->type == SOEVENT_ACCEPTED) {
         SORESULT_LISTEN*  data = (SORESULT_LISTEN*)ev->data;
         TNodeSession*     ns   = new TNodeSession();
-        CommandChannel*   cc   = new CommandChannel();
+        TCommandChannel*  cc   = new TCommandChannel();
         // -
         ns->s     = data->client;
         ns->addr  = data->src;
@@ -357,11 +357,10 @@ static void DoClientDisconnected(int s, void* param) {
         // Необходимо подождать некоторое время восстановаления сессии
         delete cs;
     }
-    printf("doClientDisconnected\n");
+    printf("DoClientDisconnected\n");
     return;
 }
 //------------------------------------------------------------------------------
-///
 static void doClientConnected(int s, SOEVENT* const ev) {
     if (ev->type == SOEVENT_ACCEPTED) {
         SORESULT_LISTEN*  data = (SORESULT_LISTEN*)ev->data;
@@ -378,8 +377,8 @@ static void doClientConnected(int s, SOEVENT* const ev) {
             }
         }
 
-        TClientSession* const cs = new TClientSession();
-        CommandChannel* const ch = new CommandChannel();
+        TClientSession* const  cs = new TClientSession();
+        TCommandChannel* const ch = new TCommandChannel();
         // -
         cs->sid    = sid;
         cs->closed = false;

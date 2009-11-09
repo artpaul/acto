@@ -5,9 +5,7 @@
 
 
 //------------------------------------------------------------------------------
-static bool isAllowed(TFileInfo* file, sid_t client) {
-    return true;
-/*
+static bool IsAllowed(TFileInfo* file, sid_t client) {
     printf("isAllowed for: %Zu\n", (size_t)client);
     std::vector<MasterPending*>::iterator i = file->pendings.begin();
 
@@ -20,7 +18,6 @@ static bool isAllowed(TFileInfo* file, sid_t client) {
         ++i;
     }
     return false;
-*/
 }
 //------------------------------------------------------------------------------
 void DoClientClose(int s, const RpcHeader* const hdr, void* param) {
@@ -28,7 +25,7 @@ void DoClientClose(int s, const RpcHeader* const hdr, void* param) {
     printf("client close\n");
 }
 //------------------------------------------------------------------------------
-void doClientOpen(int s, const RpcHeader* const hdr, void* param) {
+void DoClientOpen(int s, const RpcHeader* const hdr, void* param) {
     OpenChunkRequest    req;
     TClientInfo* const  clientInfo = static_cast<TClientInfo*>(param);
     std::map<fileid_t, TFileInfo*>::iterator i;
@@ -41,36 +38,26 @@ void doClientOpen(int s, const RpcHeader* const hdr, void* param) {
         if ((i = files.find(req.stream)) != files.end()) {
             TFileInfo* const file = i->second;
             // проверить разрешил ли master открывать данный файл клиенту
-            if (isAllowed(file, req.client)) {
+            if (IsAllowed(file, req.client)) {
                 clientInfo->files[file->uid] = file;
-
-                if (req.mode & ZFS_CREATE) {
-                    char        buf[64];
-                    sprintf(buf, "data/%Zu", (size_t)file->uid);
-                    FILE* fd = fopen(buf, "w");
-                    if (fd != 0) {
-                        file->data = fd;
-                        // -
-                        OpenChunkResponse   rsp;
-                        rsp.file = file->uid;
-                        rsp.err  = 0;
-                        send(s, &rsp, sizeof(rsp), 0);
-                        return;
-                    }
-                }
-                else {
-                    char        buf[64];
-                    sprintf(buf, "data/%Zu", (size_t)file->uid);
-                    FILE* fd = fopen(buf, "r");
-                    if (fd != 0) {
-                        file->data = fd;
-                        // -
-                        OpenChunkResponse   rsp;
-                        rsp.file = file->uid;
-                        rsp.err  = 0;
-                        send(s, &rsp, sizeof(rsp), 0);
-                        return;
-                    }
+                const char* mode = 0;
+                // -
+                if (req.mode & ZFS_CREATE)
+                    mode = "w";
+                else
+                    mode = "r";
+                // -
+                char        buf[128];
+                sprintf(buf, "data/%Zu", (size_t)file->uid);
+                FILE* fd = fopen(buf, mode);
+                if (fd != 0) {
+                    file->data = fd;
+                    // -
+                    OpenChunkResponse   rsp;
+                    rsp.file = file->uid;
+                    rsp.err  = 0;
+                    so_sendsync(s, &rsp, sizeof(rsp));
+                    return;
                 }
             }
             else
@@ -85,10 +72,10 @@ void doClientOpen(int s, const RpcHeader* const hdr, void* param) {
 }
 //------------------------------------------------------------------------------
 /// Команда чтение данных из потока
-void doClientRead(int s, const RpcHeader* const hdr, void* param) {
-    ReadReqest req;
+void DoClientRead(int s, const RpcHeader* const hdr, void* param) {
+    TReadReqest req;
 
-    so_readsync(s, &req, sizeof(ReadReqest), 5);
+    so_readsync(s, &req, sizeof(TReadReqest), 5);
 
     const FilesMap::iterator i = files.find(req.stream);
     if (i != files.end()) {
@@ -114,7 +101,7 @@ void doClientRead(int s, const RpcHeader* const hdr, void* param) {
 }
 //------------------------------------------------------------------------------
 /// Клиент присоединяет данные к указанному файлу
-void doClientAppend(int s, const RpcHeader* const hdr, void* param) {
+void DoClientAppend(int s, const RpcHeader* const hdr, void* param) {
     AppendRequest       req;
     cl::array_ptr<char> data;
     // -
@@ -138,8 +125,8 @@ void doClientAppend(int s, const RpcHeader* const hdr, void* param) {
 }
 
 //------------------------------------------------------------------------------
-void doClientDisconnected(int s, void* param) {
-    printf("doClientDisconnected\n");
+void DoClientDisconnected(int s, void* param) {
+    printf("DoClientDisconnected\n");
 
     TClientInfo* const info = static_cast<TClientInfo*>(param);
     {

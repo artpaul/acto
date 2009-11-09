@@ -13,7 +13,7 @@
 
 #include "chunk.h"
 
-struct Context {
+struct TContext {
     int         master;
     int         clientListen;
     fileid_t    uid;
@@ -22,17 +22,17 @@ struct Context {
 
 
 /// Состояние сервера
-static struct Context   ctx = {0, 0, 0, true};
+static TContext   ctx = {0, 0, 0, true};
 ///
 ClientsMap          clients;
 FilesMap            files;
 acto::core::mutex_t guard;
 
-void doClientOpen(int s, const RpcHeader* const hdr, void* param);
-void doClientRead(int s, const RpcHeader* const hdr, void* param);
-void doClientAppend(int s, const RpcHeader* const hdr, void* param);
+void DoClientOpen(int s, const RpcHeader* const hdr, void* param);
+void DoClientRead(int s, const RpcHeader* const hdr, void* param);
+void DoClientAppend(int s, const RpcHeader* const hdr, void* param);
 void DoClientClose(int s, const RpcHeader* const hdr, void* param);
-void doClientDisconnected(int s, void* param);
+void DoClientDisconnected(int s, void* param);
 
 //------------------------------------------------------------------------------
 /// Обработчик подключения клиентов
@@ -49,14 +49,14 @@ static void doClientConnected(int s, SOEVENT* const ev) {
         }
         printf("client connected...\n");
         // -
-        CommandChannel* const ch = new CommandChannel();
+        TCommandChannel* const ch = new TCommandChannel();
         // -
-        ch->registerHandler(RPC_APPEND,   &doClientAppend);
-        ch->registerHandler(RPC_OPENFILE, &doClientOpen);
-        ch->registerHandler(RPC_READ,     &doClientRead);
+        ch->registerHandler(RPC_APPEND,   &DoClientAppend);
+        ch->registerHandler(RPC_OPENFILE, &DoClientOpen);
+        ch->registerHandler(RPC_READ,     &DoClientRead);
         ch->registerHandler(RPC_CLOSE,    &DoClientClose);
 
-        ch->onDisconnected(&doClientDisconnected);
+        ch->onDisconnected(&DoClientDisconnected);
 
         ch->activate(data->client, info);
     }
@@ -132,13 +132,12 @@ static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
     }
 }
 //------------------------------------------------------------------------------
-///
 static void doMaster(int s, SOEVENT* const ev) {
     if (ev->type == SOEVENT_READ) {
         so_readsync(s, &ctx.uid, sizeof(ctx.uid), 5);
         printf("new id: %Zu\n", (size_t)ctx.uid);
         // -
-        CommandChannel* const ch = new CommandChannel();
+        TCommandChannel* const ch = new TCommandChannel();
         // -
         ch->registerHandler(RPC_ALLOCATE,    &doAllocateSpace);
         ch->registerHandler(RPC_ALLOWACCESS, &doMasterOpen);
@@ -182,24 +181,10 @@ int run() {
     return 0;
 }
 
-static void handleInterrupt(int sig) {
-    printf("interrupted...\n");
-    //so_close(ctx.chunkListen);
-    //so_close(ctx.clientListen);
-    so_terminate();
-    exit(0);
-}
-
 int main() {
-    struct sigaction sa;
-    sigemptyset (&sa.sa_mask);
-    sa.sa_flags = 0;
-
-    /* Register the handler for SIGINT. */
-    sa.sa_handler = handleInterrupt;
-    sigaction (SIGINT, &sa, 0);
-
     so_init();
+    // Прочитать все файлы из директории data
+    // -
     run();
     so_terminate();
     return 0;

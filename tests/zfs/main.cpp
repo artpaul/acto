@@ -15,7 +15,7 @@ const char* text = "if (zflock(\"test\", ZFF_LOCKSNAPSHOT, 0) != 0)\n";
 int main() {
     using namespace zfs;
 
-    ZeusFS          fs;
+    TZeusFS         fs;
     zfs_handle_t*   fd = 0;
 
     // Initialize library
@@ -23,10 +23,6 @@ int main() {
         printf("Cannot connect to file server: %d.\n", fs.error());
         return 1;
     }
-
-    // Открыть файловую систему в режиме, в котором не отображаются
-    // внешние изменения в данном файле
-    //if ((sd = zfopen("test", ZFS_READ | ZFS_SNAPSHOT)) != 0) {
 
     // Создать файл и записать данные
     if ((fd = fs.Open("/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND)) > 0) {

@@ -6,8 +6,14 @@
 
 #include <map>
 
-/// Канал обмена сообщениями между узлами
-class CommandChannel {
+#include "rpc.h"
+
+/**
+  * Канал обмена сообщениями между узлами
+  *
+  * Удаляется самостоятельно при закрытии сокета
+  */
+class TCommandChannel {
     /// Тип обработчика команд
     typedef void (*Handler)(int, const RpcHeader* const, void*);
     /// Обработчик закрытия соединения
@@ -20,12 +26,15 @@ class CommandChannel {
     OnDisconnected  m_ondisconnected;
 
 public:
-    CommandChannel() : m_ctx(0) { }
+    TCommandChannel()
+        : m_ctx(0)
+    {
+    }
 
 private:
     ///
-    static void getCommand(int s, SOEVENT* const ev) {
-        CommandChannel* const channel = static_cast<CommandChannel*>(ev->param);
+    static void GetCommand(int s, SOEVENT* const ev) {
+        TCommandChannel* const channel = static_cast<TCommandChannel*>(ev->param);
 
         switch (ev->type) {
         case SOEVENT_CLOSED:
@@ -34,7 +43,6 @@ private:
             delete channel;
             return;
         case SOEVENT_TIMEOUT:
-            printf("time out\n");
             break;
         case SOEVENT_READ:
             {
@@ -62,8 +70,7 @@ private:
                         send(s, buf, sizeof(buf), 0);
                     }
                     // Logging...
-                    printf("command: %d\n", hdr.code);
-                    printf("total:   %d\n", hdr.size);
+                    printf("%s\t%d\n", RpcCommandString(hdr.code), hdr.size);
                 }
                 else {
                     if (rval == -1) {
@@ -73,13 +80,13 @@ private:
             }
             break;
         }
-        so_pending(s, SOEVENT_READ, 10, &CommandChannel::getCommand, ev->param);
+        so_pending(s, SOEVENT_READ, 10, &TCommandChannel::GetCommand, ev->param);
     }
 
 public:
     void activate(int s, void* ctx) {
         m_ctx = ctx;
-        so_pending(s, SOEVENT_READ, 10, &CommandChannel::getCommand, this);
+        so_pending(s, SOEVENT_READ, 10, &TCommandChannel::GetCommand, this);
     }
     /// -
     void registerHandler(const ssize_t code, Handler handler) {

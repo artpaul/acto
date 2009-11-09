@@ -39,6 +39,8 @@ namespace zfs {
 struct zfs_handle_t {
     /// !!! Должен быть список узлов, на котором расположены данные
     fileid_t    id;
+    mode_t      mode;
+    uint64_t    offset;    //
     int         s;
 };
 
@@ -47,7 +49,7 @@ struct zfs_handle_t {
 
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-ZeusFS::ZeusFS() :
+TZeusFS::TZeusFS() :
     connected(0),
     m_error(0),
     fdmaster(0),
@@ -56,12 +58,12 @@ ZeusFS::ZeusFS() :
     so_init();
 }
 //------------------------------------------------------------------------------
-ZeusFS::~ZeusFS() {
+TZeusFS::~TZeusFS() {
     this->disconnect();
     so_terminate();
 }
 //------------------------------------------------------------------------------
-bool ZeusFS::sendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
+bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
     int s = so_socket(SOCK_STREAM);
     //printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
     if (so_connect(s, inet_addr(CHUNK_IP)/*nodeip.sin_addr.s_addr*/, CHUNK_CLIENTPORT) == 0) {
@@ -72,14 +74,17 @@ bool ZeusFS::sendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zf
         req.stream = stream;
         req.mode   = mode;
         // -
-        send(s, &req, sizeof(req), 0);
+        so_sendsync(s, &req, sizeof(req));
         {
             OpenChunkResponse   rsp;
             so_readsync(s, &rsp, sizeof(rsp), 5);
             if (rsp.file == stream) {
                 zfs_handle_t* const conn = new zfs_handle_t();
-                conn->id = rsp.file;
-                conn->s  = s;
+                conn->id     = rsp.file;
+                conn->mode   = mode;
+                conn->offset = 0;
+                conn->s      = s;
+
                 *nc = conn;
                 return true;
             }
@@ -93,7 +98,7 @@ bool ZeusFS::sendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zf
 }
 
 //------------------------------------------------------------------------------
-int ZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
+int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
     assert(fd && fd->id > 0);
 
     AppendRequest req;
@@ -116,7 +121,7 @@ int ZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
     }
 }
 //------------------------------------------------------------------------------
-int ZeusFS::Close(zfs_handle_t* fd) {
+int TZeusFS::Close(zfs_handle_t* fd) {
     if (!fd || fd->id <= 0)
         return -1;
     // -
@@ -145,7 +150,7 @@ int ZeusFS::Close(zfs_handle_t* fd) {
     return 0;
 }
 //------------------------------------------------------------------------------
-int ZeusFS::connect(const char* ip, unsigned short port) {
+int TZeusFS::connect(const char* ip, unsigned short port) {
     if (!fdmaster) {
         fdmaster = so_socket(SOCK_STREAM);
         // -
@@ -174,7 +179,7 @@ lberror:
     return 1;
 }
 //------------------------------------------------------------------------------
-void ZeusFS::disconnect() {
+void TZeusFS::disconnect() {
     if (fdmaster != 0) {
         ClientCloseSession  req;
 
@@ -187,16 +192,16 @@ void ZeusFS::disconnect() {
     }
 }
 //------------------------------------------------------------------------------
-int ZeusFS::lock(const char* name, mode_t mode, int wait) {
+int TZeusFS::lock(const char* name, mode_t mode, int wait) {
     return 0;
 }
 //------------------------------------------------------------------------------
-zfs_handle_t* ZeusFS::Open(const char* name, mode_t mode) {
+zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
     if (not connected)
         return 0;
     //
-    const size_t    len = strlen(name);
-    OpenRequest     req;
+    const size_t len = strlen(name);
+    OpenRequest  req;
 
     req.code   = RPC_OPENFILE;
     req.size   = sizeof(OpenRequest) + len;
@@ -204,8 +209,8 @@ zfs_handle_t* ZeusFS::Open(const char* name, mode_t mode) {
     req.mode   = mode;
     req.length = len;
 
-    send(fdmaster, &req, sizeof(OpenRequest), 0);
-    send(fdmaster, name, len, 0);
+    so_sendsync(fdmaster, &req, sizeof(OpenRequest));
+    so_sendsync(fdmaster, name, len);
 
     {
         OpenResponse  rsp;
@@ -215,7 +220,7 @@ zfs_handle_t* ZeusFS::Open(const char* name, mode_t mode) {
             if (rsp.stream != 0) {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
-                if (sendOpenToNode(rsp.nodeip, rsp.stream, mode, &nc)) {
+                if (SendOpenToNode(rsp.nodeip, rsp.stream, mode, &nc)) {
                     m_streams[rsp.stream] = nc;
                     return nc;
                 }
@@ -228,27 +233,30 @@ zfs_handle_t* ZeusFS::Open(const char* name, mode_t mode) {
     return 0;
 }
 //------------------------------------------------------------------------------
-int ZeusFS::Read(zfs_handle_t* fd, void* buf, size_t size) {
+int TZeusFS::Read(zfs_handle_t* fd, void* buf, size_t size) {
     assert(fd && fd->id > 0);
 
-    ReadReqest      req;
+    TReadReqest     req;
     // -
     req.code   = RPC_READ;
-    req.size   = sizeof(ReadReqest);
+    req.size   = sizeof(TReadReqest);
     req.stream = fd->id;
+    req.offset = fd->offset;
     req.bytes  = size;
     // -
-    send(fd->s, &req, sizeof(ReadReqest), 0); // POST REQUEST
+    send(fd->s, &req, sizeof(TReadReqest), 0); // POST REQUEST
 
     {
         ReadResponse    rr;
         int             rval = so_readsync(fd->s, &rr, sizeof(ReadResponse), 5);
+
         if (rval > 0 && rr.size > 0) {
             cl::array_ptr<char> replay(new char[rr.size]);
             // -
             rval = so_readsync(fd->s, replay.get(), rr.size, 5);
             if (rval >= 0) {
                 memcpy(buf, replay.get(), size < rr.size ? size : rr.size);
+                fd->offset += rr.size;
                 return rval;
             }
         }

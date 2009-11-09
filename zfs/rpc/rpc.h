@@ -19,6 +19,16 @@ const uint64_t  ZFS_EXCLUSIVE   = 0x0020;
 const uint64_t  ZFS_WRITE       = 0x0080;
 const uint64_t  ZFS_CREATE      = 0x0100;
 
+/*
+#define ZFF_LOCKEXCLUSIVE   8
+#define ZFF_LOCKSNAPSHOT    9
+#define ZFF_LOCKREAD        10
+#define ZFF_LOCKAPPEN       11
+#define ZFF_LOCKMERGE       12
+#define ZFF_LOCKUNLOCK      14
+#define ZFF_LOCKWAIT        15
+*/
+
 
 /* Сообщения инициируемые клиентом */
 
@@ -105,10 +115,11 @@ struct ALIGNING(4) ClientCloseSession : public RpcHeader {
     sid_t       client;
 };
 
-struct ALIGNING(4) ReadReqest : public RpcHeader {
+struct ALIGNING(4) TReadReqest : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;     // Идентификатор потока
-    uint32_t    bytes;      // Количество байт для чтения
+    uint64_t    offset;     // Смещение в файле
+    uint64_t    bytes;      // Количество байт для чтения
 };
 
 struct ALIGNING(4) ReadResponse {
@@ -172,13 +183,28 @@ struct ALIGNING(4) AllocateResponse {
 #pragma pack(pop)
 
 
-inline const char* rpcErrorString(int error) {
+inline const char* rpcErrorString(const int error) {
     switch (error) {
-    case ERPC_GENERIC:    return "ERPC_GENERIC";
-    case ERPC_FILEEXISTS: return "ERPC_FILEEXISTS";
-    case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
+        case ERPC_GENERIC:    return "ERPC_GENERIC";
+        case ERPC_FILEEXISTS: return "ERPC_FILEEXISTS";
+        case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
     }
     return "";
 }
+
+inline const char* RpcCommandString(const int cmd) {
+    switch (cmd) {
+        case RPC_NONE:          return "RPC_NONE";
+        case RPC_OPENFILE:      return "RPC_OPENFILE";
+        case RPC_READ:          return "RPC_READ";
+        case RPC_APPEND:        return "RPC_APPEND";
+        case RPC_CLOSE:         return "RPC_CLOSE";
+        case RPC_CLOSESESSION:  return "RPC_CLOSESESSION";
+        case RPC_ALLOCATE:      return "RPC_ALLOCATE";
+        case RPC_ALLOWACCESS:   return "RPC_ALLOWACCESS";
+        case RPC_NODECONNECT:   return "RPC_NODECONNECT";
+    }
+    return "";
+};
 
 #endif // rpc_h__
