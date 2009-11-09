@@ -25,5 +25,4 @@ PROJECT (ACTO-SOLUTION)
         samples/sotest
 
         tests/thread
-        tests/mr
     )
