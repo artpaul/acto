@@ -10,14 +10,22 @@
 
 /* */
 
-const uint64_t  ZFS_READ        = 0x0001;
-const uint64_t  ZFS_APPEND      = 0x0002;
-const uint64_t  ZFS_MERGE       = 0x0004;
-const uint64_t  ZFS_SNAPSHOT    = 0x0008;
-const uint64_t  ZFS_SHARED      = 0x0010;
-const uint64_t  ZFS_EXCLUSIVE   = 0x0020;
-const uint64_t  ZFS_WRITE       = 0x0080;
-const uint64_t  ZFS_CREATE      = 0x0100;
+/// Режим чтения
+const uint64_t  ZFS_READ        = (1 << 1);
+/// Режим присоединения данных к концу файла
+const uint64_t  ZFS_APPEND      = (1 << 2);
+///
+const uint64_t  ZFS_MERGE       = (1 << 3);
+const uint64_t  ZFS_SNAPSHOT    = (1 << 4);
+/// Неблокирующий доступ к файлу
+const uint64_t  ZFS_SHARED      = (1 << 5);
+/// Эксклюзивный доступ к файлу
+const uint64_t  ZFS_EXCLUSIVE   = (1 << 6);
+const uint64_t  ZFS_WRITE       = (1 << 7);
+/// Создать объект если не существует
+const uint64_t  ZFS_CREATE      = (1 << 8);
+/// Флаг создания директории
+const uint64_t  ZFS_DIRECTORY   = (1 << 9);
 
 /*
 #define ZFF_LOCKEXCLUSIVE   8
@@ -67,6 +75,8 @@ const uint16_t  RPC_NODECONNECT     = 0x0008;
 #define ERPC_FILEEXISTS     0x0002
 /// Нет свободного места для записи данных
 #define ERPC_OUTOFSPACE     0x0003
+///
+#define ERPC_BADMODE        0x0004
 
 
 #pragma pack(push, 4)

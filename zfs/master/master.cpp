@@ -1,12 +1,12 @@
 
+#include <assert.h>
+#include <signal.h>
+#include <stdlib.h>
+
 #include <list>
 #include <string>
 #include <map>
 #include <vector>
-
-#include <poll.h>
-#include <signal.h>
-#include <stdlib.h>
 
 #include <system/mutex.h>
 #include <port/strings.h>
@@ -100,7 +100,7 @@ static void sendChunkOpen(TChunk* const chunk, sid_t client, fileid_t fid, uint3
     req.fileid = fid;
     req.lease  = lease;
     // -
-    send(chunk->s, &req, sizeof(req), 0);
+    so_sendsync(chunk->s, &req, sizeof(req));
     {
         AllocateResponse    rsp;
         // -
@@ -180,7 +180,7 @@ static void DoChunkConnected(int s, SOEVENT* const ev) {
 ////////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
-static void doNewNode(cl::const_char_iterator, FileNode* node, void*) {
+static void doNewNode(cl::const_char_iterator, TFileNode* node, void*) {
     node->map = new FileInfo();
 }
 
@@ -219,7 +219,7 @@ static void doClose(int s, const RpcHeader* const hdr, void* param) {
 }
 //------------------------------------------------------------------------------
 /// Команда открытия потока
-static void doOpen(int s, const RpcHeader* const hdr, void* param) {
+static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
     TClientSession* const   cs = static_cast<TClientSession*>(param);
     OpenRequest             req;
     cl::array_ptr<char>     buf;
@@ -238,7 +238,14 @@ static void doOpen(int s, const RpcHeader* const hdr, void* param) {
     if (req.mode & ZFS_CREATE) {
         cl::const_char_iterator ci(buf.get(), req.length);
 
-        if (not ctx.tree.checkExisting(ci)) {
+        if (!ctx.tree.checkExisting(ci)) {
+            // Ошибка, если файл создаётся, но не указан режим записи
+            if ((req.mode & ZFS_WRITE) == 0 && (req.mode & ZFS_APPEND) == 0)
+                return sendOpenError(s, ERPC_BADMODE);
+
+            // Добавить информацию о файле в базу
+            TFileNode* node = ctx.tree.AddPath(ci, LOCK_WRITE, (req.mode & ZFS_DIRECTORY) ? ntDirectory : ntFile);
+
             TChunk* const  chunk = chooseChunkForFile();
             const fileid_t uid   = ++counter;
 
@@ -249,11 +256,11 @@ static void doOpen(int s, const RpcHeader* const hdr, void* param) {
             // Послать сообщение узлу о выделении места под файл
             // Можно делать в параллельном потоке, а текущий обработает
             // свою часть и будет ждать завершения этого задания
-            if (not SendChunkAllocate(chunk, req.client, uid, 180))
+            if (!SendChunkAllocate(chunk, req.client, uid, 180))
                 return sendOpenError(s, ERPC_OUTOFSPACE);
             else {
+                assert(node != 0);
                 // Добавить информацию о файле в базу
-                FileNode*           node = ctx.tree.addPath(ci, LOCK_READ);
                 FileInfo* const     info = node->map;
                 TFileContext* const octx = new TFileContext();
                 // -
@@ -287,7 +294,7 @@ static void doOpen(int s, const RpcHeader* const hdr, void* param) {
     else {
         cl::const_char_iterator ci(buf.get(), req.length);
 
-        if (FileNode* const node = ctx.tree.findPath(ci)) {
+        if (TFileNode* const node = ctx.tree.findPath(ci)) {
             FileInfo* const info = node->map;
             // Получить карту расположения файла по секторам
             // Послать узлам команду открытия файла
@@ -385,7 +392,7 @@ static void doClientConnected(int s, SOEVENT* const ev) {
         m_clients[sid] = cs;
         // -
         ch->registerHandler(RPC_CLOSE,        &doClose);
-        ch->registerHandler(RPC_OPENFILE,     &doOpen);
+        ch->registerHandler(RPC_OPENFILE,     &DoOpen);
         ch->registerHandler(RPC_CLOSESESSION, &doClientCloseSession);
 
         ch->onDisconnected(&DoClientDisconnected);

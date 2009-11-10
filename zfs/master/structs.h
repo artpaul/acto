@@ -2,27 +2,6 @@
 #ifndef __master_structs_h__
 #define __master_structs_h__
 
-struct FileInfo;
-
-
-enum NodeType {
-    ntDirectory,
-    ntFile
-};
-
-enum LockType {
-    LOCK_NONE,
-    LOCK_READ,
-    LOCK_WRITE
-};
-
-struct FileNode {
-    FileInfo*               map;       //
-    cl::string              name;      //
-    std::list<FileNode*>    children;  //
-    NodeType                type;
-};
-
 #include "filetree.h"
 
 /*
@@ -62,7 +41,7 @@ struct TClientSession {
 
 /// Server data context
 struct TContext {
-    TFileTree<FileNode>   tree;
+    TFileTree   tree;
 
     int         chunkListen;    // Chunk socket
     int         clientListen;   // Client socket

@@ -181,6 +181,32 @@ int run() {
     return 0;
 }
 
+#include <dirent.h>
+
+static void LoadFileList() {
+    struct dirent* dp;
+
+    DIR* dir = opendir("./data");
+
+    if (dir) {
+        while ((dp = readdir(dir)) != NULL) {
+            if (dp->d_type == DT_REG) {
+                //uuid_t id;
+
+                //if (uuid_parse(dp->d_name, id) == 0) {
+                //    TFileInfo* const info = new TFileInfo();
+                //    info->lease = 0;
+                //    info->data = 0;
+                //    uuid_copy(info->uid, id);
+                //    files[uuid_hash64(id)] = info;
+                //}
+            }
+        }
+        closedir(dir);
+    }
+}
+
+
 int main() {
     so_init();
     // Прочитать все файлы из директории data

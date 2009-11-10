@@ -4,15 +4,35 @@
 
 typedef std::list<cl::string> PathParts;
 
+struct FileInfo;
+
+
+enum NodeType {
+    ntDirectory,
+    ntFile
+};
+
+enum LockType {
+    LOCK_NONE,
+    LOCK_READ,
+    LOCK_WRITE
+};
+
+struct TFileNode {
+    FileInfo*               map;       //
+    cl::string              name;      //
+    std::list<TFileNode*>   children;  //
+    NodeType                type;
+};
+
 /**
  * Дерево файловой системы
  */
-template <typename FileNode>
 class TFileTree {
 private:
-    typedef void (*AddNodeHandler)(cl::const_char_iterator, FileNode*, void*);
+    typedef void (*AddNodeHandler)(cl::const_char_iterator, TFileNode*, void*);
 
-    FileNode        root;
+    TFileNode       root;
     AddNodeHandler  m_onnewnode;
 
     bool parsePath(cl::const_char_iterator path, PathParts& parts) const {
@@ -48,17 +68,17 @@ public:
 
 public:
     /// Добавить новый узел к дереву
-    FileNode* addPath(cl::const_char_iterator path, LockType lock, void* param = 0) {
+    TFileNode* AddPath(cl::const_char_iterator path, LockType lock, NodeType nt, void* param = 0) {
         PathParts parts;
         // -
-        if (not parsePath(path, parts))
+        if (!parsePath(path, parts))
             return 0;
-        FileNode* node = &root;
+        TFileNode* node = &root;
         PathParts::const_iterator j = parts.begin();
         // -
         while (j != parts.end()) {
             bool hasPart = false;
-            for (typename std::list<FileNode*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
+            for (std::list<TFileNode*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
                 if ((*i)->name == *j) {
                     j++;
                     node = (*i);
@@ -66,8 +86,8 @@ public:
                     break;
                 }
             }
-            if (not hasPart) {
-                FileNode* const nn = new FileNode();
+            if (!hasPart) {
+                TFileNode* const nn = new TFileNode();
 
                 nn->name = *j;
                 nn->map  = 0;
@@ -80,13 +100,13 @@ public:
                 node = nn;
                 j++;
             }
-            if (j != parts.end() and node->type == ntFile)
+            if (j != parts.end() && node->type == ntFile)
                 // Текущий компонент пути файл, а значит он не может быть не
                 // конечным элементом пути
                 return 0;
         }
         if (node != &root)
-            node->type = ntFile;
+            node->type = nt;
         return node;
     }
 
@@ -94,29 +114,29 @@ public:
         return this->findPath(path) != 0;
     }
 
-    FileNode* findPath(cl::const_char_iterator path) const {
+    TFileNode* findPath(cl::const_char_iterator path) const {
         PathParts parts;
         // -
-        if (not parsePath(path, parts))
+        if (!parsePath(path, parts))
             return 0;
         // -
-        const FileNode* node = &root;
+        const TFileNode* node = &root;
         PathParts::const_iterator j = parts.begin();
         // -
-        while (node != 0 and j != parts.end()) {
+        while (node != 0 && j != parts.end()) {
             bool hasPart = false;
-            for (typename std::list<FileNode*>::const_iterator i = node->children.begin(); i != node->children.end(); ++i) {
+            for (std::list<TFileNode*>::const_iterator i = node->children.begin(); i != node->children.end(); ++i) {
                 if ((*i)->name == *j) {
                     node = (*i);
                     hasPart = true;
                     break;
                 }
             }
-            if (not hasPart)
+            if (!hasPart)
                 return 0;
             ++j;
         }
-        return node != 0 and j == parts.end() ? const_cast<FileNode*>(node) : 0;
+        return node != 0 && j == parts.end() ? const_cast<TFileNode*>(node) : 0;
     }
 
     void onNewNode(const AddNodeHandler handler) {
