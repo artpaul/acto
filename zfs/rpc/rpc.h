@@ -56,35 +56,37 @@ const uint16_t  RPC_CLOSESESSION    = 0x0009;
 /* Сообщения инициируемые мастер-сервером */
 
 /// Выделить область под хранения данных
-const uint16_t  RPC_ALLOCATE        = 0x0007;
+const uint16_t  RPC_ALLOCATE        = 0x0101;
 /// Разрешить доступ к определенному файлу
-const uint16_t  RPC_ALLOWACCESS     = 0x0010;
+const uint16_t  RPC_ALLOWACCESS     = 0x0102;
 
 
 /* Сообщения инициируемые узлом данных */
 
 /// Установка соединения с мастер-сервером
-const uint16_t  RPC_NODECONNECT     = 0x0008;
-
-// last: 0x0010
+const uint16_t  RPC_NODECONNECT     = 0x0501;
+/// Передать список файлов, хранящихся на узле
+const uint16_t  RPC_NODE_FILETABLE  = 0x0502;
 
 
 ///
-#define ERPC_GENERIC        0x0001
+#define ERPC_GENERIC            0x0001
 /// Файл существует
-#define ERPC_FILEEXISTS     0x0002
+#define ERPC_FILEEXISTS         0x0002
 /// Нет свободного места для записи данных
-#define ERPC_OUTOFSPACE     0x0003
+#define ERPC_OUTOFSPACE         0x0003
 ///
-#define ERPC_BADMODE        0x0004
+#define ERPC_BADMODE            0x0004
+
+#define ERPC_FILE_NOT_EXISTS    0x0005
 
 
 #pragma pack(push, 4)
 
 struct ALIGNING(4) RpcHeader {
     uint32_t    size;       // Суммарная длинна данных в запросе (+ заголовок)
-    uint8_t     code;       // Command code
-    uint8_t     dummy[3];   //
+    uint16_t    code;       // Command code
+    uint8_t     dummy[2];   //
 };
 
 ///////////////
@@ -179,6 +181,14 @@ struct ALIGNING(4) ChunkConnecting : public RpcHeader {
 };
 
 ///
+struct ALIGNING(4) TFileTableMessage : public RpcHeader {
+    __uint64_t      uid;        // Идентификатор узла
+    __uint64_t      count;      // Кол-во идентификаторов файлов
+
+    // uint64_t data[count];
+};
+
+///
 struct ALIGNING(4) AllocateSpace : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    fileid;     // Идентификатор файла
@@ -187,7 +197,7 @@ struct ALIGNING(4) AllocateSpace : public RpcHeader {
 };
 
 struct ALIGNING(4) AllocateResponse {
-    bool    good;           //
+    uint16_t    err;
 };
 
 #pragma pack(pop)
@@ -198,21 +208,23 @@ inline const char* rpcErrorString(const int error) {
         case ERPC_GENERIC:    return "ERPC_GENERIC";
         case ERPC_FILEEXISTS: return "ERPC_FILEEXISTS";
         case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
+        case ERPC_FILE_NOT_EXISTS: return "ERPC_FILE_NOT_EXISTS";
     }
     return "";
 }
 
 inline const char* RpcCommandString(const int cmd) {
     switch (cmd) {
-        case RPC_NONE:          return "RPC_NONE";
-        case RPC_OPENFILE:      return "RPC_OPENFILE";
-        case RPC_READ:          return "RPC_READ";
-        case RPC_APPEND:        return "RPC_APPEND";
-        case RPC_CLOSE:         return "RPC_CLOSE";
-        case RPC_CLOSESESSION:  return "RPC_CLOSESESSION";
-        case RPC_ALLOCATE:      return "RPC_ALLOCATE";
-        case RPC_ALLOWACCESS:   return "RPC_ALLOWACCESS";
-        case RPC_NODECONNECT:   return "RPC_NODECONNECT";
+        case RPC_NONE:           return "RPC_NONE";
+        case RPC_OPENFILE:       return "RPC_OPENFILE";
+        case RPC_READ:           return "RPC_READ";
+        case RPC_APPEND:         return "RPC_APPEND";
+        case RPC_CLOSE:          return "RPC_CLOSE";
+        case RPC_CLOSESESSION:   return "RPC_CLOSESESSION";
+        case RPC_ALLOCATE:       return "RPC_ALLOCATE";
+        case RPC_ALLOWACCESS:    return "RPC_ALLOWACCESS";
+        case RPC_NODECONNECT:    return "RPC_NODECONNECT";
+        case RPC_NODE_FILETABLE: return "RPC_NODE_FILETABLE";
     }
     return "";
 };

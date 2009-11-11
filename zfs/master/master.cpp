@@ -10,6 +10,7 @@
 
 #include <system/mutex.h>
 #include <port/strings.h>
+#include <port/fnv.h>
 
 #include "master.h"
 
@@ -20,8 +21,7 @@
 
 static TContext             ctx;
 static volatile __uint64_t  chunkId = 0;
-
-static __uint64_t           counter = 1;
+static volatile __uint64_t  client_id = 0;
 
 /// Таблица подключенных узлов-данных
 static ChunkMap             chunks;
@@ -52,9 +52,9 @@ static TChunk* chunkById(const __uint64_t uid) {
     return 0;
 }
 //------------------------------------------------------------------------------
-static void sendOpenError(int s, int error) {
+static void SendOpenError(int s, uint64_t uid, int error) {
     OpenResponse  rsp;
-    rsp.stream = 0;
+    rsp.stream = uid;
     rsp.err    = error;
     so_sendsync(s, &rsp, sizeof(rsp));
 }
@@ -73,7 +73,7 @@ static void SendCommonResponse(int s, uint8_t cmd, uint32_t err) {
 ///////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
-static bool SendChunkAllocate(TChunk* const chunk, sid_t client, fileid_t fid, uint32_t lease) {
+static int SendChunkAllocate(TChunk* const chunk, sid_t client, fileid_t fid, uint32_t lease) {
     AllocateSpace  req;
     req.code   = RPC_ALLOCATE;
     req.size   = sizeof(req);
@@ -86,13 +86,12 @@ static bool SendChunkAllocate(TChunk* const chunk, sid_t client, fileid_t fid, u
         AllocateResponse    rsp;
         // -
         so_readsync(chunk->s, &rsp, sizeof(rsp), 5);
-        if (rsp.good)
-            return true;
+        return rsp.err;
     }
-    return false;
+    return ERPC_GENERIC;
 }
 //------------------------------------------------------------------------------
-static void sendChunkOpen(TChunk* const chunk, sid_t client, fileid_t fid, uint32_t lease) {
+static int SendChunkOpen(TChunk* const chunk, sid_t client, fileid_t fid, uint32_t lease) {
     AllocateSpace  req;
     req.code   = RPC_ALLOWACCESS;
     req.size   = sizeof(req);
@@ -105,10 +104,9 @@ static void sendChunkOpen(TChunk* const chunk, sid_t client, fileid_t fid, uint3
         AllocateResponse    rsp;
         // -
         so_readsync(chunk->s, &rsp, sizeof(rsp), 5);
-        if (rsp.good)
-            return;
+        return rsp.err;
     }
-    return;
+    return ERPC_GENERIC;
 }
 
 //------------------------------------------------------------------------------
@@ -140,6 +138,24 @@ static void DoNodeConnecting(int s, const RpcHeader* const hdr, void* param) {
     }
 }
 //-----------------------------------------------------------------------------
+static void DoNodeFileTable(int s, const RpcHeader* const hdr, void* param) {
+    TNodeSession* const ns = static_cast<TNodeSession*>(param);
+    TFileTableMessage   msg;
+    // -
+    int rval = so_readsync(s, &msg, sizeof(msg), 5);
+
+    if (rval > 0 && msg.count > 0) {
+        cl::array_ptr<uint64_t> buf(new uint64_t[msg.count]);
+        size_t                  length = msg.count * sizeof(uint64_t);
+
+        rval = so_readsync(s, buf.get(), length, 15);
+
+        if (rval == length) {
+            printf("file-table readed\n");
+        }
+    }
+}
+//-----------------------------------------------------------------------------
 static void DoChunkDisconnected(int s, void* param) {
     printf("DoChunkDisconnected\n");
     //
@@ -164,7 +180,8 @@ static void DoChunkConnected(int s, SOEVENT* const ev) {
         ns->addr  = data->src;
         ns->chunk = NULL;
         // -
-        cc->registerHandler(RPC_NODECONNECT, &DoNodeConnecting);
+        cc->registerHandler(RPC_NODECONNECT,    &DoNodeConnecting);
+        cc->registerHandler(RPC_NODE_FILETABLE, &DoNodeFileTable);
         // -
         cc->onDisconnected(&DoChunkDisconnected);
         cc->activate(data->client, ns);
@@ -234,6 +251,7 @@ static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
     // !!! Создание или открытие файлов должно осуществляться только
     //     после наложения блокировки на все наддиректории для файла.
     //
+    const fileid_t uid = fnvhash64(buf.get(), req.length);
 
     if (req.mode & ZFS_CREATE) {
         cl::const_char_iterator ci(buf.get(), req.length);
@@ -241,23 +259,23 @@ static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
         if (!ctx.tree.checkExisting(ci)) {
             // Ошибка, если файл создаётся, но не указан режим записи
             if ((req.mode & ZFS_WRITE) == 0 && (req.mode & ZFS_APPEND) == 0)
-                return sendOpenError(s, ERPC_BADMODE);
+                return SendOpenError(s, uid, ERPC_BADMODE);
 
             // Добавить информацию о файле в базу
             TFileNode* node = ctx.tree.AddPath(ci, LOCK_WRITE, (req.mode & ZFS_DIRECTORY) ? ntDirectory : ntFile);
 
             TChunk* const  chunk = chooseChunkForFile();
-            const fileid_t uid   = ++counter;
+            int   error;
 
             // Выбрать узел для хранения данных
             if (chunk == 0)
-                return sendOpenError(s, ERPC_OUTOFSPACE);
+                return SendOpenError(s, uid, ERPC_OUTOFSPACE);
 
             // Послать сообщение узлу о выделении места под файл
             // Можно делать в параллельном потоке, а текущий обработает
             // свою часть и будет ждать завершения этого задания
-            if (!SendChunkAllocate(chunk, req.client, uid, 180))
-                return sendOpenError(s, ERPC_OUTOFSPACE);
+            if ((error = SendChunkAllocate(chunk, req.client, uid, 180)) != 0)
+                return SendOpenError(s, uid, error);
             else {
                 assert(node != 0);
                 // Добавить информацию о файле в базу
@@ -288,7 +306,7 @@ static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
             }
         }
         else {
-            return sendOpenError(s, ERPC_FILEEXISTS);
+            return SendOpenError(s, uid, ERPC_FILEEXISTS);
         }
     }
     else {
@@ -301,7 +319,7 @@ static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
             // Отправить карту клиенту
             // -
             for (size_t i = 0; i < info->chunks.size(); ++i) {
-                sendChunkOpen(chunkById(info->chunks[i]), req.client, info->uid, 180);
+                SendChunkOpen(chunkById(info->chunks[i]), req.client, info->uid, 180);
             }
             streams[info->uid] = info;
 
@@ -325,9 +343,11 @@ static void DoOpen(int s, const RpcHeader* const hdr, void* param) {
                 return;
             }
         }
+        else
+            return SendOpenError(s, uid, ERPC_FILE_NOT_EXISTS);
     }
     // -
-    sendOpenError(s, ERPC_GENERIC);
+    SendOpenError(s, uid, ERPC_GENERIC);
 }
 //------------------------------------------------------------------------------
 static void doClientCloseSession(int s, const RpcHeader* const hdr, void* param) {
@@ -379,7 +399,7 @@ static void doClientConnected(int s, SOEVENT* const ev) {
             so_readsync(data->client, &req, sizeof(req), 5);
             // -
             if (req.sid == 0) {
-                sid = req.sid = ++counter;
+                sid = req.sid = ++client_id;
                 send(data->client, &req, sizeof(req), 0);
             }
         }

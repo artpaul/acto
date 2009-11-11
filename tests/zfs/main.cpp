@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 
 #include <client/zfslib.h>
 
@@ -25,7 +26,7 @@ int main() {
     }
 
     // Создать файл и записать данные
-    if ((fd = fs.Open("/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND)) > 0) {
+    if ((fd = fs.Open("/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
         fs.Append(fd, text, strlen(text));
         //exit(EXIT_SUCCESS);
         printf("close\n");
@@ -38,7 +39,8 @@ int main() {
     }
 
     // Открыть только-что созданный файл и прочитать данные
-    if ((fd = fs.Open("/text.ascii", ZFS_READ | ZFS_SHARED)) > 0) {
+    if ((fd = fs.Open("/text.ascii", ZFS_READ | ZFS_SHARED))) {
+        assert(fd);
         char    buf[1024];
         // -
         while (fs.Read(fd, buf, sizeof(buf)) != -1) {

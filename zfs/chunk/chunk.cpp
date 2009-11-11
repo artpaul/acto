@@ -10,6 +10,11 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <dirent.h>
+
+#include <list>
+
+#include <port/pointers.h>
 
 #include "chunk.h"
 
@@ -69,14 +74,16 @@ static void doClientConnected(int s, SOEVENT* const ev) {
 //------------------------------------------------------------------------------
 static void doAllocateSpace(int s, const RpcHeader* const hdr, void* param) {
     AllocateSpace   req;
-    bool            good = false;
+    uint16_t        error = 0;
     // -
     so_readsync(s, &req, sizeof(req), 10);
     {
         acto::core::MutexLocker lock(guard);
         // -
-        if (files.find(req.fileid) != files.end())
+        if (files.find(req.fileid) != files.end()) {
             printf("file already exists\n");
+            error = ERPC_FILEEXISTS;
+        }
         else {
             TFileInfo* const     info = new TFileInfo();
             MasterPending* const mp   = new MasterPending();
@@ -89,13 +96,12 @@ static void doAllocateSpace(int s, const RpcHeader* const hdr, void* param) {
             info->pendings.push_back(mp);
 
             files[req.fileid] = info;
-            good = true;
         }
     }
 
     {
         AllocateResponse    rsp;
-        rsp.good = good;
+        rsp.err = error;
         send(s, &rsp, sizeof(rsp), 0);
     }
 }
@@ -103,15 +109,17 @@ static void doAllocateSpace(int s, const RpcHeader* const hdr, void* param) {
 /// Команда от мастер-сервера разрешающая открывать файл
 static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
     AllocateSpace       req;
-    bool                good = false;
+    uint16_t            error = 0;
     FilesMap::iterator  i;
     // -
     so_readsync(s, &req, sizeof(req), 10);
     {
         acto::core::MutexLocker lock(guard);
 
-        if ((i = files.find(req.fileid)) == files.end())
+        if ((i = files.find(req.fileid)) == files.end()) {
             printf("file not exists\n");
+            error = ERPC_FILE_NOT_EXISTS;
+        }
         else {
             TFileInfo* const     info = i->second;
             MasterPending* const mp   = new MasterPending();
@@ -121,18 +129,62 @@ static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
             mp->deadline = time(0) + req.lease;
 
             info->pendings.push_back(mp);
-            good = true;
         }
     }
 
     {
         AllocateResponse    rsp;
-        rsp.good = good;
+        rsp.err = error;
         send(s, &rsp, sizeof(rsp), 0);
     }
 }
 //------------------------------------------------------------------------------
-static void doMaster(int s, SOEVENT* const ev) {
+static void LoadFileList(std::list<TFileInfo*>& loaded) {
+    struct dirent* dp;
+
+    DIR* dir = opendir("./data");
+
+    if (dir) {
+        while ((dp = readdir(dir)) != NULL) {
+            if (dp->d_type == DT_REG) {
+                TFileInfo* const info = new TFileInfo();
+                uint64_t    uid = strtoull(dp->d_name, NULL, 10);
+
+                info->uid   = uid;
+                info->lease = 0;
+                info->data  = 0;
+
+                files[uid] = info;
+                loaded.push_back(info);
+            }
+        }
+        closedir(dir);
+    }
+}
+
+static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
+    typedef std::list<TFileInfo*>::const_iterator   TListIterator;
+
+    const size_t            count  = files.size();
+    uint64_t                length = count * sizeof(uint64_t);
+    cl::array_ptr<uint64_t> data(new uint64_t[count]);
+    size_t j = 0;
+
+    TFileTableMessage   msg;
+
+    msg.size  = sizeof(msg) + length;
+    msg.code  = RPC_NODE_FILETABLE;
+    msg.uid   = ctx.uid;
+    msg.count = count;
+
+    for (TListIterator i = files.begin(); i != files.end(); ++i)
+        data.get()[j++] = (*i)->uid;
+
+    so_sendsync(s, &msg, sizeof(msg));
+    so_sendsync(s, data.get(), length);
+}
+//------------------------------------------------------------------------------
+static void DoMaster(int s, SOEVENT* const ev) {
     if (ev->type == SOEVENT_READ) {
         so_readsync(s, &ctx.uid, sizeof(ctx.uid), 5);
         printf("new id: %Zu\n", (size_t)ctx.uid);
@@ -142,9 +194,20 @@ static void doMaster(int s, SOEVENT* const ev) {
         ch->registerHandler(RPC_ALLOCATE,    &doAllocateSpace);
         ch->registerHandler(RPC_ALLOWACCESS, &doMasterOpen);
         ch->activate(s, 0);
+
+        // Отослать список хранящихся файлов
+        {
+            std::list<TFileInfo*>   files;
+
+            LoadFileList(files);
+
+            printf("count : %u\n", (unsigned int)files.size());
+            // -
+            if (files.size() > 0)
+                SendStoredFiles(s, files);
+        }
     }
 }
-//------------------------------------------------------------------------------
 int run() {
     ctx.master       = so_socket(SOCK_STREAM);
     // Create client socket
@@ -164,7 +227,7 @@ int run() {
             req.uid  = 1;
             req.freespace = 1 << 30;
             // -
-            so_pending(ctx.master, SOEVENT_READ, 10, &doMaster, 0);
+            so_pending(ctx.master, SOEVENT_READ, 10, &DoMaster, 0);
 
             if (send(ctx.master, &req, sizeof(req), 0) == -1)
                 printf("error on send: %d\n", errno);
@@ -180,32 +243,6 @@ int run() {
         printf("so_socket error\n");
     return 0;
 }
-
-#include <dirent.h>
-
-static void LoadFileList() {
-    struct dirent* dp;
-
-    DIR* dir = opendir("./data");
-
-    if (dir) {
-        while ((dp = readdir(dir)) != NULL) {
-            if (dp->d_type == DT_REG) {
-                //uuid_t id;
-
-                //if (uuid_parse(dp->d_name, id) == 0) {
-                //    TFileInfo* const info = new TFileInfo();
-                //    info->lease = 0;
-                //    info->data = 0;
-                //    uuid_copy(info->uid, id);
-                //    files[uuid_hash64(id)] = info;
-                //}
-            }
-        }
-        closedir(dir);
-    }
-}
-
 
 int main() {
     so_init();

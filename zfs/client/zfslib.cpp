@@ -64,6 +64,8 @@ TZeusFS::~TZeusFS() {
 }
 //------------------------------------------------------------------------------
 bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
+    assert(stream != 0);
+
     int s = so_socket(SOCK_STREAM);
     //printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
     if (so_connect(s, inet_addr(CHUNK_IP)/*nodeip.sin_addr.s_addr*/, CHUNK_CLIENTPORT) == 0) {
@@ -99,7 +101,7 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
 
 //------------------------------------------------------------------------------
 int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
-    assert(fd && fd->id > 0);
+    assert(fd && fd->id);
 
     AppendRequest req;
     // -
@@ -122,7 +124,7 @@ int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
 }
 //------------------------------------------------------------------------------
 int TZeusFS::Close(zfs_handle_t* fd) {
-    if (!fd || fd->id <= 0)
+    if (!fd || !fd->id)
         return -1;
     // -
     CloseRequest   req;
@@ -217,7 +219,9 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
         int           rval = so_readsync(fdmaster, &rsp, sizeof(OpenResponse), 5);
         // -
         if (rval > 0) {
-            if (rsp.stream != 0) {
+            if (rsp.err != 0 || rsp.stream == 0)
+                printf("%s\n", rpcErrorString(rsp.err));
+            else {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
                 if (SendOpenToNode(rsp.nodeip, rsp.stream, mode, &nc)) {
@@ -225,16 +229,13 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
                     return nc;
                 }
             }
-            else {
-                printf("%s\n", rpcErrorString(rsp.err));
-            }
         }
     }
     return 0;
 }
 //------------------------------------------------------------------------------
 int TZeusFS::Read(zfs_handle_t* fd, void* buf, size_t size) {
-    assert(fd && fd->id > 0);
+    assert(fd && fd->id);
 
     TReadReqest     req;
     // -

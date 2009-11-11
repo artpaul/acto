@@ -48,7 +48,7 @@ void DoClientOpen(int s, const RpcHeader* const hdr, void* param) {
                     mode = "r";
                 // -
                 char        buf[128];
-                sprintf(buf, "data/%Zu", (size_t)file->uid);
+                sprintf(buf, "data/%Lu", (long long unsigned int)file->uid);
                 FILE* fd = fopen(buf, mode);
                 if (fd != 0) {
                     file->data = fd;
