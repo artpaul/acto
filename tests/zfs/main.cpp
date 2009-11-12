@@ -26,7 +26,7 @@ int main() {
     }
 
     // Создать файл и записать данные
-    if ((fd = fs.Open("/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
+    if ((fd = fs.Open("/tmp/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
         fs.Append(fd, text, strlen(text));
         //exit(EXIT_SUCCESS);
         printf("close\n");
@@ -39,7 +39,7 @@ int main() {
     }
 
     // Открыть только-что созданный файл и прочитать данные
-    if ((fd = fs.Open("/text.ascii", ZFS_READ | ZFS_SHARED))) {
+    if ((fd = fs.Open("/tmp/text.ascii", ZFS_READ | ZFS_SHARED))) {
         assert(fd);
         char    buf[1024];
         // -

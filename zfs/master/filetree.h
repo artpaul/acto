@@ -2,10 +2,12 @@
 #ifndef __master_filetree_h__
 #define __master_filetree_h__
 
-typedef std::list<cl::string> PathParts;
+#include <list>
+#include <vector>
 
-struct FileInfo;
+#include <port/strings.h>
 
+struct TChunk;
 
 enum NodeType {
     ntDirectory,
@@ -18,130 +20,69 @@ enum LockType {
     LOCK_WRITE
 };
 
+///
+const ui8 FSTATE_NONE    = 0x00;
+///
+const ui8 FSTATE_NEW     = 0x01;
+///
+const ui8 FSTATE_OPENED  = 0x02;
+/// Файл существует
+const ui8 FSTATE_CLOSED  = 0x03;
+/// Файл удалён
+const ui8 FSTATE_DELETED = 0x04;
+
+
+/** Метаинформация о файле */
 struct TFileNode {
-    FileInfo*               map;       //
+/* Структура дерева */
+    TFileNode*              parent;
     cl::string              name;      //
     std::list<TFileNode*>   children;  //
     NodeType                type;
+
+    fileid_t                uid;        // Идентификатор файла
+    std::vector<TChunk*>    chunks;     // Узлы, на которых расположены данные этого файла
+    ui8                     state;
+
+/* Состояние открытого файла */
+    i32                     refs;       // Счетчик ссылок на файл
+    i32                     locks;      //
 };
+
+
+///
+const int ERROR_INVALID_FILENAME = 0x0001;
+const int ERROR_FILE_NOT_EXISTS  = 0x0002;
+
 
 /**
  * Дерево файловой системы
  */
-class TFileTree {
+class TFileDatabase {
+    typedef std::map<fileid_t, TFileNode*>  TFileMap;
+    typedef std::list<cl::string>           PathParts;
+
 private:
-    typedef void (*AddNodeHandler)(cl::const_char_iterator, TFileNode*, void*);
+    TFileNode   mRoot;
+    /// Таблица открытых файлов
+    TFileMap    mOpenedFiles;
 
-    TFileNode       root;
-    AddNodeHandler  m_onnewnode;
-
-    bool parsePath(cl::const_char_iterator path, PathParts& parts) const {
-        cl::const_char_iterator p  = path;
-        cl::const_char_iterator st = p + 1;
-        // -
-        if (*p != '/')
-            return false;
-        ++p;
-        while (p.valid()) {
-            while (p.valid() && *p != '/')
-                p++;
-            if (p > st) {
-                parts.push_back(cl::string(~st, p - st));
-                if (p.valid()) {
-                    p++;
-                    st = p + 1;
-                }
-                else
-                    st = p;
-            }
-        }
-        if (p > st)
-            parts.push_back(cl::string(~st, p - st));
-        return true;
-    }
+    TFileNode*  findPath(cl::const_char_iterator path) const;
+    bool parsePath(cl::const_char_iterator path, PathParts& parts) const;
+    bool MakeupFilepath(const PathParts& parts, TFileNode** fn);
 
 public:
-    TFileTree()
-        : m_onnewnode(0)
-    {
-    }
+    TFileDatabase();
 
-public:
-    /// Добавить новый узел к дереву
-    TFileNode* AddPath(cl::const_char_iterator path, LockType lock, NodeType nt, void* param = 0) {
-        PathParts parts;
-        // -
-        if (!parsePath(path, parts))
-            return 0;
-        TFileNode* node = &root;
-        PathParts::const_iterator j = parts.begin();
-        // -
-        while (j != parts.end()) {
-            bool hasPart = false;
-            for (std::list<TFileNode*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
-                if ((*i)->name == *j) {
-                    j++;
-                    node = (*i);
-                    hasPart = true;
-                    break;
-                }
-            }
-            if (!hasPart) {
-                TFileNode* const nn = new TFileNode();
+    ///
+    int CloseFile (fileid_t uid);
+    /// Открыть существующий файл или создать новый, если create == true
+    int OpenFile  (const char* path, size_t len, LockType lock, NodeType nt, bool create, TFileNode** fn);
 
-                nn->name = *j;
-                nn->map  = 0;
-                nn->type = ntDirectory;
-
-                if (m_onnewnode)
-                    m_onnewnode(path, nn, param);
-
-                node->children.push_back(nn);
-                node = nn;
-                j++;
-            }
-            if (j != parts.end() && node->type == ntFile)
-                // Текущий компонент пути файл, а значит он не может быть не
-                // конечным элементом пути
-                return 0;
-        }
-        if (node != &root)
-            node->type = nt;
-        return node;
-    }
-
-    bool checkExisting(cl::const_char_iterator path) const {
-        return this->findPath(path) != 0;
-    }
-
-    TFileNode* findPath(cl::const_char_iterator path) const {
-        PathParts parts;
-        // -
-        if (!parsePath(path, parts))
-            return 0;
-        // -
-        const TFileNode* node = &root;
-        PathParts::const_iterator j = parts.begin();
-        // -
-        while (node != 0 && j != parts.end()) {
-            bool hasPart = false;
-            for (std::list<TFileNode*>::const_iterator i = node->children.begin(); i != node->children.end(); ++i) {
-                if ((*i)->name == *j) {
-                    node = (*i);
-                    hasPart = true;
-                    break;
-                }
-            }
-            if (!hasPart)
-                return 0;
-            ++j;
-        }
-        return node != 0 && j == parts.end() ? const_cast<TFileNode*>(node) : 0;
-    }
-
-    void onNewNode(const AddNodeHandler handler) {
-        m_onnewnode = handler;
-    }
+    ///
+    bool        CheckExisting(const char* path, size_t len) const;
+    ///
+    TFileNode*  FileById(const fileid_t uid) const;
 };
 
 #endif // __master_filetree_h__

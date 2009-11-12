@@ -67,8 +67,8 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
     assert(stream != 0);
 
     int s = so_socket(SOCK_STREAM);
-    //printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
-    if (so_connect(s, inet_addr(CHUNK_IP)/*nodeip.sin_addr.s_addr*/, CHUNK_CLIENTPORT) == 0) {
+    printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
+    if (so_connect(s, /*inet_addr(CHUNK_IP)*/nodeip.sin_addr.s_addr, CHUNK_CLIENTPORT) == 0) {
         OpenChunkRequest    req;
         req.code   = RPC_OPENFILE;
         req.size   = sizeof(req);
@@ -133,7 +133,7 @@ int TZeusFS::Close(zfs_handle_t* fd) {
     req.size   = sizeof(CloseRequest);
     req.stream = fd->id;
     // -
-    send(fdmaster, &req, sizeof(CloseRequest), 0);
+    so_sendsync(fdmaster, &req, sizeof(CloseRequest));
     // -
     {
         TCommonResponse resp;

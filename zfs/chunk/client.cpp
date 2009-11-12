@@ -3,7 +3,6 @@
 
 #include "chunk.h"
 
-
 //------------------------------------------------------------------------------
 static bool IsAllowed(TFileInfo* file, sid_t client) {
     printf("isAllowed for: %Zu\n", (size_t)client);

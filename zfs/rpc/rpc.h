@@ -80,6 +80,8 @@ const uint16_t  RPC_NODE_FILETABLE  = 0x0502;
 
 #define ERPC_FILE_NOT_EXISTS    0x0005
 
+#define ERPC_FILE_BUSY          0x0006
+
 
 #pragma pack(push, 4)
 
@@ -209,6 +211,7 @@ inline const char* rpcErrorString(const int error) {
         case ERPC_FILEEXISTS: return "ERPC_FILEEXISTS";
         case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
         case ERPC_FILE_NOT_EXISTS: return "ERPC_FILE_NOT_EXISTS";
+        case ERPC_FILE_BUSY:  return "ERPC_FILE_BUSY";
     }
     return "";
 }

@@ -148,7 +148,11 @@ static void LoadFileList(std::list<TFileInfo*>& loaded) {
         while ((dp = readdir(dir)) != NULL) {
             if (dp->d_type == DT_REG) {
                 TFileInfo* const info = new TFileInfo();
-                uint64_t    uid = strtoull(dp->d_name, NULL, 10);
+                uint64_t         uid;
+
+                //decode64((unsigned char*)dp->d_name, uid);
+
+                //printf("%Lu\n", uid);
 
                 info->uid   = uid;
                 info->lease = 0;
@@ -196,6 +200,7 @@ static void DoMaster(int s, SOEVENT* const ev) {
         ch->activate(s, 0);
 
         // Отослать список хранящихся файлов
+        /*
         {
             std::list<TFileInfo*>   files;
 
@@ -206,6 +211,7 @@ static void DoMaster(int s, SOEVENT* const ev) {
             if (files.size() > 0)
                 SendStoredFiles(s, files);
         }
+        */
     }
 }
 int run() {

@@ -2,6 +2,8 @@
 #ifndef chunk_h_5de09c85b176406b88ac63e7a57b9920
 #define chunk_h_5de09c85b176406b88ac63e7a57b9920
 
+#include <memory.h>
+
 #include <map>
 #include <vector>
 
@@ -48,6 +50,5 @@ struct TFileInfo {
 extern ClientsMap           clients;
 extern FilesMap             files;
 extern acto::core::mutex_t  guard;
-
 
 #endif // chunk_h_5de09c85b176406b88ac63e7a57b9920
