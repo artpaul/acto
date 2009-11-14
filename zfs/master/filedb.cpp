@@ -1,9 +1,10 @@
 
 #include <assert.h>
-
-#include "master.h"
+#include <unistd.h>
 
 #include <port/fnv.h>
+
+#include "filetree.h"
 
 //-----------------------------------------------------------------------------
 TFileDatabase::TFileDatabase() {
@@ -20,6 +21,8 @@ int TFileDatabase::OpenFile(
     PathParts               parts;
     cl::const_char_iterator ci(path, len);
     const fileid_t          uid = fnvhash64(path, len);
+    // -
+    *fn = NULL;
     // -
     if (!parsePath(ci, parts))
         return ERROR_INVALID_FILENAME;
@@ -82,10 +85,10 @@ TFileNode* TFileDatabase::findPath(cl::const_char_iterator path) const {
             }
         }
         if (!hasPart)
-            return 0;
+            return NULL;
         ++j;
     }
-    return node != 0 && j == parts.end() ? const_cast<TFileNode*>(node) : 0;
+    return (node != 0 && j == parts.end()) ? const_cast<TFileNode*>(node) : 0;
 }
 //-----------------------------------------------------------------------------
 bool TFileDatabase::parsePath(cl::const_char_iterator path, PathParts& parts) const {

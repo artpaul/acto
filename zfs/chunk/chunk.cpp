@@ -99,11 +99,14 @@ static void doAllocateSpace(int s, const RpcHeader* const hdr, void* param) {
         }
     }
 
-    {
-        AllocateResponse    rsp;
-        rsp.err = error;
-        send(s, &rsp, sizeof(rsp), 0);
-    }
+    AllocateResponse    rsp;
+    rsp.code   = RPC_ALLOCATE;
+    rsp.size   = sizeof(AllocateResponse);
+    rsp.error  = error;
+    rsp.client = req.client;
+    rsp.fileid = req.fileid;
+    rsp.chunk  = ctx.uid;
+    send(s, &rsp, sizeof(rsp), 0);
 }
 //------------------------------------------------------------------------------
 /// Команда от мастер-сервера разрешающая открывать файл
@@ -132,11 +135,16 @@ static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
         }
     }
 
-    {
-        AllocateResponse    rsp;
-        rsp.err = error;
-        send(s, &rsp, sizeof(rsp), 0);
-    }
+
+    AllocateResponse    rsp;
+
+    rsp.code  = RPC_ALLOWACCESS;
+    rsp.size  = sizeof(rsp);
+    rsp.error = error;
+    rsp.client = req.client;
+    rsp.fileid = req.fileid;
+    rsp.chunk  = ctx.uid;
+    send(s, &rsp, sizeof(rsp), 0);
 }
 //------------------------------------------------------------------------------
 static void LoadFileList(std::list<TFileInfo*>& loaded) {
@@ -190,14 +198,24 @@ static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
 //------------------------------------------------------------------------------
 static void DoMaster(int s, SOEVENT* const ev) {
     if (ev->type == SOEVENT_READ) {
-        so_readsync(s, &ctx.uid, sizeof(ctx.uid), 5);
-        printf("new id: %Zu\n", (size_t)ctx.uid);
-        // -
-        TCommandChannel* const ch = new TCommandChannel();
-        // -
-        ch->registerHandler(RPC_ALLOCATE,    &doAllocateSpace);
-        ch->registerHandler(RPC_ALLOWACCESS, &doMasterOpen);
-        ch->activate(s, 0);
+        TChunkConnecting    msg;
+
+        so_readsync(s, &msg, sizeof(msg), 5);
+
+        if (msg.error != 0) {
+            printf("master error : %i\n", msg.error);
+            exit(1);
+        }
+        else {
+            ctx.uid = msg.uid;
+            printf("new id: %Zu\n", (size_t)ctx.uid);
+            // -
+            TCommandChannel* const ch = new TCommandChannel();
+            // -
+            ch->registerHandler(RPC_ALLOCATE,    &doAllocateSpace);
+            ch->registerHandler(RPC_ALLOWACCESS, &doMasterOpen);
+            ch->activate(s, 0);
+        }
 
         // Отослать список хранящихся файлов
         /*
@@ -227,15 +245,17 @@ int run() {
             return 1;
         }
         else {
-            ChunkConnecting    req;
+            TChunkConnecting    req;
             req.code = RPC_NODECONNECT;
             req.size = sizeof(req);
-            req.uid  = 1;
+            req.uid  = 0;
             req.freespace = 1 << 30;
+            req.ip.sin_addr.s_addr   = inet_addr(SERVERIP);
+            req.port = CLIENTPORT;
             // -
             so_pending(ctx.master, SOEVENT_READ, 10, &DoMaster, 0);
 
-            if (send(ctx.master, &req, sizeof(req), 0) == -1)
+            if (so_sendsync(ctx.master, &req, sizeof(req)) == -1)
                 printf("error on send: %d\n", errno);
             else
                 printf("sended\n");

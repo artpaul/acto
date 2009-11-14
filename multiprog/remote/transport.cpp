@@ -270,24 +270,137 @@ transport_t::~transport_t() {
     so_terminate();
 }
 //-----------------------------------------------------------------------------
-void transport_t::client_handler(handler_t callback, void* param) {
-    m_pimpl->client_handler(callback, param);
-}
-//-----------------------------------------------------------------------------
-void transport_t::server_handler(handler_t callback, void* param) {
-    m_pimpl->server_handler(callback, param);
-}
-//-----------------------------------------------------------------------------
-network_node_t* transport_t::connect(const char* host, const int port) {
+network_node_t* transport_t::connect(const char* host, const int port, handler_t cb, void* param) {
+    m_pimpl->client_handler(cb, param);
     return m_pimpl->connect(host, port);
 }
 //-----------------------------------------------------------------------------
-void transport_t::open_node(int port) {
+void transport_t::open_node(int port, handler_t cb, void* param) {
+    m_pimpl->server_handler(cb, param);
     m_pimpl->open_node(port);
 }
 //-----------------------------------------------------------------------------
 void transport_t::send_message(network_node_t* const target, const transport_msg_t& msg) {
     msg.send(target);
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+message_channel_t::message_channel_t(message_server_t* owner, int s)
+    : m_handler(0)
+    , m_owner(owner)
+    , m_param(0)
+    , m_socket(s)
+{
+}
+
+void message_channel_t::close() {
+    // -
+}
+
+void message_channel_t::send_message(void* data, size_t len) {
+    so_sendsync(m_socket, data, len);
+}
+
+void message_channel_t::set_handler(message_handler_t* cb, void* param) {
+    m_handler = cb;
+    m_param   = param;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+message_server_t::message_server_t()
+    : m_param(0)
+    , m_socket(0)
+{
+}
+//-----------------------------------------------------------------------------
+message_server_t::~message_server_t() {
+    if (m_socket != 0)
+        so_close(m_socket);
+}
+
+//-----------------------------------------------------------------------------
+int message_server_t::open(const char* ip, int port, connected_handler_t cb, void* param) {
+    const int s = so_socket(SOCK_STREAM);
+
+    if (s == -1) {
+        return -1;
+    }
+    else {
+        so_listen(s, inet_addr(ip), port, 5, &message_server_t::do_connected, this);
+    }
+
+    m_handler = cb;
+    m_param   = param;
+    m_socket  = s;
+}
+
+//-----------------------------------------------------------------------------
+void message_server_t::do_connected(int s, SOEVENT* const ev) {
+    switch (ev->type) {
+    case SOEVENT_ACCEPTED:
+        {
+            SORESULT_LISTEN*  data  = (SORESULT_LISTEN*)ev->data;
+            message_server_t* pthis = static_cast<message_server_t*>(ev->param);
+
+            message_channel_t* mc = new message_channel_t(pthis, data->client);
+            pthis->m_channels.insert(mc);
+
+            so_pending(data->client, SOEVENT_READ, 10, &message_server_t::do_read, mc);
+
+            if (pthis->m_handler)
+                pthis->m_handler(mc, pthis->m_param);
+        }
+        break;
+    case SOEVENT_CLOSED:
+        return;
+    case SOEVENT_TIMEOUT:
+        break;
+    }
+}
+//-----------------------------------------------------------------------------
+void message_server_t::do_read(int s, SOEVENT* const ev) {
+     message_channel_t* ch = static_cast<message_channel_t*>(ev->param);
+
+    switch (ev->type) {
+    case SOEVENT_CLOSED:
+        if (ch->m_handler)
+            ch->m_handler->on_disconnected(ch->m_param);
+        // -
+        ch->m_owner->m_channels.erase(ch);
+        delete ch;
+        return;
+    case SOEVENT_TIMEOUT:
+        break;
+    case SOEVENT_READ:
+        {
+            message_header_t    hdr;
+
+            const int rval = recv(s, &hdr, sizeof(hdr), MSG_PEEK);
+
+            if (rval == sizeof(hdr)) {
+                generics::array_ptr<char>   buf(new char[hdr.size]);
+
+                if (so_readsync(s, buf.get(), hdr.size, 30) == hdr.size) {
+                    if (ch->m_handler) {
+                        message_t msg;
+
+                        msg.size    = hdr.size;
+                        msg.code    = hdr.code;
+                        msg.error   = hdr.error;
+                        msg.data    = buf.get();
+                        msg.channel = ch;
+
+                        ch->m_handler->on_message(&msg, ch->m_param);
+                    }
+                }
+            }
+        }
+        break;
+    }
+    so_pending(s, SOEVENT_READ, 10, &message_server_t::do_read, ev->param);
 }
 
 } // namespace remote

@@ -2,10 +2,16 @@
 #ifndef __master_filetree_h__
 #define __master_filetree_h__
 
+#include <arpa/inet.h>
+
 #include <list>
+#include <map>
 #include <vector>
 
+#include <system/platform.h>
 #include <port/strings.h>
+
+#include <rpc/rpc.h>
 
 struct TChunk;
 

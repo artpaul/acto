@@ -3,12 +3,16 @@
 #define acto_remote_transport_h_20d942d7a779464eb373d0bad8f10cd0
 
 #include <map>
+#include <set>
 #include <string>
 
 #include <generic/memory.h>
 
 #include <system/platform.h>
 #include <core/serialization.h>
+
+// !!!
+#include <remote/libsocket/libsocket.h>
 
 
 namespace acto {
@@ -74,16 +78,12 @@ public:
     ~transport_t();
 
 public:
-    /// Установить обработчик команды
-    void            client_handler(handler_t callback, void* param);
-    /// Получить поток входных данных для сообщения
-    // stream_t* get_package_stream(command_event_t* ev);
-    /// -
-    void            server_handler(handler_t callback, void* param);
-    /// Установить соединение с удаленным узлом
-    network_node_t* connect(const char* host, const int port);
-    /// Открыть узел для доступа из сети
-    void            open_node(int port);
+    /// \brief Установить соединение с удаленным узлом
+    network_node_t* connect(const char* host, const int port, handler_t cb, void* param);
+
+    /// \brief Открыть узел для доступа из сети
+    void            open_node(int port, handler_t cb, void* param);
+
     /// -
     void            send_message(network_node_t* const target, const transport_msg_t& msg);
 
@@ -91,6 +91,88 @@ private:
     class impl;
 
     std::auto_ptr< impl >   m_pimpl;
+};
+
+
+#pragma pack(push, 4)
+
+struct message_header_t {
+    ui32        size;       // Суммарная длинна данных в запросе (+ заголовок)
+    ui16        code;       // Command code
+    i16         error;      // Код ошибки
+};
+
+#pragma pack(pop)
+
+
+struct message_t {
+    ui32        size;       // Суммарная длинна данных (включая заголовок)
+    ui16        code;       // Код сообщения
+    i16         error;      // Код ошибки
+    void*       data;       // Буфер данных (включая заголовок)
+    /// Канал, по которому пришло данное сообщение
+    class message_channel_t*    channel;
+};
+
+/** */
+class message_handler_t {
+public:
+    virtual ~message_handler_t() { };
+    ///
+    virtual void on_disconnected(void* param) { }
+    ///
+    virtual void on_message(const message_t* msg, void* param) { }
+};
+
+/**
+ * Канал обмена сообщениями между узлами
+ */
+class message_channel_t {
+    friend class message_server_t;
+
+    message_handler_t*      m_handler;
+    class message_server_t* m_owner;
+    void*                   m_param;
+    int                     m_socket;
+
+public:
+    message_channel_t(class message_server_t* owner, int s);
+
+    /// \brief Закрыть канал
+    void close();
+
+    /// \brief Отправить сообщение клиенту
+    void send_message(void* data, size_t len);
+
+    ///
+    void set_handler(message_handler_t* cb, void* param);
+};
+
+/**
+ * Сервер сообщений
+ */
+class message_server_t {
+    /// Множество активных каналов взаимодействия с клиентами
+    typedef std::set<message_channel_t*>    channels_t;
+    ///
+    typedef void (*connected_handler_t)(message_channel_t* const, void* param);
+
+public:
+    message_server_t();
+    ~message_server_t();
+
+    ///
+    int open(const char* ip, int port, connected_handler_t cb, void* param);
+
+private:
+    static void do_connected(int s, SOEVENT* const ev);
+    static void do_read     (int s, SOEVENT* const ev);
+
+private:
+    channels_t          m_channels;
+    connected_handler_t m_handler;
+    void*               m_param;
+    int                 m_socket;
 };
 
 } // namespace remote

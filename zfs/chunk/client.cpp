@@ -115,10 +115,10 @@ void DoClientAppend(int s, const RpcHeader* const hdr, void* param) {
         fflush(i->second->data);
     }
     // -
-    TCommonResponse resp;
-    resp.size = sizeof(TCommonResponse);
-    resp.code = RPC_APPEND;
-    resp.err  = 0;
+    TMessage resp;
+    resp.size  = sizeof(resp);
+    resp.code  = RPC_APPEND;
+    resp.error = 0;
 
     so_sendsync(s, &resp, sizeof(resp));
 }

@@ -117,7 +117,7 @@ int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
     send(fd->s, buf,  size, 0);
     // -
     {
-        TCommonResponse resp;
+        TMessage resp;
         // -
         so_readsync(fd->s, &resp, sizeof(resp), 5);
     }
@@ -136,7 +136,7 @@ int TZeusFS::Close(zfs_handle_t* fd) {
     so_sendsync(fdmaster, &req, sizeof(CloseRequest));
     // -
     {
-        TCommonResponse resp;
+        TMessage resp;
         // -
         so_readsync(fdmaster, &resp, sizeof(resp), 5);
     }

@@ -6,6 +6,7 @@
 #ifndef rpc_h__
 #define rpc_h__
 
+#include <system/platform.h>
 #include <port/macros.h>
 
 /* */
@@ -16,11 +17,13 @@ const uint64_t  ZFS_READ        = (1 << 1);
 const uint64_t  ZFS_APPEND      = (1 << 2);
 ///
 const uint64_t  ZFS_MERGE       = (1 << 3);
+///
 const uint64_t  ZFS_SNAPSHOT    = (1 << 4);
 /// Неблокирующий доступ к файлу
 const uint64_t  ZFS_SHARED      = (1 << 5);
 /// Эксклюзивный доступ к файлу
 const uint64_t  ZFS_EXCLUSIVE   = (1 << 6);
+///
 const uint64_t  ZFS_WRITE       = (1 << 7);
 /// Создать объект если не существует
 const uint64_t  ZFS_CREATE      = (1 << 8);
@@ -81,41 +84,35 @@ const uint16_t  RPC_NODE_FILETABLE  = 0x0502;
 #define ERPC_FILE_NOT_EXISTS    0x0005
 
 #define ERPC_FILE_BUSY          0x0006
+/// Сообщение уже было обработано
+#define ERPC_ALREADY_PROCESSED  0x0007
 
+
+/// Идентификатор файла
+typedef ui64    fileid_t;
+
+/// Сессионный идентификатор
+typedef ui64    sid_t;
 
 #pragma pack(push, 4)
 
-struct ALIGNING(4) RpcHeader {
-    uint32_t    size;       // Суммарная длинна данных в запросе (+ заголовок)
-    uint16_t    code;       // Command code
-    uint8_t     dummy[2];   //
+struct TMessage {
+    ui32    size;       // Суммарная длинна данных в запросе (+ заголовок)
+    ui16    code;       // Command code
+    i16     error;      // Код ошибки
 };
+
+typedef TMessage RpcHeader;
 
 ///////////////
 
-/// Идентификатор файла
-typedef __int64_t      fileid_t;
-
-/// Сессионный идентификатор
-typedef __int64_t      sid_t;
-
-/// Идентификатор файла
-//typedef __int128_t      fileid_t;
-/// Сессионный идентификатор
-//typedef __int128_t      sid_t;
-
-
-///
-struct ALIGNING(4) TCommonResponse : public RpcHeader {
-    int err;
-};
 
 struct ALIGNING(4) AppendRequest : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;     // Идентификатор потока
-    uint32_t    bytes;      // Количество байт в буфере
-    uint32_t    crc;        // Контрольная сумма для блока данных
-    bool        futher;     // Флаг продолжения передачи
+    ui32        bytes;      // Количество байт в буфере
+    ui32        crc;        // Контрольная сумма для блока данных
+    ui8         futher;     // Флаг продолжения передачи
 };
 
 /// Запрос закрытия файла
@@ -132,15 +129,15 @@ struct ALIGNING(4) ClientCloseSession : public RpcHeader {
 struct ALIGNING(4) TReadReqest : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;     // Идентификатор потока
-    uint64_t    offset;     // Смещение в файле
-    uint64_t    bytes;      // Количество байт для чтения
+    ui64        offset;     // Смещение в файле
+    ui64        bytes;      // Количество байт для чтения
 };
 
 struct ALIGNING(4) ReadResponse {
     fileid_t    stream;     // Идентификатор потока
-    uint32_t    crc;        // Контрольная сумма для блока данных
-    uint32_t    size;       // Размер блока данных
-    bool        futher;     // Флаг продолжения передачи
+    ui32        crc;        // Контрольная сумма для блока данных
+    ui32        size;       // Размер блока данных
+    ui8         futher;     // Флаг продолжения передачи
 };
 
 /// Запрос открытия / создания файла
@@ -153,7 +150,7 @@ struct ALIGNING(4) OpenRequest : public RpcHeader {
 /// Ответ открытия файла
 struct ALIGNING(4) OpenResponse {
     fileid_t    stream;     // Идентификатор потока
-    uint32_t    err;        // Код ошибки
+    i32         err;        // Код ошибки
     sockaddr_in nodeip;     //
 };
 
@@ -161,12 +158,12 @@ struct ALIGNING(4) OpenResponse {
 struct ALIGNING(4)  OpenChunkRequest : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;
-    uint64_t    mode;
+    ui64        mode;
 };
 
 struct ALIGNING(4)  OpenChunkResponse {
     fileid_t    file;
-    uint32_t    err;
+    i32         err;
 };
 
 
@@ -177,29 +174,33 @@ struct ALIGNING(4) MasterSession {
 
 
 ///
-struct ALIGNING(4) ChunkConnecting : public RpcHeader {
-    __uint64_t  uid;
-    uint64_t    freespace;  // Оценка свободного места в узле
+struct TChunkConnecting : public TMessage {
+    ui64        uid;
+    ui64        freespace;  // Оценка свободного места в узле
+    sockaddr_in ip;
+    i32         port;
 };
 
 ///
 struct ALIGNING(4) TFileTableMessage : public RpcHeader {
-    __uint64_t      uid;        // Идентификатор узла
-    __uint64_t      count;      // Кол-во идентификаторов файлов
+    ui64        uid;        // Идентификатор узла
+    ui64        count;      // Кол-во идентификаторов файлов
 
     // uint64_t data[count];
 };
 
 ///
-struct ALIGNING(4) AllocateSpace : public RpcHeader {
+struct AllocateSpace : public RpcHeader {
     sid_t       client;     // Идентификатор клиента
     fileid_t    fileid;     // Идентификатор файла
-    uint64_t    mode;       // Режим открытия
-    uint32_t    lease;      // Максимально допустимое время ожидание запроса клиента
+    ui64        mode;       // Режим открытия
+    ui32        lease;      // Максимально допустимое время ожидание запроса клиента
 };
 
-struct ALIGNING(4) AllocateResponse {
-    uint16_t    err;
+struct AllocateResponse : public TMessage {
+    sid_t       client;     // Идентификатор клиента
+    fileid_t    fileid;     // Идентификатор файла
+    ui64        chunk;
 };
 
 #pragma pack(pop)
@@ -212,6 +213,7 @@ inline const char* rpcErrorString(const int error) {
         case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
         case ERPC_FILE_NOT_EXISTS: return "ERPC_FILE_NOT_EXISTS";
         case ERPC_FILE_BUSY:  return "ERPC_FILE_BUSY";
+        case ERPC_ALREADY_PROCESSED: return "ERPC_ALREADY_PROCESSED";
     }
     return "";
 }

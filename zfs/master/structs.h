@@ -39,10 +39,12 @@ struct TLocationRecord {
 
 /** Параметры сервера-данных */
 struct TChunk {
+    typedef acto::remote::message_channel_t msg_channel_t;
+
     ui64            uid;            //
     sockaddr_in     ip;             // Node ip
     TChunk*         slave;          //
-    int             s;              //
+    msg_channel_t*  channel;
     int             available : 1;  //
 };
 
@@ -59,6 +61,7 @@ struct TClientSession {
 
     sid_t           sid;        // Уникальный идентификатор сессии
     sockaddr_in     addr;       //
+    int             s;
     bool            closed;     // Флаг штатного закрытия сессии
     // Список открытых/заблокированных файлов
     TFiles          files;

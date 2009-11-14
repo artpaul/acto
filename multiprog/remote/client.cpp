@@ -16,9 +16,6 @@ remote_module_t::remote_module_t()
     , m_counter(0)
 {
     core::runtime_t::instance()->register_module(this, 1);
-
-    m_transport.client_handler(&remote_module_t::do_client_commands, this);
-    m_transport.server_handler(&remote_module_t::do_server_commands, this);
 }
 //-----------------------------------------------------------------------------
 remote_module_t::~remote_module_t() {
@@ -92,7 +89,7 @@ void remote_module_t::startup() {
 actor_t remote_module_t::connect(const char* path, unsigned int port) {
     // !!! Parse path
 
-    network_node_t* const node = m_transport.connect("127.0.0.1", port);
+    network_node_t* const node = m_transport.connect("127.0.0.1", port, &remote_module_t::do_client_commands, this);
 
     if (node != NULL) {
         ask_data_t* const ask = new ask_data_t();
@@ -137,7 +134,7 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
 }
 //-----------------------------------------------------------------------------
 void remote_module_t::enable_server() {
-    m_transport.open_node(CLIENTPORT);
+    m_transport.open_node(CLIENTPORT, &remote_module_t::do_server_commands, this);
 }
 //-----------------------------------------------------------------------------
 void remote_module_t::register_actor(const actor_t& actor, const char* path) {
