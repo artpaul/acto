@@ -159,10 +159,13 @@ int TZeusFS::connect(const char* ip, unsigned short port) {
         if (so_connect(fdmaster, inet_addr(ip), port) != 0)
             goto lberror;
         else {
-            MasterSession   req;
+            TMasterSession   req;
             // -
-            req.sid = 0;
-            send(fdmaster, &req, sizeof(req), 0);
+            req.size  = sizeof(req);
+            req.code  = RPC_CLIENT_CONNECT;
+            req.error = 0;
+            req.sid   = 0;
+            so_sendsync(fdmaster, &req, sizeof(req));
             // -
             so_readsync(fdmaster, &req, sizeof(req), 5);
             if (req.sid != 0) {
@@ -215,12 +218,12 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
     so_sendsync(fdmaster, name, len);
 
     {
-        OpenResponse  rsp;
-        int           rval = so_readsync(fdmaster, &rsp, sizeof(OpenResponse), 5);
+        TOpenResponse rsp;
+        int           rval = so_readsync(fdmaster, &rsp, sizeof(TOpenResponse), 5);
         // -
         if (rval > 0) {
-            if (rsp.err != 0 || rsp.stream == 0)
-                printf("%s\n", rpcErrorString(rsp.err));
+            if (rsp.error != 0 || rsp.stream == 0)
+                printf("%s\n", rpcErrorString(rsp.error));
             else {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных

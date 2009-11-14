@@ -138,9 +138,9 @@ static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
 
     AllocateResponse    rsp;
 
-    rsp.code  = RPC_ALLOWACCESS;
-    rsp.size  = sizeof(rsp);
-    rsp.error = error;
+    rsp.size   = sizeof(rsp);
+    rsp.code   = RPC_ALLOWACCESS;
+    rsp.error  = error;
     rsp.client = req.client;
     rsp.fileid = req.fileid;
     rsp.chunk  = ctx.uid;

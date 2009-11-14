@@ -44,6 +44,8 @@ const uint64_t  ZFS_DIRECTORY   = (1 << 9);
 /* Сообщения инициируемые клиентом */
 
 const uint16_t  RPC_NONE            = 0x0000;
+///
+const uint16_t  RPC_CLIENT_CONNECT  = 0x0001;
 /// Открыть/создать файл
 const uint16_t  RPC_OPENFILE        = 0x0002;
 /// Режим чтения данных
@@ -148,9 +150,8 @@ struct ALIGNING(4) OpenRequest : public RpcHeader {
 };
 
 /// Ответ открытия файла
-struct ALIGNING(4) OpenResponse {
+struct TOpenResponse : public TMessage {
     fileid_t    stream;     // Идентификатор потока
-    i32         err;        // Код ошибки
     sockaddr_in nodeip;     //
 };
 
@@ -168,7 +169,7 @@ struct ALIGNING(4)  OpenChunkResponse {
 
 
 /// Установка сессии с мастер-сервером
-struct ALIGNING(4) MasterSession {
+struct TMasterSession : TMessage {
     sid_t       sid;        // Сессионный идентификатор
 };
 
@@ -221,6 +222,7 @@ inline const char* rpcErrorString(const int error) {
 inline const char* RpcCommandString(const int cmd) {
     switch (cmd) {
         case RPC_NONE:           return "RPC_NONE";
+        case RPC_CLIENT_CONNECT: return "RPC_CLIENT_CONNECT";
         case RPC_OPENFILE:       return "RPC_OPENFILE";
         case RPC_READ:           return "RPC_READ";
         case RPC_APPEND:         return "RPC_APPEND";

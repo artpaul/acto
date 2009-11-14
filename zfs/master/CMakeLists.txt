@@ -1,7 +1,9 @@
 
 ADD_EXECUTABLE (zfs-master
     master.cpp
-    filedb.cpp)
+    filedb.cpp
+    chunk_handler.cpp
+    client_handler.cpp)
 
 TARGET_LINK_LIBRARIES (zfs-master
     acto-lib

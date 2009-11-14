@@ -2,6 +2,8 @@
 #ifndef fnv_h_43045174d6b7453c930acc7afc6f7abc
 #define fnv_h_43045174d6b7453c930acc7afc6f7abc
 
+#include <system/platform.h>
+
 //#define FNV_INIT        0x811c9dc5L
 //#define FNV_MULT        0x01000193L
 
@@ -14,8 +16,8 @@
 
 #define FNVPART64(h,c)  (h = h * FNV_MULT64 ^ (c))
 
-inline __uint64_t fnvhash64(const char* str, int len) {
-    __uint64_t h = FNV_INIT64;
+inline ui64 fnvhash64(const char* str, int len) {
+    ui64 h = FNV_INIT64;
 
     register int i = 0;
     while (i < len)

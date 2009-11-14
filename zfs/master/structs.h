@@ -3,6 +3,7 @@
 #define __master_structs_h__
 
 #include <system/platform.h>
+#include <remote/transport.h>
 
 #include "filetree.h"
 
@@ -51,32 +52,21 @@ struct TChunk {
 ///
 struct TNodeSession {
     TChunk*             chunk;  //
-    int                 s;      // Socket
-    struct sockaddr_in  addr;   //
 };
 
 /** Состояние соединения с клиентским приложением */
 struct TClientSession {
-    typedef std::map<fileid_t, TFileNode*>   TFiles;
+    typedef acto::remote::message_channel_t     msg_channel_t;
+    typedef std::map<fileid_t, TFileNode*>      TFiles;
 
     sid_t           sid;        // Уникальный идентификатор сессии
     sockaddr_in     addr;       //
     int             s;
-    bool            closed;     // Флаг штатного закрытия сессии
     // Список открытых/заблокированных файлов
     TFiles          files;
+    msg_channel_t*  channel;
+    bool            closed;     // Флаг штатного закрытия сессии
 };
-
-/// Server data context
-struct TContext {
-    TFileDatabase   tree;
-
-    int             chunkListen;    // Chunk socket
-    int             clientListen;   // Client socket
-};
-
-typedef std::map<ui64, TChunk*>             TChunkMap;
-typedef std::map<sid_t, TClientSession*>    ClientMap;
 
 // TABLE FILES : uid, parent, name, options
 
