@@ -31,45 +31,45 @@ void TClientHandler::SendOpenError(acto::remote::message_channel_t* mc, ui64 uid
     mc->send_message(&rsp, sizeof(rsp));
 }
 
-void TClientHandler::ClientConnect(const acto::remote::message_t* msg, TClientSession* cs) {
+void TClientHandler::ClientConnect(const acto::remote::message_t* msg) {
     const TMasterSession*   req = (const TMasterSession*)msg->data;
     TMasterSession          rsp = *req;
     // -
     // -
     if (req->sid == 0)
-        cs->sid = rsp.sid = ++client_id;
+        this->sid = rsp.sid = ++client_id;
     // -
-    ctx.clients[cs->sid] = cs;
+    ctx.clients[this->sid] = this;
     // -
-    cs->channel->send_message(&rsp, sizeof(rsp));
+    this->channel->send_message(&rsp, sizeof(rsp));
 }
 
-void TClientHandler::OpenFile(const acto::remote::message_t* msg, TClientSession* cs) {
+void TClientHandler::OpenFile(const acto::remote::message_t* msg) {
     const OpenRequest*  req = (const OpenRequest*)msg->data;
     const char*         name = (const char*)msg->data + sizeof(OpenRequest);
     //
     const fileid_t uid  = fnvhash64(name, req->length);
     TFileNode*     node = NULL;
 
-    if (cs->files.find(uid) != cs->files.end())
-        return SendOpenError(cs->channel, uid, ERPC_FILE_BUSY);
+    if (this->files.find(uid) != this->files.end())
+        return SendOpenError(this->channel, uid, ERPC_FILE_BUSY);
 
     // -
     if (req->mode & ZFS_CREATE) {
         // Ошибка, если файл создаётся, но не указан режим записи
         if ((req->mode & ZFS_WRITE) == 0 && (req->mode & ZFS_APPEND) == 0)
-            return SendOpenError(cs->channel, uid, ERPC_BADMODE);
+            return SendOpenError(this->channel, uid, ERPC_BADMODE);
         // -
         int error = ctx.tree.OpenFile(name, req->length, LOCK_WRITE, (req->mode & ZFS_DIRECTORY) ? ntDirectory : ntFile, true, &node);
 
         if (error != 0)
-            return SendOpenError(cs->channel, uid, ERPC_FILEEXISTS);
+            return SendOpenError(this->channel, uid, ERPC_FILEEXISTS);
 
         TChunk* const chunk = chooseChunkForFile();
 
         // Выбрать узел для хранения данных
         if (chunk == 0)
-            SendOpenError(cs->channel, uid, ERPC_OUTOFSPACE);
+            SendOpenError(this->channel, uid, ERPC_OUTOFSPACE);
         else {
             AllocateSpace  msg;
             msg.code   = RPC_ALLOCATE;
@@ -86,7 +86,7 @@ void TClientHandler::OpenFile(const acto::remote::message_t* msg, TClientSession
         int error = ctx.tree.OpenFile(name, req->length, LOCK_READ, ntFile, false, &node);
 
         if (error != 0) {
-            SendOpenError(cs->channel, uid, ERPC_FILE_NOT_EXISTS);
+            SendOpenError(this->channel, uid, ERPC_FILE_NOT_EXISTS);
             return;
         }
         else {
@@ -108,16 +108,16 @@ void TClientHandler::OpenFile(const acto::remote::message_t* msg, TClientSession
             return;
         }
     }
-    SendOpenError(cs->channel, uid, ERPC_GENERIC);
+    SendOpenError(this->channel, uid, ERPC_GENERIC);
 }
 
-void TClientHandler::CloseFile(const acto::remote::message_t* msg, TClientSession* cs) {
-    const CloseRequest*   req = (const CloseRequest*)msg->data;
+void TClientHandler::CloseFile(const acto::remote::message_t* msg) {
+    const CloseRequest* req = (const CloseRequest*)msg->data;
     // -
     {
         acto::core::MutexLocker lock(guard);
 
-        cs->files.erase(req->stream);
+        this->files.erase(req->stream);
         // !!! Отметить файл как закрытый
         if (TFileNode* node = ctx.tree.FileById(req->stream)) {
             if (node->refs == 0)
@@ -132,10 +132,10 @@ void TClientHandler::CloseFile(const acto::remote::message_t* msg, TClientSessio
         }
     }
     // -
-    SendCommonResponse(cs->channel, RPC_CLOSE, 0);
+    SendCommonResponse(this->channel, RPC_CLOSE, 0);
 }
 
-void TClientHandler::CloseSession(const acto::remote::message_t* msg, TClientSession* cs) {
+void TClientHandler::CloseSession(const acto::remote::message_t* msg) {
     const ClientCloseSession*  req = (const ClientCloseSession*)msg->data;
 
     const ClientMap::iterator i = ctx.clients.find(req->client);
@@ -148,41 +148,40 @@ void TClientHandler::CloseSession(const acto::remote::message_t* msg, TClientSes
 
 void TClientHandler::on_disconnected(void* param) {
     printf("DoClientDisconnected\n");
-    TClientSession* const cs = static_cast<TClientSession*>(param);
 
-    const ClientMap::iterator i = ctx.clients.find(cs->sid);
+    const ClientMap::iterator i = ctx.clients.find(this->sid);
     if (i != ctx.clients.end())
         ctx.clients.erase(i);
 
     // Закрыть все открытые файлы
-    if (!cs->files.empty()) {
+    if (!this->files.empty()) {
         //for (TClientSession::TFiles::iterator i = cs->files.begin(); i != cs->files.end(); ++i)
             //CloseFile(i->second, internal = true);
     }
     //
-    if (cs->closed)
-        delete cs;
+    if (this->closed) {
+        // -
+    }
     else {
         // Соединение с клиентом было потеряно.
         // Возможно это временная ошибка.
         // Необходимо подождать некоторое время восстановаления сессии
-        delete cs;
+
     }
     delete this;
 }
 
 void TClientHandler::on_message(const acto::remote::message_t* msg, void* param) {
     printf("client on_message %s\n", RpcCommandString(msg->code));
-    TClientSession* const cs = static_cast<TClientSession*>(param);
 
     switch (msg->code) {
-    case RPC_CLIENT_CONNECT: ClientConnect(msg, cs);
+    case RPC_CLIENT_CONNECT: ClientConnect(msg);
         break;
-    case RPC_OPENFILE:       OpenFile(msg, cs);
+    case RPC_OPENFILE:       OpenFile(msg);
         break;
-    case RPC_CLOSE:          CloseFile(msg, cs);
+    case RPC_CLOSE:          CloseFile(msg);
         break;
-    case RPC_CLOSESESSION:   CloseSession(msg, cs);
+    case RPC_CLOSESESSION:   CloseSession(msg);
         break;
     }
 };

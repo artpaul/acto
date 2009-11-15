@@ -104,12 +104,10 @@ struct TMessage {
     i16     error;      // Код ошибки
 };
 
-typedef TMessage RpcHeader;
-
 ///////////////
 
 
-struct ALIGNING(4) AppendRequest : public RpcHeader {
+struct TAppendRequest : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;     // Идентификатор потока
     ui32        bytes;      // Количество байт в буфере
@@ -118,53 +116,52 @@ struct ALIGNING(4) AppendRequest : public RpcHeader {
 };
 
 /// Запрос закрытия файла
-struct ALIGNING(4) CloseRequest : public RpcHeader {
+struct CloseRequest : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;
 };
 
 /// Закрытие сессии со стороны клиента
-struct ALIGNING(4) ClientCloseSession : public RpcHeader {
+struct ClientCloseSession : TMessage {
     sid_t       client;
 };
 
-struct ALIGNING(4) TReadReqest : public RpcHeader {
+struct TReadReqest : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;     // Идентификатор потока
     ui64        offset;     // Смещение в файле
     ui64        bytes;      // Количество байт для чтения
 };
 
-struct ALIGNING(4) ReadResponse {
+struct TReadResponse : TMessage {
     fileid_t    stream;     // Идентификатор потока
     ui32        crc;        // Контрольная сумма для блока данных
-    ui32        size;       // Размер блока данных
+    ui32        bytes;      // Размер блока данных
     ui8         futher;     // Флаг продолжения передачи
 };
 
 /// Запрос открытия / создания файла
-struct ALIGNING(4) OpenRequest : public RpcHeader {
+struct OpenRequest : TMessage {
     sid_t       client;     // Идентификатор клиента
     uint64_t    mode;       // Режим открытия
     uint16_t    length;     // Длинна имени файла
 };
 
 /// Ответ открытия файла
-struct TOpenResponse : public TMessage {
+struct TOpenResponse : TMessage {
     fileid_t    stream;     // Идентификатор потока
     sockaddr_in nodeip;     //
 };
 
 /// Запрос открытия файла на chunk
-struct ALIGNING(4)  OpenChunkRequest : public RpcHeader {
+struct TOpenChunkRequest : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    stream;
     ui64        mode;
 };
 
-struct ALIGNING(4)  OpenChunkResponse {
+struct TOpenChunkResponse : TMessage {
     fileid_t    file;
-    i32         err;
 };
 
 
@@ -175,7 +172,7 @@ struct TMasterSession : TMessage {
 
 
 ///
-struct TChunkConnecting : public TMessage {
+struct TChunkConnecting : TMessage {
     ui64        uid;
     ui64        freespace;  // Оценка свободного места в узле
     sockaddr_in ip;
@@ -183,7 +180,7 @@ struct TChunkConnecting : public TMessage {
 };
 
 ///
-struct ALIGNING(4) TFileTableMessage : public RpcHeader {
+struct ALIGNING(4) TFileTableMessage : TMessage {
     ui64        uid;        // Идентификатор узла
     ui64        count;      // Кол-во идентификаторов файлов
 
@@ -191,14 +188,14 @@ struct ALIGNING(4) TFileTableMessage : public RpcHeader {
 };
 
 ///
-struct AllocateSpace : public RpcHeader {
+struct AllocateSpace : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    fileid;     // Идентификатор файла
     ui64        mode;       // Режим открытия
     ui32        lease;      // Максимально допустимое время ожидание запроса клиента
 };
 
-struct AllocateResponse : public TMessage {
+struct AllocateResponse : TMessage {
     sid_t       client;     // Идентификатор клиента
     fileid_t    fileid;     // Идентификатор файла
     ui64        chunk;

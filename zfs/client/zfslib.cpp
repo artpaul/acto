@@ -69,7 +69,7 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
     int s = so_socket(SOCK_STREAM);
     printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
     if (so_connect(s, /*inet_addr(CHUNK_IP)*/nodeip.sin_addr.s_addr, CHUNK_CLIENTPORT) == 0) {
-        OpenChunkRequest    req;
+        TOpenChunkRequest    req;
         req.code   = RPC_OPENFILE;
         req.size   = sizeof(req);
         req.client = m_sid;
@@ -78,7 +78,7 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
         // -
         so_sendsync(s, &req, sizeof(req));
         {
-            OpenChunkResponse   rsp;
+            TOpenChunkResponse   rsp;
             so_readsync(s, &rsp, sizeof(rsp), 5);
             if (rsp.file == stream) {
                 zfs_handle_t* const conn = new zfs_handle_t();
@@ -103,17 +103,17 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
 int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
     assert(fd && fd->id);
 
-    AppendRequest req;
+    TAppendRequest req;
     // -
     req.code   = RPC_APPEND;
-    req.size   = sizeof(AppendRequest) + size;
+    req.size   = sizeof(TAppendRequest) + size;
     req.stream = fd->id;
     req.crc    = 0;
     req.bytes  = size;
     req.futher = false;
     // -
 
-    send(fd->s, &req, sizeof(AppendRequest), 0);
+    send(fd->s, &req, sizeof(TAppendRequest), 0);
     send(fd->s, buf,  size, 0);
     // -
     {
@@ -190,6 +190,7 @@ void TZeusFS::disconnect() {
 
         req.code   = RPC_CLOSESESSION;
         req.size   = sizeof(req);
+        req.error  = 0;
         req.client = m_sid;
         send(fdmaster, &req, sizeof(req), 0);
 
@@ -251,16 +252,16 @@ int TZeusFS::Read(zfs_handle_t* fd, void* buf, size_t size) {
     send(fd->s, &req, sizeof(TReadReqest), 0); // POST REQUEST
 
     {
-        ReadResponse    rr;
-        int             rval = so_readsync(fd->s, &rr, sizeof(ReadResponse), 5);
+        TReadResponse rr;
+        int           rval = so_readsync(fd->s, &rr, sizeof(TReadResponse), 5);
 
         if (rval > 0 && rr.size > 0) {
-            cl::array_ptr<char> replay(new char[rr.size]);
+            cl::array_ptr<char> replay(new char[rr.bytes]);
             // -
-            rval = so_readsync(fd->s, replay.get(), rr.size, 5);
+            rval = so_readsync(fd->s, replay.get(), rr.bytes, 5);
             if (rval >= 0) {
-                memcpy(buf, replay.get(), size < rr.size ? size : rr.size);
-                fd->offset += rr.size;
+                memcpy(buf, replay.get(), size < rr.bytes ? size : rr.bytes);
+                fd->offset += rr.bytes;
                 return rval;
             }
         }

@@ -94,6 +94,7 @@ private:
     std::auto_ptr< impl >   m_pimpl;
 };
 
+///////////////////////////////////////////////////////////////////////////////
 
 #pragma pack(push, 4)
 
@@ -119,6 +120,9 @@ struct message_t {
 class message_handler_t {
 public:
     virtual ~message_handler_t() { };
+
+    ///
+    virtual void on_connected(message_channel_t* const, void* param) { }
     ///
     virtual void on_disconnected(void* param) { }
     ///
@@ -129,30 +133,72 @@ public:
  * Канал обмена сообщениями между узлами
  */
 class message_channel_t {
-    friend class message_server_t;
+    friend class message_base_t;
 
     message_handler_t*      m_handler;
-    class message_server_t* m_owner;
+    class message_base_t*   m_owner;
     void*                   m_param;
     int                     m_socket;
 
 public:
-    message_channel_t(class message_server_t* owner, int s);
+    message_channel_t(class message_base_t* owner, int s);
 
     /// \brief Закрыть канал
     void close();
 
     /// \brief Отправить сообщение клиенту
-    void send_message(void* data, size_t len);
+    void send_message(const void* data, size_t len);
 
     ///
     void set_handler(message_handler_t* cb, void* param);
 };
 
+/** */
+class message_base_t {
+protected:
+    ///
+    static void do_read_message(int s, SOEVENT* const ev);
+
+    virtual void channel_closed(message_channel_t* const) { }
+};
+
+/**
+ * Клиент сервера сообщений
+ */
+template <typename T>
+class message_client_t : public message_base_t {
+public:
+    message_client_t()
+        : m_channel(0)
+        , m_handler(0)
+    {
+    }
+
+    ///
+    message_channel_t* channel() const {
+        return m_channel;
+    }
+    ///
+    int  connect(const char* ip, int port, void* param = 0);
+    ///
+    bool connected() const {
+        m_channel != 0;
+    }
+
+protected:
+    virtual void channel_closed(message_channel_t* const) {
+        m_channel = 0;
+    }
+
+private:
+    message_channel_t*  m_channel;
+    T*                  m_handler;
+};
+
 /**
  * Сервер сообщений
  */
-class message_server_t {
+class message_server_t : public message_base_t {
     /// Множество активных каналов взаимодействия с клиентами
     typedef std::set<message_channel_t*>    channels_t;
     ///
@@ -165,9 +211,13 @@ public:
     ///
     int open(const char* ip, int port, connected_handler_t cb, void* param);
 
+protected:
+    virtual void channel_closed(message_channel_t* const ch) {
+        m_channels.erase(ch);
+    }
+
 private:
     static void do_connected(int s, SOEVENT* const ev);
-    static void do_read     (int s, SOEVENT* const ev);
 
 private:
     channels_t          m_channels;
@@ -175,6 +225,31 @@ private:
     void*               m_param;
     int                 m_socket;
 };
+
+
+
+template <typename T>
+int message_client_t<T>::connect(const char* ip, int port, void* param) {
+    if (m_channel != NULL)
+        return 1;
+    else {
+        int s    = so_socket(SOCK_STREAM);
+        int rval = so_connect(s, inet_addr(ip), port);
+
+        if (rval != 0)
+            return rval;
+        else {
+            m_channel = new message_channel_t(this, s);
+            m_handler = new T();
+
+            m_handler->on_connected(m_channel, param);
+            m_channel->set_handler(m_handler, 0);
+            // -
+            so_pending(s, SOEVENT_READ, 10, &message_base_t::do_read_message, m_channel);
+        }
+    }
+    return 0;
+}
 
 } // namespace remote
 

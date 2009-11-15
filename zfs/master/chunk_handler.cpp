@@ -11,16 +11,16 @@ static void SendOpenError(acto::remote::message_channel_t* mc, ui64 uid, int err
     mc->send_message(&rsp, sizeof(rsp));
 }
 
-void TChunkHandler::NodeConnect(const acto::remote::message_t* msg, TNodeSession* ns) {
+void TChunkHandler::NodeConnect(const acto::remote::message_t* msg) {
     TChunkConnecting req = *((TChunkConnecting*)msg->data);
 
     acto::core::MutexLocker lock(guard);
 
-    if (ns->chunk) {
+    if (this->chunk) {
         req.size  = sizeof(req);
         req.code  = RPC_NODECONNECT;
         req.error = ERPC_ALREADY_PROCESSED;
-        req.uid   = ns->chunk->uid;
+        req.uid   = this->chunk->uid;
 
         msg->channel->send_message(&req, sizeof(req));
         return;
@@ -50,7 +50,7 @@ void TChunkHandler::NodeConnect(const acto::remote::message_t* msg, TNodeSession
     }
     assert(chunk != NULL);
     // -
-    ns->chunk = chunk;
+    this->chunk = chunk;
     // -
     chunk->uid       = chunkId;
     chunk->channel   = msg->channel;
@@ -68,8 +68,8 @@ void TChunkHandler::NodeConnect(const acto::remote::message_t* msg, TNodeSession
     printf("client id: %d\n", (int)chunk->uid);
 }
 
-void TChunkHandler::NodeAllocated(const acto::remote::message_t* msg, TNodeSession* ns) {
-    typedef std::map<sid_t, TClientSession*>::iterator    TIterator;
+void TChunkHandler::NodeAllocated(const acto::remote::message_t* msg) {
+    typedef std::map<sid_t, TClientHandler*>::iterator    TIterator;
 
     acto::core::MutexLocker lock(guard);
 
@@ -77,7 +77,7 @@ void TChunkHandler::NodeAllocated(const acto::remote::message_t* msg, TNodeSessi
     TIterator i = ctx.clients.find(req->client);
 
     if (i != ctx.clients.end()) {
-        TClientSession* cs    = i->second;
+        TClientHandler* cs    = i->second;
         TChunk*         chunk = chunkById(req->chunk);
         TFileNode*      node  = ctx.tree.FileById(req->fileid);
         // -
@@ -100,8 +100,8 @@ void TChunkHandler::NodeAllocated(const acto::remote::message_t* msg, TNodeSessi
     }
 }
 
-void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg, TNodeSession* ns) {
-    typedef std::map<sid_t, TClientSession*>::iterator    TIterator;
+void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg) {
+    typedef std::map<sid_t, TClientHandler*>::iterator    TIterator;
 
     acto::core::MutexLocker lock(guard);
 
@@ -109,7 +109,7 @@ void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg, TNodeSes
     TIterator i = ctx.clients.find(req->client);
 
     if (i != ctx.clients.end()) {
-        TClientSession* cs    = i->second;
+        TClientHandler* cs    = i->second;
         TChunk*         chunk = chunkById(req->chunk);
         TFileNode*      node  = ctx.tree.FileById(req->fileid);
         // -
@@ -133,28 +133,24 @@ void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg, TNodeSes
 
 void TChunkHandler::on_disconnected(void* param) {
     printf("DoChunkDisconnected\n");
-    //
-    TNodeSession* const ns = static_cast<TNodeSession*>(param);
-
-    if (ns->chunk) {
-        ns->chunk->channel   = NULL;
-        ns->chunk->available = 0;
+    // -
+    if (this->chunk) {
+        this->chunk->channel   = NULL;
+        this->chunk->available = 0;
     }
 
-    delete ns;
     delete this;
 }
 
 void TChunkHandler::on_message(const acto::remote::message_t* msg, void* param) {
     printf("chunk on_message : %s\n", RpcCommandString(msg->code));
-    TNodeSession* const ns = static_cast<TNodeSession*>(param);
 
     switch (msg->code) {
-    case RPC_ALLOCATE:    NodeAllocated(msg, ns);
+    case RPC_ALLOCATE:    NodeAllocated(msg);
         break;
-    case RPC_ALLOWACCESS: NodeAllowAccess(msg, ns);
+    case RPC_ALLOWACCESS: NodeAllowAccess(msg);
         break;
-    case RPC_NODECONNECT: NodeConnect(msg, ns);
+    case RPC_NODECONNECT: NodeConnect(msg);
         break;
     }
 }

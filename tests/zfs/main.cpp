@@ -34,6 +34,7 @@ int main() {
         fs.Close(fd);
     }
     else {
+        printf("open error\n");
         // определить тип ошибки
         //exit(EXIT_SUCCESS);
     }

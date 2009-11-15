@@ -19,133 +19,28 @@
 #include "chunk.h"
 
 struct TContext {
-    int         master;
-    int         clientListen;
+    acto::remote::message_server_t   client_net;
+    acto::remote::message_client_t<TMasterHandler>  master;
+
     fileid_t    uid;
     bool        active;
+
+    static void ClientConnected(acto::remote::message_channel_t* const mc, void* param);
+public:
+    void Run();
 };
 
 
 /// Состояние сервера
-static TContext   ctx = {0, 0, 0, true};
+static TContext   ctx;
 ///
 ClientsMap          clients;
 FilesMap            files;
 acto::core::mutex_t guard;
 
-void DoClientOpen(int s, const RpcHeader* const hdr, void* param);
-void DoClientRead(int s, const RpcHeader* const hdr, void* param);
-void DoClientAppend(int s, const RpcHeader* const hdr, void* param);
-void DoClientClose(int s, const RpcHeader* const hdr, void* param);
-void DoClientDisconnected(int s, void* param);
-
-//------------------------------------------------------------------------------
-/// Обработчик подключения клиентов
-static void doClientConnected(int s, SOEVENT* const ev) {
-    if (ev->type == SOEVENT_ACCEPTED) {
-        SORESULT_LISTEN*  data = (SORESULT_LISTEN*)ev->data;
-        TClientInfo* const info = new TClientInfo();
-        // -
-        {
-            acto::core::MutexLocker lock(guard);
-            // -
-            info->sid = 0;
-            clients[info->sid] = info;
-        }
-        printf("client connected...\n");
-        // -
-        TCommandChannel* const ch = new TCommandChannel();
-        // -
-        ch->registerHandler(RPC_APPEND,   &DoClientAppend);
-        ch->registerHandler(RPC_OPENFILE, &DoClientOpen);
-        ch->registerHandler(RPC_READ,     &DoClientRead);
-        ch->registerHandler(RPC_CLOSE,    &DoClientClose);
-
-        ch->onDisconnected(&DoClientDisconnected);
-
-        ch->activate(data->client, info);
-    }
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-//------------------------------------------------------------------------------
-static void doAllocateSpace(int s, const RpcHeader* const hdr, void* param) {
-    AllocateSpace   req;
-    uint16_t        error = 0;
-    // -
-    so_readsync(s, &req, sizeof(req), 10);
-    {
-        acto::core::MutexLocker lock(guard);
-        // -
-        if (files.find(req.fileid) != files.end()) {
-            printf("file already exists\n");
-            error = ERPC_FILEEXISTS;
-        }
-        else {
-            TFileInfo* const     info = new TFileInfo();
-            MasterPending* const mp   = new MasterPending();
-            // -
-            mp->client   = req.client;
-            mp->file     = req.fileid;
-            mp->deadline = time(0) + req.lease;
-            // -
-            info->uid = req.fileid;
-            info->pendings.push_back(mp);
-
-            files[req.fileid] = info;
-        }
-    }
-
-    AllocateResponse    rsp;
-    rsp.code   = RPC_ALLOCATE;
-    rsp.size   = sizeof(AllocateResponse);
-    rsp.error  = error;
-    rsp.client = req.client;
-    rsp.fileid = req.fileid;
-    rsp.chunk  = ctx.uid;
-    send(s, &rsp, sizeof(rsp), 0);
-}
-//------------------------------------------------------------------------------
-/// Команда от мастер-сервера разрешающая открывать файл
-static void doMasterOpen(int s, const RpcHeader* const hdr, void* param) {
-    AllocateSpace       req;
-    uint16_t            error = 0;
-    FilesMap::iterator  i;
-    // -
-    so_readsync(s, &req, sizeof(req), 10);
-    {
-        acto::core::MutexLocker lock(guard);
-
-        if ((i = files.find(req.fileid)) == files.end()) {
-            printf("file not exists\n");
-            error = ERPC_FILE_NOT_EXISTS;
-        }
-        else {
-            TFileInfo* const     info = i->second;
-            MasterPending* const mp   = new MasterPending();
-            // -
-            mp->client   = req.client;
-            mp->file     = req.fileid;
-            mp->deadline = time(0) + req.lease;
-
-            info->pendings.push_back(mp);
-        }
-    }
-
-
-    AllocateResponse    rsp;
-
-    rsp.size   = sizeof(rsp);
-    rsp.code   = RPC_ALLOWACCESS;
-    rsp.error  = error;
-    rsp.client = req.client;
-    rsp.fileid = req.fileid;
-    rsp.chunk  = ctx.uid;
-    send(s, &rsp, sizeof(rsp), 0);
-}
 //------------------------------------------------------------------------------
 static void LoadFileList(std::list<TFileInfo*>& loaded) {
     struct dirent* dp;
@@ -195,86 +90,161 @@ static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
     so_sendsync(s, &msg, sizeof(msg));
     so_sendsync(s, data.get(), length);
 }
-//------------------------------------------------------------------------------
-static void DoMaster(int s, SOEVENT* const ev) {
-    if (ev->type == SOEVENT_READ) {
-        TChunkConnecting    msg;
 
-        so_readsync(s, &msg, sizeof(msg), 5);
+void TContext::ClientConnected(acto::remote::message_channel_t* const mc, void* param) {
+    printf("client connected...\n");
+    TClientHandler* cs = new TClientHandler();
 
-        if (msg.error != 0) {
-            printf("master error : %i\n", msg.error);
-            exit(1);
-        }
-        else {
-            ctx.uid = msg.uid;
-            printf("new id: %Zu\n", (size_t)ctx.uid);
-            // -
-            TCommandChannel* const ch = new TCommandChannel();
-            // -
-            ch->registerHandler(RPC_ALLOCATE,    &doAllocateSpace);
-            ch->registerHandler(RPC_ALLOWACCESS, &doMasterOpen);
-            ch->activate(s, 0);
-        }
+    cs->sid     = 0;
+    cs->channel = mc;
+    clients[cs->sid] = cs;
 
-        // Отослать список хранящихся файлов
-        /*
+    mc->set_handler(cs, 0);
+}
+
+void TMasterHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+    TChunkConnecting    req;
+    req.code = RPC_NODECONNECT;
+    req.size = sizeof(req);
+    req.error = 0;
+    req.uid  = 0;
+    req.freespace = 1 << 30;
+    req.ip.sin_addr.s_addr = inet_addr(SERVERIP);
+    req.port = CLIENTPORT;
+    // -
+    mc->send_message(&req, sizeof(req));
+
+    this->channel = mc;
+}
+
+void TMasterHandler::on_disconnected(void* param) {
+    printf("master disconnected\n");
+}
+
+void TMasterHandler::on_message(const acto::remote::message_t* msg, void* param) {
+    printf("master message : %s\n", RpcCommandString(msg->code));
+    switch (msg->code) {
+    case RPC_NODECONNECT:
         {
-            std::list<TFileInfo*>   files;
+            const TChunkConnecting* req = (const TChunkConnecting*)msg->data;
 
-            LoadFileList(files);
+            if (req->error != 0) {
+                printf("master error : %i\n", req->error);
+                exit(1);
+            }
+            else {
+                ctx.uid = req->uid;
+                printf("new id: %Zu\n", (size_t)ctx.uid);
+            }
+            /*
+             // Отослать список хранящихся файлов
 
-            printf("count : %u\n", (unsigned int)files.size());
-            // -
-            if (files.size() > 0)
-                SendStoredFiles(s, files);
+            {
+                std::list<TFileInfo*>   files;
+
+                LoadFileList(files);
+
+                printf("count : %u\n", (unsigned int)files.size());
+                // -
+                if (files.size() > 0)
+                    SendStoredFiles(s, files);
+            }
+            */
         }
-        */
+        break;
+    case RPC_ALLOCATE:
+        {
+            const AllocateSpace* req = (const AllocateSpace*)msg->data;
+            uint16_t        error = 0;
+            {
+                acto::core::MutexLocker lock(guard);
+                // -
+                if (files.find(req->fileid) != files.end()) {
+                    printf("file already exists\n");
+                    error = ERPC_FILEEXISTS;
+                }
+                else {
+                    TFileInfo* const     info = new TFileInfo();
+                    MasterPending* const mp   = new MasterPending();
+                    // -
+                    mp->client   = req->client;
+                    mp->file     = req->fileid;
+                    mp->deadline = time(0) + req->lease;
+                    // -
+                    info->uid = req->fileid;
+                    info->pendings.push_back(mp);
+
+                    files[req->fileid] = info;
+                }
+            }
+
+            AllocateResponse    rsp;
+            rsp.code   = RPC_ALLOCATE;
+            rsp.size   = sizeof(AllocateResponse);
+            rsp.error  = error;
+            rsp.client = req->client;
+            rsp.fileid = req->fileid;
+            rsp.chunk  = ctx.uid;
+            this->channel->send_message(&rsp, sizeof(rsp));
+        }
+        break;
+    case RPC_ALLOWACCESS:
+        {
+            const AllocateSpace* req = (const AllocateSpace*)msg->data;
+            uint16_t             error = 0;
+
+            // -
+            {
+                acto::core::MutexLocker lock(guard);
+                FilesMap::iterator      i = files.find(req->fileid);
+
+                if (i == files.end()) {
+                    printf("file not exists\n");
+                    error = ERPC_FILE_NOT_EXISTS;
+                }
+                else {
+                    TFileInfo* const     info = i->second;
+                    MasterPending* const mp   = new MasterPending();
+                    // -
+                    mp->client   = req->client;
+                    mp->file     = req->fileid;
+                    mp->deadline = time(0) + req->lease;
+
+                    info->pendings.push_back(mp);
+                }
+            }
+
+            AllocateResponse    rsp;
+
+            rsp.size   = sizeof(rsp);
+            rsp.code   = RPC_ALLOWACCESS;
+            rsp.error  = error;
+            rsp.client = req->client;
+            rsp.fileid = req->fileid;
+            rsp.chunk  = ctx.uid;
+            this->channel->send_message(&rsp, sizeof(rsp));
+        }
+        break;
     }
 }
-int run() {
-    ctx.master       = so_socket(SOCK_STREAM);
-    // Create client socket
-    ctx.clientListen = so_socket(SOCK_STREAM);
 
-    if (ctx.master != -1 and ctx.clientListen != -1) {
-        int rval = so_connect(ctx.master, inet_addr(MASTERIP), MASTERPORT);
+void TContext::Run() {
+    client_net.open(SERVERIP, CLIENTPORT, &TContext::ClientConnected, 0);
 
-        if (rval != 0) {
-            printf("cannot connect to master: %d\n", rval);
-            return 1;
-        }
-        else {
-            TChunkConnecting    req;
-            req.code = RPC_NODECONNECT;
-            req.size = sizeof(req);
-            req.uid  = 0;
-            req.freespace = 1 << 30;
-            req.ip.sin_addr.s_addr   = inet_addr(SERVERIP);
-            req.port = CLIENTPORT;
-            // -
-            so_pending(ctx.master, SOEVENT_READ, 10, &DoMaster, 0);
-
-            if (so_sendsync(ctx.master, &req, sizeof(req)) == -1)
-                printf("error on send: %d\n", errno);
-            else
-                printf("sended\n");
-            // -
-            so_listen(ctx.clientListen, inet_addr(SERVERIP), CLIENTPORT, 5, &doClientConnected, 0);
-            // -
-            so_loop(-1, 0, 0);
-        }
+    if (int rval = master.connect(MASTERIP, MASTERPORT)) {
+        printf("cannot connect to master: %d\n", rval);
+        return;
     }
-    else
-        printf("so_socket error\n");
-    return 0;
+    so_loop(-1, 0, 0);
 }
 
 int main() {
     so_init();
     // Прочитать все файлы из директории data
     // -
-    run();
+    ctx.uid    = 0;
+    ctx.active = true;
+    ctx.Run();
     so_terminate();
     return 0;
 }

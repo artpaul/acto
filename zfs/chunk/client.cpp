@@ -1,4 +1,7 @@
 
+#include <assert.h>
+#include <stdio.h>
+
 #include <port/pointers.h>
 
 #include "chunk.h"
@@ -18,122 +21,128 @@ static bool IsAllowed(TFileInfo* file, sid_t client) {
     }
     return false;
 }
-//------------------------------------------------------------------------------
-void DoClientClose(int s, const RpcHeader* const hdr, void* param) {
-    // -
-    printf("client close\n");
-}
-//------------------------------------------------------------------------------
-void DoClientOpen(int s, const RpcHeader* const hdr, void* param) {
-    OpenChunkRequest    req;
-    TClientInfo* const  clientInfo = static_cast<TClientInfo*>(param);
-    std::map<fileid_t, TFileInfo*>::iterator i;
-    // -
-    so_readsync(s, &req, sizeof(req), 5);
-    // -
-    {
-        acto::core::MutexLocker    lock(guard);
 
-        if ((i = files.find(req.stream)) != files.end()) {
-            TFileInfo* const file = i->second;
-            // проверить разрешил ли master открывать данный файл клиенту
-            if (IsAllowed(file, req.client)) {
-                clientInfo->files[file->uid] = file;
-                const char* mode = 0;
-                // -
-                if (req.mode & ZFS_CREATE)
-                    mode = "w";
-                else
-                    mode = "r";
-                // -
-                char        buf[128];
-                sprintf(buf, "data/%Lu", (long long unsigned int)file->uid);
-                FILE* fd = fopen(buf, mode);
-                if (fd != 0) {
-                    file->data = fd;
-                    // -
-                    OpenChunkResponse   rsp;
-                    rsp.file = file->uid;
-                    rsp.err  = 0;
-                    so_sendsync(s, &rsp, sizeof(rsp));
+void TClientHandler::on_disconnected(void* param) {
+    printf("DoClientDisconnected\n");
+
+    const ClientsMap::iterator i = clients.find(this->sid);
+    if (i != clients.end()) {
+        clients.erase(i);
+    }
+    // -
+    delete this;
+}
+
+void TClientHandler::on_message(const acto::remote::message_t* msg, void* param) {
+    printf("client on_message : %s\n", RpcCommandString(msg->code));
+    // -
+    switch (msg->code) {
+    case RPC_APPEND:
+        {
+            const TAppendRequest* req  = (const TAppendRequest*)msg->data;
+            const char*           data = (const char*)msg->data + sizeof(TAppendRequest);
+            // -
+            const FilesMap::iterator i = ::files.find(req->stream);
+            if (i != ::files.end()) {
+                fwrite(data, 1, req->bytes, i->second->data);
+                fflush(i->second->data);
+            }
+            // -
+            TMessage resp;
+            resp.size  = sizeof(resp);
+            resp.code  = RPC_APPEND;
+            resp.error = 0;
+            this->channel->send_message(&resp, sizeof(resp));
+        }
+        break;
+    case RPC_OPENFILE:
+        {
+            const TOpenChunkRequest* req = (const TOpenChunkRequest*)msg->data;
+            std::map<fileid_t, TFileInfo*>::iterator i;
+            // -
+            // -
+            {
+                acto::core::MutexLocker    lock(guard);
+
+                if ((i = ::files.find(req->stream)) != ::files.end()) {
+                    printf("2\n");
+                    TFileInfo* const file = i->second;
+                    // проверить разрешил ли master открывать данный файл клиенту
+                    if (IsAllowed(file, req->client)) {
+                        this->files[file->uid] = file;
+                        const char* mode = 0;
+                        // -
+                        if (req->mode & ZFS_CREATE)
+                            mode = "w";
+                        else
+                            mode = "r";
+                        // -
+                        char        buf[128];
+                        sprintf(buf, "data/%Lu", (long long unsigned int)file->uid);
+                        FILE* fd = fopen(buf, mode);
+                        if (fd != 0) {
+                            file->data = fd;
+                            // -
+                            TOpenChunkResponse   rsp;
+                            rsp.size  = sizeof(rsp);
+                            rsp.code  = RPC_OPENFILE;
+                            rsp.file  = file->uid;
+                            rsp.error = 0;
+                            msg->channel->send_message(&rsp, sizeof(rsp));
+                            return;
+                        }
+                    }
+                    else
+                        printf("access denided\n"); // Доступ к данному файлу запрещен
+                }
+            }
+            // -
+            TOpenChunkResponse   rsp;
+            rsp.size  = sizeof(rsp);
+            rsp.code  = RPC_OPENFILE;
+            rsp.error = 1;
+            rsp.file  = req->stream;
+
+            msg->channel->send_message(&rsp, sizeof(rsp));
+        }
+        break;
+    case RPC_CLOSE:
+        printf("client close\n");
+        break;
+    case RPC_READ:
+        {
+            const TReadReqest* req = (const TReadReqest*)msg->data;
+
+            const FilesMap::iterator i = ::files.find(req->stream);
+            if (i != ::files.end()) {
+                char            data[255];
+                TReadResponse    rr;
+                int rval = fread(data, 1, 255, i->second->data);
+                if (rval > 0) {
+                    rr.size   = sizeof(TReadResponse) + rval;
+                    rr.code   = RPC_READ;
+                    rr.error  = 0;
+                    rr.stream = i->first;
+                    rr.crc    = 0;
+                    rr.bytes  = rval;
+                    rr.futher = false;
+                    msg->channel->send_message(&rr,  sizeof(rr));
+                    msg->channel->send_message(data, rval);
+                    //send(s, &rr, sizeof(rr), 0);
+                    //send(s, data, rr.size, 0);
                     return;
                 }
             }
-            else
-                printf("access denided\n"); // Доступ к данному файлу запрещен
-        }
-    }
-    // -
-    OpenChunkResponse   rsp;
-    rsp.file = 0;
-    rsp.err  = 1;
-    send(s, &rsp, sizeof(rsp), 0);
-}
-//------------------------------------------------------------------------------
-/// Команда чтение данных из потока
-void DoClientRead(int s, const RpcHeader* const hdr, void* param) {
-    TReadReqest req;
-
-    so_readsync(s, &req, sizeof(TReadReqest), 5);
-
-    const FilesMap::iterator i = files.find(req.stream);
-    if (i != files.end()) {
-        char            data[255];
-        ReadResponse    rr;
-        int rval = fread(data, 1, 255, i->second->data);
-        if (rval > 0) {
-            rr.stream = i->first;
+            TReadResponse    rr;
+            rr.size   = sizeof(rr);
+            rr.code   = RPC_READ;
+            rr.error  = 1;
+            rr.stream = req->stream;
+            rr.bytes  = 0;
             rr.crc    = 0;
-            rr.size   = rval;
             rr.futher = false;
-            send(s, &rr, sizeof(rr), 0);
-            send(s, data, rr.size, 0);
-            return;
+            msg->channel->send_message(&rr, sizeof(rr));
         }
+        break;
     }
-    ReadResponse    rr;
-    rr.stream = req.stream;
-    rr.crc    = 0;
-    rr.size   = 0;
-    rr.futher = false;
-    send(s, &rr, sizeof(rr), 0);
-}
-//------------------------------------------------------------------------------
-/// Клиент присоединяет данные к указанному файлу
-void DoClientAppend(int s, const RpcHeader* const hdr, void* param) {
-    AppendRequest       req;
-    cl::array_ptr<char> data;
-    // -
-    so_readsync(s, &req, sizeof(AppendRequest), 5);
-    // -
-    data.reset(new char[req.bytes]);
-    so_readsync(s, data.get(), req.bytes, 5);
-    // -
-    const FilesMap::iterator i = files.find(req.stream);
-    if (i != files.end()) {
-        fwrite(data.get(), 1, req.bytes, i->second->data);
-        fflush(i->second->data);
-    }
-    // -
-    TMessage resp;
-    resp.size  = sizeof(resp);
-    resp.code  = RPC_APPEND;
-    resp.error = 0;
-
-    so_sendsync(s, &resp, sizeof(resp));
-}
-
-//------------------------------------------------------------------------------
-void DoClientDisconnected(int s, void* param) {
-    printf("DoClientDisconnected\n");
-
-    TClientInfo* const info = static_cast<TClientInfo*>(param);
-    {
-        const ClientsMap::iterator i = clients.find(info->sid);
-        if (i != clients.end()) {
-            clients.erase(i);
-            delete info;
-        }
-    }
-    return;
 }

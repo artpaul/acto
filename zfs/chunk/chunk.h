@@ -8,9 +8,8 @@
 #include <vector>
 
 #include <system/mutex.h>
-#include <remote/libsocket/libsocket.h>
+#include <remote/transport.h>
 #include <rpc/rpc.h>
-#include <rpc/channel.h>
 
 #define MASTERIP    "127.0.0.1"
 #define SERVERIP    "127.0.0.1"
@@ -18,18 +17,26 @@
 #define MASTERPORT  32541
 #define CLIENTPORT  32543
 
-struct TClientInfo;
+struct TClientHandler;
 struct TFileInfo;
 
 
-typedef std::map<sid_t, TClientInfo*>    ClientsMap;
+typedef std::map<sid_t, TClientHandler*> ClientsMap;
 typedef std::map<fileid_t, TFileInfo*>   FilesMap;
 
 
 /// Информация о соединении с клиентом
-struct TClientInfo {
-    sid_t       sid;    //
-    FilesMap    files;  // Список открытых файлов
+class TClientHandler : public acto::remote::message_handler_t  {
+public:
+    typedef acto::remote::message_channel_t msg_channel_t;
+
+    sid_t           sid;        //
+    FilesMap        files;      // Список открытых файлов
+    msg_channel_t*  channel;
+
+public:
+    virtual void on_disconnected(void* param);
+    virtual void on_message(const acto::remote::message_t* msg, void* param);
 };
 
 /// Разрешения от мастер-сервера на доступ к указанным файлам
@@ -45,6 +52,17 @@ struct TFileInfo {
     time_t      lease;
     FILE*       data;
     std::vector<MasterPending*>   pendings;
+};
+
+/** */
+class TMasterHandler : public acto::remote::message_handler_t {
+    typedef acto::remote::message_channel_t msg_channel_t;
+
+    msg_channel_t*  channel;
+public:
+    virtual void on_connected(acto::remote::message_channel_t* const, void* param);
+    virtual void on_disconnected(void* param);
+    virtual void on_message(const acto::remote::message_t* msg, void* param);
 };
 
 extern ClientsMap           clients;

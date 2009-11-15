@@ -40,22 +40,22 @@ TChunk* chunkById(const ui64 uid) {
 
 void TMasterServer::ClientConnected(acto::remote::message_channel_t* const mc, void* param) {
     printf("ChunkConnected\n");
-    TClientSession* const  cs = new TClientSession();
+    TClientHandler* const  ch = new TClientHandler();
 
-    cs->sid     = 0;
-    cs->channel = mc;
-    cs->closed  = false;
+    ch->sid     = 0;
+    ch->channel = mc;
+    ch->closed  = false;
 
-    mc->set_handler(new TClientHandler, cs);
+    mc->set_handler(ch, 0);
 }
 
 void TMasterServer::ChunkConnected(acto::remote::message_channel_t* const mc, void* param) {
     printf("ChunkConnected\n");
-    TNodeSession* ns = new TNodeSession();
+    TChunkHandler* ch = new TChunkHandler();
     // -
-    ns->chunk = NULL;
+    ch->chunk = NULL;
     // -
-    mc->set_handler(new TChunkHandler(), ns);
+    mc->set_handler(ch, 0);
 }
 
 void TMasterServer::Run() {
