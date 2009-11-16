@@ -39,7 +39,7 @@ int so_broadcast(int s, unsigned short port, const char* buf, int len) {
 }
 //-----------------------------------------------------------------------------
 int so_close(int s) {
-    return close(s);
+    return ::close(s);
 }
 //-----------------------------------------------------------------------------
 int so_connect(int s, unsigned long addr, unsigned short port) {
@@ -62,7 +62,7 @@ int so_connect(int s, unsigned long addr, unsigned short port) {
             rval = poll(&fd, 1, 100);
             // -
             if (rval > 0) {
-                char        opt;
+                int         opt;
                 socklen_t   len = sizeof(opt);
 
                 getsockopt(s, SOL_SOCKET, SO_ERROR, &opt, &len);
@@ -79,11 +79,11 @@ int so_init() {
     return 0;
 }
 //-----------------------------------------------------------------------------
-void so_listen(int s, unsigned long addr, unsigned short port, int backlog, socallback cb, void* param) {
-    if (so_bind(s, addr, port) != 0)
+int so_listen(int s, unsigned long addr, unsigned short port, int backlog, socallback cb, void* param) {
+    if (so_bind(s, addr, port) == -1)
         goto error;
     // -
-    if (listen(s, backlog) != 0)
+    if (listen(s, backlog) == -1)
         goto error;
 
     {
@@ -98,10 +98,11 @@ void so_listen(int s, unsigned long addr, unsigned short port, int backlog, soca
             so_enqueue(cmd);
         }
     }
-    return;
+    return 0;
 
 error:
-    printf("so_listen error: %d\n", errno);
+    fprintf(stderr, "so_listen error: %d\n", errno);
+    return -1;
 }
 //------------------------------------------------------------------------------
 void so_loop(int timeout, soloopcallback cb, void* param) {
@@ -176,7 +177,7 @@ int so_sendsync(int s, const void* buf, size_t size) {
 }
 
 //------------------------------------------------------------------------------
-int so_socket(int type) {
+int so_socket(int type, int nonblock) {
     int     fd;
     int     protocol;
 
@@ -194,11 +195,11 @@ int so_socket(int type) {
     // Create new socket
     fd = socket(AF_INET, type, protocol);
     // Set socket to non-blocking mode
-    if (fd != -1) {
+    if (fd != -1 && nonblock) {
         u_long  flags = fcntl(fd, F_GETFL);
         // -
         if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-            printf("cannot set nonblocking mode\n");
+            fprintf(stderr, "cannot set nonblocking mode\n");
     }
     // -
     return fd;

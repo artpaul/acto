@@ -151,6 +151,7 @@ struct OpenRequest : TMessage {
 struct TOpenResponse : TMessage {
     fileid_t    stream;     // Идентификатор потока
     sockaddr_in nodeip;     //
+    ui16        nodeport;   //
 };
 
 /// Запрос открытия файла на chunk
@@ -232,5 +233,11 @@ inline const char* RpcCommandString(const int cmd) {
     }
     return "";
 };
+
+#define DEBUG_LOG(m)    do { fprintf(stderr, "%s\n", m); } while (0)
+
+#define LOGGING_IF(b, m) \
+    if (b) \
+        fprintf(stderr, "%s\n", m);
 
 #endif // rpc_h__

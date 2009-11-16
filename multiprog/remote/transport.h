@@ -124,9 +124,9 @@ public:
     ///
     virtual void on_connected(message_channel_t* const, void* param) { }
     ///
-    virtual void on_disconnected(void* param) { }
+    virtual void on_disconnected() { }
     ///
-    virtual void on_message(const message_t* msg, void* param) { }
+    virtual void on_message(const message_t* msg) { }
 };
 
 /**
@@ -137,7 +137,6 @@ class message_channel_t {
 
     message_handler_t*      m_handler;
     class message_base_t*   m_owner;
-    void*                   m_param;
     int                     m_socket;
 
 public:
@@ -150,7 +149,7 @@ public:
     void send_message(const void* data, size_t len);
 
     ///
-    void set_handler(message_handler_t* cb, void* param);
+    void set_handler(message_handler_t* cb);
 };
 
 /** */
@@ -174,12 +173,38 @@ public:
     {
     }
 
+    ~message_client_t() {
+        if (m_channel) {
+            m_channel->close();
+        }
+    }
+
     ///
     message_channel_t* channel() const {
         return m_channel;
     }
     ///
-    int  connect(const char* ip, int port, void* param = 0);
+    int  connect(const char* ip, int port, void* param = 0) {
+        if (m_channel != NULL)
+            return 1;
+        else {
+            int s    = so_socket(SOCK_STREAM);
+            int rval = so_connect(s, inet_addr(ip), port);
+
+            if (rval != 0)
+                return rval;
+            else {
+                m_channel = new message_channel_t(this, s);
+                m_handler = new T();
+
+                m_handler->on_connected(m_channel, param);
+                m_channel->set_handler(m_handler);
+                // -
+                so_pending(s, SOEVENT_READ, 10, &message_base_t::do_read_message, m_channel);
+            }
+        }
+        return 0;
+    }
     ///
     bool connected() const {
         m_channel != 0;
@@ -188,6 +213,8 @@ public:
 protected:
     virtual void channel_closed(message_channel_t* const) {
         m_channel = 0;
+        if (m_handler)
+            delete m_handler, m_handler = 0;
     }
 
 private:
@@ -198,18 +225,43 @@ private:
 /**
  * Сервер сообщений
  */
+template <typename T>
 class message_server_t : public message_base_t {
     /// Множество активных каналов взаимодействия с клиентами
     typedef std::set<message_channel_t*>    channels_t;
-    ///
-    typedef void (*connected_handler_t)(message_channel_t* const, void* param);
 
 public:
-    message_server_t();
-    ~message_server_t();
+    message_server_t()
+        : m_handler(0)
+        , m_param(0)
+        , m_socket(0)
+    {
+    }
+
+    ~message_server_t() {
+        if (m_socket != 0)
+            so_close(m_socket);
+    }
 
     ///
-    int open(const char* ip, int port, connected_handler_t cb, void* param);
+    int open(const char* ip, int port, void* param) {
+        const int s = so_socket(SOCK_STREAM);
+
+        if (s != -1) {
+            m_param  = param;
+            m_socket = s;
+            // -
+            int rval = so_listen(s, inet_addr(ip), port, 5, &message_server_t::do_connected, this);
+
+            if (rval != -1)
+                return 0;
+            else {
+                so_close(s);
+                m_socket = 0;
+            }
+        }
+        return -1;
+    }
 
 protected:
     virtual void channel_closed(message_channel_t* const ch) {
@@ -217,39 +269,37 @@ protected:
     }
 
 private:
-    static void do_connected(int s, SOEVENT* const ev);
+    static void do_connected(int s, SOEVENT* const ev) {
+        switch (ev->type) {
+        case SOEVENT_ACCEPTED:
+            {
+                SORESULT_LISTEN*  data  = (SORESULT_LISTEN*)ev->data;
+                message_server_t* pthis = static_cast<message_server_t*>(ev->param);
 
-private:
-    channels_t          m_channels;
-    connected_handler_t m_handler;
-    void*               m_param;
-    int                 m_socket;
-};
+                message_channel_t* mc = new message_channel_t(pthis, data->client);
+                pthis->m_handler = new T();
+                pthis->m_channels.insert(mc);
 
 
+                pthis->m_handler->on_connected(mc, pthis->m_param);
+                mc->set_handler(pthis->m_handler);
 
-template <typename T>
-int message_client_t<T>::connect(const char* ip, int port, void* param) {
-    if (m_channel != NULL)
-        return 1;
-    else {
-        int s    = so_socket(SOCK_STREAM);
-        int rval = so_connect(s, inet_addr(ip), port);
-
-        if (rval != 0)
-            return rval;
-        else {
-            m_channel = new message_channel_t(this, s);
-            m_handler = new T();
-
-            m_handler->on_connected(m_channel, param);
-            m_channel->set_handler(m_handler, 0);
-            // -
-            so_pending(s, SOEVENT_READ, 10, &message_base_t::do_read_message, m_channel);
+                so_pending(data->client, SOEVENT_READ, 10, &message_base_t::do_read_message, mc);
+            }
+            break;
+        case SOEVENT_CLOSED:
+            return;
+        case SOEVENT_TIMEOUT:
+            break;
         }
     }
-    return 0;
-}
+
+private:
+    channels_t  m_channels;
+    T*          m_handler;
+    void*       m_param;
+    int         m_socket;
+};
 
 } // namespace remote
 

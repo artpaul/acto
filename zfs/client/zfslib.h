@@ -35,7 +35,7 @@ private:
     __int64_t       m_sid;      // Идентификатор сессии
     TStreamMap      m_streams;  //
 
-    bool SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zfs_handle_t** nc);
+    bool SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc);
 
 public:
      TZeusFS();

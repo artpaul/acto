@@ -25,6 +25,7 @@ struct TChunk {
 
     ui64            uid;            //
     sockaddr_in     ip;             // Node ip
+    int             clientport;     //
     TChunk*         slave;          //
     msg_channel_t*  channel;
     int             available : 1;  //
@@ -33,24 +34,6 @@ struct TChunk {
 
 typedef std::map<ui64, TChunk*>                 TChunkMap;
 typedef std::map<sid_t, class TClientHandler*>  ClientMap;
-
-/** Server data context */
-class TMasterServer {
-public:
-    static void ClientConnected(acto::remote::message_channel_t* const mc, void* param);
-    static void ChunkConnected(acto::remote::message_channel_t* const mc, void* param);
-
-    void Run();
-
-public:
-    TFileDatabase   tree;
-
-    /// Таблица подключённых клиентов
-    ClientMap       clients;
-
-    acto::remote::message_server_t   chunk_net;
-    acto::remote::message_server_t   client_net;
-};
 
 
 /**
@@ -63,8 +46,9 @@ private:
     void NodeAllowAccess(const acto::remote::message_t* msg);
 
 public:
-    virtual void on_disconnected(void* param);
-    virtual void on_message(const acto::remote::message_t* msg, void* param);
+    virtual void on_connected(acto::remote::message_channel_t* const, void* param);
+    virtual void on_disconnected();
+    virtual void on_message(const acto::remote::message_t* msg);
 
 public:
     TChunk*     chunk;  //
@@ -82,8 +66,9 @@ private:
     void CloseFile    (const acto::remote::message_t* msg);
     void CloseSession (const acto::remote::message_t* msg);
 public:
-    virtual void on_disconnected(void* param);
-    virtual void on_message(const acto::remote::message_t* msg, void* param);
+    virtual void on_connected(acto::remote::message_channel_t* const, void* param);
+    virtual void on_disconnected();
+    virtual void on_message(const acto::remote::message_t* msg);
 
 public:
     typedef acto::remote::message_channel_t     msg_channel_t;
@@ -98,13 +83,29 @@ public:
     bool            closed;     // Флаг штатного закрытия сессии
 };
 
+/** Server data context */
+class TMasterServer {
+public:
+    void Run();
+
+public:
+    TFileDatabase       tree;
+
+    /// Таблица подключённых клиентов
+    ClientMap           clients;
+    /// Таблица подключенных узлов-данных
+    TChunkMap           chunks;
+
+    acto::remote::message_server_t<TChunkHandler>   chunk_net;
+    acto::remote::message_server_t<TClientHandler>  client_net;
+};
+
 
 TChunk* chunkById(const ui64 uid);
 
 extern ui64                 chunkId;
 extern acto::core::mutex_t  guard;
 extern TMasterServer        ctx;
-extern TChunkMap            chunks;
 extern ui64                 client_id;
 
 

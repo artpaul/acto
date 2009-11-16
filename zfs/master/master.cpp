@@ -23,49 +23,25 @@ TMasterServer       ctx;
 ui64                chunkId = 0;
 ui64                client_id = 0;
 
-/// Таблица подключенных узлов-данных
-TChunkMap           chunks;
-
 acto::core::mutex_t guard;
 
 //------------------------------------------------------------------------------
 TChunk* chunkById(const ui64 uid) {
-    const TChunkMap::iterator i = chunks.find(uid);
+    const TChunkMap::iterator i = ctx.chunks.find(uid);
 
-    if (i != chunks.end())
+    if (i != ctx.chunks.end())
         return i->second;
     return 0;
 }
 
-
-void TMasterServer::ClientConnected(acto::remote::message_channel_t* const mc, void* param) {
-    printf("ChunkConnected\n");
-    TClientHandler* const  ch = new TClientHandler();
-
-    ch->sid     = 0;
-    ch->channel = mc;
-    ch->closed  = false;
-
-    mc->set_handler(ch, 0);
-}
-
-void TMasterServer::ChunkConnected(acto::remote::message_channel_t* const mc, void* param) {
-    printf("ChunkConnected\n");
-    TChunkHandler* ch = new TChunkHandler();
-    // -
-    ch->chunk = NULL;
-    // -
-    mc->set_handler(ch, 0);
-}
-
 void TMasterServer::Run() {
-    chunk_net.open (SERVERIP, CHUNKPORT, &TMasterServer::ChunkConnected, 0);
-    client_net.open(SERVERIP, CLIENTPORT, &TMasterServer::ClientConnected, 0);
+    chunk_net.open (SERVERIP, CHUNKPORT,  0);
+    client_net.open(SERVERIP, CLIENTPORT, 0);
     so_loop(-1, 0, 0);
 }
 
 static void handleInterrupt(int sig) {
-    printf("interrupted...\n");
+    fprintf(stderr, "interrupted...\n");
     //so_close(ctx.clientListen);
     exit(0);
 }

@@ -19,13 +19,12 @@
 #include "chunk.h"
 
 struct TContext {
-    acto::remote::message_server_t   client_net;
+    acto::remote::message_server_t<TClientHandler>  client_net;
     acto::remote::message_client_t<TMasterHandler>  master;
 
     fileid_t    uid;
+    int         actual_port;
     bool        active;
-
-    static void ClientConnected(acto::remote::message_channel_t* const mc, void* param);
 public:
     void Run();
 };
@@ -91,50 +90,39 @@ static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
     so_sendsync(s, data.get(), length);
 }
 
-void TContext::ClientConnected(acto::remote::message_channel_t* const mc, void* param) {
-    printf("client connected...\n");
-    TClientHandler* cs = new TClientHandler();
-
-    cs->sid     = 0;
-    cs->channel = mc;
-    clients[cs->sid] = cs;
-
-    mc->set_handler(cs, 0);
-}
-
 void TMasterHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
     TChunkConnecting    req;
-    req.code = RPC_NODECONNECT;
-    req.size = sizeof(req);
+    req.code  = RPC_NODECONNECT;
+    req.size  = sizeof(req);
     req.error = 0;
-    req.uid  = 0;
+    req.uid   = 0;
     req.freespace = 1 << 30;
     req.ip.sin_addr.s_addr = inet_addr(SERVERIP);
-    req.port = CLIENTPORT;
+    req.port  = ctx.actual_port;
     // -
     mc->send_message(&req, sizeof(req));
 
     this->channel = mc;
 }
 
-void TMasterHandler::on_disconnected(void* param) {
-    printf("master disconnected\n");
+void TMasterHandler::on_disconnected() {
+    fprintf(stderr, "master disconnected\n");
 }
 
-void TMasterHandler::on_message(const acto::remote::message_t* msg, void* param) {
-    printf("master message : %s\n", RpcCommandString(msg->code));
+void TMasterHandler::on_message(const acto::remote::message_t* msg) {
+    fprintf(stderr, "master message : %s\n", RpcCommandString(msg->code));
     switch (msg->code) {
     case RPC_NODECONNECT:
         {
             const TChunkConnecting* req = (const TChunkConnecting*)msg->data;
 
             if (req->error != 0) {
-                printf("master error : %i\n", req->error);
+                fprintf(stderr, "master error : %i\n", req->error);
                 exit(1);
             }
             else {
                 ctx.uid = req->uid;
-                printf("new id: %Zu\n", (size_t)ctx.uid);
+                fprintf(stderr, "new id: %Zu\n", (size_t)ctx.uid);
             }
             /*
              // Отослать список хранящихся файлов
@@ -160,7 +148,7 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg, void* param)
                 acto::core::MutexLocker lock(guard);
                 // -
                 if (files.find(req->fileid) != files.end()) {
-                    printf("file already exists\n");
+                    fprintf(stderr, "file already exists\n");
                     error = ERPC_FILEEXISTS;
                 }
                 else {
@@ -199,7 +187,7 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg, void* param)
                 FilesMap::iterator      i = files.find(req->fileid);
 
                 if (i == files.end()) {
-                    printf("file not exists\n");
+                    fprintf(stderr, "file not exists\n");
                     error = ERPC_FILE_NOT_EXISTS;
                 }
                 else {
@@ -229,20 +217,30 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg, void* param)
 }
 
 void TContext::Run() {
-    client_net.open(SERVERIP, CLIENTPORT, &TContext::ClientConnected, 0);
+    int rval = client_net.open(SERVERIP, this->actual_port, 0);
+
+    if (rval != 0) {
+        fprintf(stderr, "error : %i\n", errno);
+        exit(1);
+    }
 
     if (int rval = master.connect(MASTERIP, MASTERPORT)) {
-        printf("cannot connect to master: %d\n", rval);
+        fprintf(stderr, "cannot connect to master: %d\n", rval);
         return;
     }
     so_loop(-1, 0, 0);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    int port = CLIENTPORT;
+    if (argc > 1)
+        port = atoi(argv[1]);
+
     so_init();
     // Прочитать все файлы из директории data
     // -
     ctx.uid    = 0;
+    ctx.actual_port = port;
     ctx.active = true;
     ctx.Run();
     so_terminate();

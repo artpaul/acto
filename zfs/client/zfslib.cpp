@@ -63,12 +63,12 @@ TZeusFS::~TZeusFS() {
     so_terminate();
 }
 //------------------------------------------------------------------------------
-bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
+bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
     assert(stream != 0);
 
-    int s = so_socket(SOCK_STREAM);
-    printf("addr: %s\n", inet_ntoa(nodeip.sin_addr));
-    if (so_connect(s, /*inet_addr(CHUNK_IP)*/nodeip.sin_addr.s_addr, CHUNK_CLIENTPORT) == 0) {
+    int s = so_socket(SOCK_STREAM, 0);
+    fprintf(stderr, "addr: %s\tport: %i\n", inet_ntoa(nodeip.sin_addr), port);
+    if (so_connect(s, nodeip.sin_addr.s_addr, port) == 0) {
         TOpenChunkRequest    req;
         req.code   = RPC_OPENFILE;
         req.size   = sizeof(req);
@@ -94,7 +94,7 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, fileid_t stream, mode_t mode, z
         so_close(s);
     }
     else
-        printf("connection error: %d\n", errno);
+        fprintf(stderr, "connection error: %d (%s)\n", errno, strerror(errno));
     *nc = 0;
     return false;
 }
@@ -228,7 +228,7 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
             else {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
-                if (SendOpenToNode(rsp.nodeip, rsp.stream, mode, &nc)) {
+                if (SendOpenToNode(rsp.nodeip, rsp.nodeport, rsp.stream, mode, &nc)) {
                     m_streams[rsp.stream] = nc;
                     return nc;
                 }

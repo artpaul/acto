@@ -22,7 +22,15 @@ static bool IsAllowed(TFileInfo* file, sid_t client) {
     return false;
 }
 
-void TClientHandler::on_disconnected(void* param) {
+void TClientHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+    fprintf(stderr, "client connected...\n");
+
+    this->sid     = 0;
+    this->channel = mc;
+    clients[this->sid] = this;
+}
+
+void TClientHandler::on_disconnected() {
     printf("DoClientDisconnected\n");
 
     const ClientsMap::iterator i = clients.find(this->sid);
@@ -33,7 +41,7 @@ void TClientHandler::on_disconnected(void* param) {
     delete this;
 }
 
-void TClientHandler::on_message(const acto::remote::message_t* msg, void* param) {
+void TClientHandler::on_message(const acto::remote::message_t* msg) {
     printf("client on_message : %s\n", RpcCommandString(msg->code));
     // -
     switch (msg->code) {

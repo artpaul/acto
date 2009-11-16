@@ -3,11 +3,12 @@
 
 #include "master.h"
 
-static TChunk* chooseChunkForFile() {
-    TChunkMap::iterator i = chunks.find(1);
-    // -
-    if (i != chunks.end()) {
-        return i->second;
+static TChunk* ChooseChunkForFile() {
+    for (TChunkMap::iterator i = ctx.chunks.begin(); i != ctx.chunks.end(); ++i) {
+        TChunk* const chunk = i->second;
+        // -
+        if (chunk->channel)
+            return chunk;
     }
     return 0;
 }
@@ -65,10 +66,12 @@ void TClientHandler::OpenFile(const acto::remote::message_t* msg) {
         if (error != 0)
             return SendOpenError(this->channel, uid, ERPC_FILEEXISTS);
 
-        TChunk* const chunk = chooseChunkForFile();
+        TChunk* const chunk = ChooseChunkForFile();
+
+        LOGGING_IF(!chunk, "chunk is NULL");
 
         // Выбрать узел для хранения данных
-        if (chunk == 0)
+        if (!chunk || !chunk->channel)
             SendOpenError(this->channel, uid, ERPC_OUTOFSPACE);
         else {
             AllocateSpace  msg;
@@ -96,6 +99,9 @@ void TClientHandler::OpenFile(const acto::remote::message_t* msg) {
             // Отправить карту клиенту
             // -
             for (size_t i = 0; i < node->chunks.size(); ++i) {
+                if (!node->chunks[i]->channel)
+                    continue;
+
                 AllocateSpace  msg;
                 msg.code   = RPC_ALLOWACCESS;
                 msg.size   = sizeof(AllocateSpace);
@@ -125,7 +131,7 @@ void TClientHandler::CloseFile(const acto::remote::message_t* msg) {
             node->refs--;
             //
             if (node->refs == 0) {
-                printf("refs gose to zero\n");
+                fprintf(stderr, "refs gose to zero\n");
                 // файл больше ни кем не используется
                 //streams.erase(i);
             }
@@ -143,11 +149,19 @@ void TClientHandler::CloseSession(const acto::remote::message_t* msg) {
     if (i != ctx.clients.end())
         i->second->closed = true;
     // -
-    printf("close session: %Zu\n", (size_t)req->client);
+    fprintf(stderr, "close session: %Zu\n", (size_t)req->client);
 }
 
-void TClientHandler::on_disconnected(void* param) {
-    printf("DoClientDisconnected\n");
+void TClientHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+    DEBUG_LOG("ClientConnected");
+
+    this->sid     = 0;
+    this->channel = mc;
+    this->closed  = false;
+}
+
+void TClientHandler::on_disconnected() {
+    DEBUG_LOG("DoClientDisconnected");
 
     const ClientMap::iterator i = ctx.clients.find(this->sid);
     if (i != ctx.clients.end())
@@ -171,8 +185,8 @@ void TClientHandler::on_disconnected(void* param) {
     delete this;
 }
 
-void TClientHandler::on_message(const acto::remote::message_t* msg, void* param) {
-    printf("client on_message %s\n", RpcCommandString(msg->code));
+void TClientHandler::on_message(const acto::remote::message_t* msg) {
+    fprintf(stderr, "client on_message %s\n", RpcCommandString(msg->code));
 
     switch (msg->code) {
     case RPC_CLIENT_CONNECT: ClientConnect(msg);

@@ -41,10 +41,11 @@ void TChunkHandler::NodeConnect(const acto::remote::message_t* msg) {
         // -
         if (chunk == 0) {
             chunk = new TChunk();
-            chunk->uid = req.uid;
+            chunk->uid = chunkId;
         }
         else if (chunk->available) {
             // ОШИБКА: узел с данным идентификатором уже подключён
+            fprintf(stderr, "duplicated chunk uid : %i\n", (int)chunk->uid);
             msg->channel->close();
         }
     }
@@ -52,12 +53,12 @@ void TChunkHandler::NodeConnect(const acto::remote::message_t* msg) {
     // -
     this->chunk = chunk;
     // -
-    chunk->uid       = chunkId;
-    chunk->channel   = msg->channel;
-    chunk->available = 1;
-    chunk->ip        = req.ip;
-    //chunk->clientport      = req.port;
-    chunks[chunk->uid] = chunk;
+    chunk->uid        = chunkId;
+    chunk->channel    = msg->channel;
+    chunk->available  = 1;
+    chunk->ip         = req.ip;
+    chunk->clientport = req.port;
+    ctx.chunks[chunk->uid] = chunk;
 
     req.size  = sizeof(req);
     req.code  = RPC_NODECONNECT;
@@ -88,11 +89,12 @@ void TChunkHandler::NodeAllocated(const acto::remote::message_t* msg) {
             // Отправить ответ клиенту
             TOpenResponse    rsp;
 
-            rsp.size   = sizeof(rsp);
-            rsp.code   = RPC_OPENFILE;
-            rsp.error  = 0;
-            rsp.stream = node->uid;
-            rsp.nodeip = chunk->ip;
+            rsp.size     = sizeof(rsp);
+            rsp.code     = RPC_OPENFILE;
+            rsp.error    = 0;
+            rsp.stream   = node->uid;
+            rsp.nodeip   = chunk->ip;
+            rsp.nodeport = chunk->clientport;
             cs->channel->send_message(&rsp, sizeof(rsp));
         }
         else
@@ -119,11 +121,12 @@ void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg) {
             // Отправить ответ клиенту
             TOpenResponse    rsp;
 
-            rsp.size   = sizeof(rsp);
-            rsp.code   = RPC_OPENFILE;
-            rsp.error  = 0;
-            rsp.stream = node->uid;
-            rsp.nodeip = chunk->ip;
+            rsp.size     = sizeof(rsp);
+            rsp.code     = RPC_OPENFILE;
+            rsp.error    = 0;
+            rsp.stream   = node->uid;
+            rsp.nodeip   = chunk->ip;
+            rsp.nodeport = chunk->clientport;
             cs->channel->send_message(&rsp, sizeof(rsp));
         }
         else
@@ -131,8 +134,14 @@ void TChunkHandler::NodeAllowAccess(const acto::remote::message_t* msg) {
     }
 }
 
-void TChunkHandler::on_disconnected(void* param) {
-    printf("DoChunkDisconnected\n");
+void TChunkHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+    DEBUG_LOG("ChunkConnected");
+    // -
+    this->chunk = NULL;
+}
+
+void TChunkHandler::on_disconnected() {
+    DEBUG_LOG("DoChunkDisconnected");
     // -
     if (this->chunk) {
         this->chunk->channel   = NULL;
@@ -142,8 +151,8 @@ void TChunkHandler::on_disconnected(void* param) {
     delete this;
 }
 
-void TChunkHandler::on_message(const acto::remote::message_t* msg, void* param) {
-    printf("chunk on_message : %s\n", RpcCommandString(msg->code));
+void TChunkHandler::on_message(const acto::remote::message_t* msg) {
+    fprintf(stderr, "chunk on_message : %s\n", RpcCommandString(msg->code));
 
     switch (msg->code) {
     case RPC_ALLOCATE:    NodeAllocated(msg);

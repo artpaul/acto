@@ -75,7 +75,7 @@ int    so_connect(int s, unsigned long addr, unsigned short port);
 int    so_init();
 
 // -
-void   so_listen(int s, unsigned long addr, unsigned short port, int backlog, socallback cb, void* param);
+int    so_listen(int s, unsigned long addr, unsigned short port, int backlog, socallback cb, void* param);
 
 /// \brief Цикл ожидание событий сетевого уровня
 ///        Можно использовать, если приложение не организует свой собственный цикл
@@ -93,7 +93,7 @@ int    so_sendsync(int s, const void* buf, size_t size);
 // Register handler for specific events
 // void so_register(int s, int event, socallback cb, void* param);
 /// Create new socket
-int    so_socket(int type);
+int    so_socket(int type, int nonblock = 1);
 
 /// Terminate library
 void   so_terminate();

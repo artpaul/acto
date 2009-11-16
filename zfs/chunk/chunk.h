@@ -35,8 +35,9 @@ public:
     msg_channel_t*  channel;
 
 public:
-    virtual void on_disconnected(void* param);
-    virtual void on_message(const acto::remote::message_t* msg, void* param);
+    virtual void on_connected(acto::remote::message_channel_t* const, void* param);
+    virtual void on_disconnected();
+    virtual void on_message(const acto::remote::message_t* msg);
 };
 
 /// Разрешения от мастер-сервера на доступ к указанным файлам
@@ -61,8 +62,8 @@ class TMasterHandler : public acto::remote::message_handler_t {
     msg_channel_t*  channel;
 public:
     virtual void on_connected(acto::remote::message_channel_t* const, void* param);
-    virtual void on_disconnected(void* param);
-    virtual void on_message(const acto::remote::message_t* msg, void* param);
+    virtual void on_disconnected();
+    virtual void on_message(const acto::remote::message_t* msg);
 };
 
 extern ClientsMap           clients;

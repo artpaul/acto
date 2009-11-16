@@ -290,7 +290,6 @@ void transport_t::send_message(network_node_t* const target, const transport_msg
 message_channel_t::message_channel_t(message_base_t* owner, int s)
     : m_handler(0)
     , m_owner(owner)
-    , m_param(0)
     , m_socket(s)
 {
 }
@@ -303,9 +302,8 @@ void message_channel_t::send_message(const void* data, size_t len) {
     so_sendsync(m_socket, data, len);
 }
 
-void message_channel_t::set_handler(message_handler_t* cb, void* param) {
+void message_channel_t::set_handler(message_handler_t* cb) {
     m_handler = cb;
-    m_param   = param;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -315,7 +313,7 @@ void message_base_t::do_read_message(int s, SOEVENT* const ev) {
     switch (ev->type) {
     case SOEVENT_CLOSED:
         if (ch->m_handler)
-            ch->m_handler->on_disconnected(ch->m_param);
+            ch->m_handler->on_disconnected();
         // -
         ch->m_owner->channel_closed(ch);
         delete ch;
@@ -341,7 +339,7 @@ void message_base_t::do_read_message(int s, SOEVENT* const ev) {
                         msg.data    = buf.get();
                         msg.channel = ch;
 
-                        ch->m_handler->on_message(&msg, ch->m_param);
+                        ch->m_handler->on_message(&msg);
                     }
                 }
             }
@@ -351,18 +349,9 @@ void message_base_t::do_read_message(int s, SOEVENT* const ev) {
     so_pending(s, SOEVENT_READ, 10, &message_base_t::do_read_message, ev->param);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-message_server_t::message_server_t()
-    : m_param(0)
-    , m_socket(0)
-{
-}
-//-----------------------------------------------------------------------------
-message_server_t::~message_server_t() {
-    if (m_socket != 0)
-        so_close(m_socket);
-}
+/*
 
+///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 int message_server_t::open(const char* ip, int port, connected_handler_t cb, void* param) {
     const int s = so_socket(SOCK_STREAM);
@@ -371,12 +360,18 @@ int message_server_t::open(const char* ip, int port, connected_handler_t cb, voi
         return -1;
     }
     else {
-        so_listen(s, inet_addr(ip), port, 5, &message_server_t::do_connected, this);
+        int rval = so_listen(s, inet_addr(ip), port, 5, &message_server_t::do_connected, this);
+
+        if (rval == -1) {
+            so_close(s);
+            return rval;
+        }
     }
 
     m_handler = cb;
     m_param   = param;
     m_socket  = s;
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -402,6 +397,7 @@ void message_server_t::do_connected(int s, SOEVENT* const ev) {
         break;
     }
 }
+*/
 
 } // namespace remote
 
