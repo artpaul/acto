@@ -16,7 +16,7 @@ const char* text = "if (zflock(\"test\", ZFF_LOCKSNAPSHOT, 0) != 0)\n";
 int main() {
     using namespace zfs;
 
-    TZeusFS         fs;
+    zeusfs_t        fs;
     zfs_handle_t*   fd = 0;
 
     // Initialize library
@@ -26,12 +26,12 @@ int main() {
     }
 
     // Создать файл и записать данные
-    if ((fd = fs.Open("/tmp/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
-        fs.Append(fd, text, strlen(text));
+    if ((fd = fs.open("/tmp/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
+        fs.append(fd, text, strlen(text));
         //exit(EXIT_SUCCESS);
         printf("close\n");
         // -
-        fs.Close(fd);
+        fs.close(fd);
     }
     else {
         printf("open error\n");
@@ -40,15 +40,15 @@ int main() {
     }
 
     // Открыть только-что созданный файл и прочитать данные
-    if ((fd = fs.Open("/tmp/text.ascii", ZFS_READ | ZFS_SHARED))) {
+    if ((fd = fs.open("/tmp/text.ascii", ZFS_READ | ZFS_SHARED))) {
         assert(fd);
         char    buf[1024];
         // -
-        while (fs.Read(fd, buf, sizeof(buf)) != -1) {
+        while (fs.read(fd, buf, sizeof(buf)) != -1) {
             printf("%s\n", buf);
         }
         // -
-        fs.Close(fd);
+        fs.close(fd);
     }
     return 0;
 }

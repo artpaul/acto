@@ -19,8 +19,8 @@
 #include "chunk.h"
 
 struct TContext {
-    acto::remote::message_server_t<TClientHandler>  client_net;
-    acto::remote::message_client_t<TMasterHandler>  master;
+    acto::remote::message_server_t<client_handler_t>    client_net;
+    acto::remote::message_client_t<master_handler_t>    master;
 
     fileid_t    uid;
     int         actual_port;
@@ -33,15 +33,15 @@ public:
 /// Состояние сервера
 static TContext   ctx;
 ///
-ClientsMap          clients;
-FilesMap            files;
+client_map_t        clients;
+file_map_t          files;
 acto::core::mutex_t guard;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 //------------------------------------------------------------------------------
-static void LoadFileList(std::list<TFileInfo*>& loaded) {
+static void load_file_list(std::list<file_info_t*>& loaded) {
     struct dirent* dp;
 
     DIR* dir = opendir("./data");
@@ -49,8 +49,8 @@ static void LoadFileList(std::list<TFileInfo*>& loaded) {
     if (dir) {
         while ((dp = readdir(dir)) != NULL) {
             if (dp->d_type == DT_REG) {
-                TFileInfo* const info = new TFileInfo();
-                uint64_t         uid;
+                file_info_t* const info = new file_info_t();
+                uint64_t           uid;
 
                 //decode64((unsigned char*)dp->d_name, uid);
 
@@ -68,8 +68,8 @@ static void LoadFileList(std::list<TFileInfo*>& loaded) {
     }
 }
 
-static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
-    typedef std::list<TFileInfo*>::const_iterator   TListIterator;
+static void send_stored_files(int s, const std::list<file_info_t*>& files) {
+    typedef std::list<file_info_t*>::const_iterator   TListIterator;
 
     const size_t            count  = files.size();
     uint64_t                length = count * sizeof(uint64_t);
@@ -90,7 +90,7 @@ static void SendStoredFiles(int s, const std::list<TFileInfo*>& files) {
     so_sendsync(s, data.get(), length);
 }
 
-void TMasterHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+void master_handler_t::on_connected(acto::remote::message_channel_t* const mc, void* param) {
     TChunkConnecting    req;
     req.code  = RPC_NODECONNECT;
     req.size  = sizeof(req);
@@ -105,12 +105,12 @@ void TMasterHandler::on_connected(acto::remote::message_channel_t* const mc, voi
     this->channel = mc;
 }
 
-void TMasterHandler::on_disconnected() {
+void master_handler_t::on_disconnected() {
     fprintf(stderr, "master disconnected\n");
 }
 
-void TMasterHandler::on_message(const acto::remote::message_t* msg) {
-    fprintf(stderr, "master message : %s\n", RpcCommandString(msg->code));
+void master_handler_t::on_message(const acto::remote::message_t* msg) {
+    fprintf(stderr, "master message : %s\n", rpc_command_string(msg->code));
     switch (msg->code) {
     case RPC_NODECONNECT:
         {
@@ -128,14 +128,14 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg) {
              // Отослать список хранящихся файлов
 
             {
-                std::list<TFileInfo*>   files;
+                std::list< file_info_t* >   files;
 
-                LoadFileList(files);
+                load_file_list(files);
 
                 printf("count : %u\n", (unsigned int)files.size());
                 // -
                 if (files.size() > 0)
-                    SendStoredFiles(s, files);
+                    send_stored_files(s, files);
             }
             */
         }
@@ -152,8 +152,8 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg) {
                     error = ERPC_FILEEXISTS;
                 }
                 else {
-                    TFileInfo* const     info = new TFileInfo();
-                    MasterPending* const mp   = new MasterPending();
+                    file_info_t* const      info = new file_info_t();
+                    master_pending_t* const mp   = new master_pending_t();
                     // -
                     mp->client   = req->client;
                     mp->file     = req->fileid;
@@ -184,15 +184,15 @@ void TMasterHandler::on_message(const acto::remote::message_t* msg) {
             // -
             {
                 acto::core::MutexLocker lock(guard);
-                FilesMap::iterator      i = files.find(req->fileid);
+                file_map_t::iterator      i = files.find(req->fileid);
 
                 if (i == files.end()) {
                     fprintf(stderr, "file not exists\n");
                     error = ERPC_FILE_NOT_EXISTS;
                 }
                 else {
-                    TFileInfo* const     info = i->second;
-                    MasterPending* const mp   = new MasterPending();
+                    file_info_t* const      info = i->second;
+                    master_pending_t* const mp   = new master_pending_t();
                     // -
                     mp->client   = req->client;
                     mp->file     = req->fileid;

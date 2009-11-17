@@ -17,22 +17,25 @@
 #define MASTERPORT  32541
 #define CLIENTPORT  32543
 
-struct TClientHandler;
-struct TFileInfo;
+struct client_handler_t;
+struct file_info_t;
 
 
-typedef std::map<sid_t, TClientHandler*> ClientsMap;
-typedef std::map<fileid_t, TFileInfo*>   FilesMap;
+typedef std::map<sid_t, client_handler_t*>  client_map_t;
+typedef std::map<fileid_t, file_info_t*>    file_map_t;
 
 
 /// Информация о соединении с клиентом
-class TClientHandler : public acto::remote::message_handler_t  {
+class client_handler_t : public acto::remote::message_handler_t  {
+     ///
+     bool is_allowed(file_info_t* file, sid_t client);
+
 public:
     typedef acto::remote::message_channel_t msg_channel_t;
 
-    sid_t           sid;        //
-    FilesMap        files;      // Список открытых файлов
-    msg_channel_t*  channel;
+    sid_t           m_sid;        //
+    file_map_t      m_files;      // Список открытых файлов
+    msg_channel_t*  m_channel;
 
 public:
     virtual void on_connected(acto::remote::message_channel_t* const, void* param);
@@ -41,33 +44,34 @@ public:
 };
 
 /// Разрешения от мастер-сервера на доступ к указанным файлам
-struct MasterPending {
+struct master_pending_t {
     sid_t       client;     //
     fileid_t    file;       //
     time_t      deadline;   //
 };
 
 /// Информация о хранящемся файле
-struct TFileInfo {
+struct file_info_t {
     fileid_t    uid;
     time_t      lease;
     FILE*       data;
-    std::vector<MasterPending*>   pendings;
+    std::vector<master_pending_t*>   pendings;
 };
 
 /** */
-class TMasterHandler : public acto::remote::message_handler_t {
+class master_handler_t : public acto::remote::message_handler_t {
     typedef acto::remote::message_channel_t msg_channel_t;
 
     msg_channel_t*  channel;
+
 public:
     virtual void on_connected(acto::remote::message_channel_t* const, void* param);
     virtual void on_disconnected();
     virtual void on_message(const acto::remote::message_t* msg);
 };
 
-extern ClientsMap           clients;
-extern FilesMap             files;
+extern client_map_t         clients;
+extern file_map_t           files;
 extern acto::core::mutex_t  guard;
 
 #endif // chunk_h_5de09c85b176406b88ac63e7a57b9920

@@ -7,12 +7,11 @@
 #include "chunk.h"
 
 //------------------------------------------------------------------------------
-static bool IsAllowed(TFileInfo* file, sid_t client) {
-    printf("isAllowed for: %Zu\n", (size_t)client);
-    std::vector<MasterPending*>::iterator i = file->pendings.begin();
+bool client_handler_t::is_allowed(file_info_t* file, sid_t client) {
+    fprintf(stderr, "is_allowed for: %Zu\n", (size_t)client);
+    std::vector<master_pending_t*>::iterator i = file->pendings.begin();
 
     while (i != file->pendings.end()) {
-        printf("\t%Zu\n", (size_t)(*i)->client);
         if ((*i)->client == client) {
             file->pendings.erase(i);
             return true;
@@ -22,27 +21,24 @@ static bool IsAllowed(TFileInfo* file, sid_t client) {
     return false;
 }
 
-void TClientHandler::on_connected(acto::remote::message_channel_t* const mc, void* param) {
+void client_handler_t::on_connected(acto::remote::message_channel_t* const mc, void* param) {
     fprintf(stderr, "client connected...\n");
 
-    this->sid     = 0;
-    this->channel = mc;
-    clients[this->sid] = this;
+    m_sid     = 0;
+    m_channel = mc;
+    clients[m_sid] = this;
 }
 
-void TClientHandler::on_disconnected() {
-    printf("DoClientDisconnected\n");
+void client_handler_t::on_disconnected() {
+    fprintf(stderr, "DoClientDisconnected\n");
 
-    const ClientsMap::iterator i = clients.find(this->sid);
-    if (i != clients.end()) {
+    const client_map_t::iterator i = clients.find(m_sid);
+    if (i != clients.end())
         clients.erase(i);
-    }
-    // -
-    delete this;
 }
 
-void TClientHandler::on_message(const acto::remote::message_t* msg) {
-    printf("client on_message : %s\n", RpcCommandString(msg->code));
+void client_handler_t::on_message(const acto::remote::message_t* msg) {
+    fprintf(stderr, "client on_message : %s\n", rpc_command_string(msg->code));
     // -
     switch (msg->code) {
     case RPC_APPEND:
@@ -50,7 +46,7 @@ void TClientHandler::on_message(const acto::remote::message_t* msg) {
             const TAppendRequest* req  = (const TAppendRequest*)msg->data;
             const char*           data = (const char*)msg->data + sizeof(TAppendRequest);
             // -
-            const FilesMap::iterator i = ::files.find(req->stream);
+            const file_map_t::iterator i = ::files.find(req->stream);
             if (i != ::files.end()) {
                 fwrite(data, 1, req->bytes, i->second->data);
                 fflush(i->second->data);
@@ -60,24 +56,23 @@ void TClientHandler::on_message(const acto::remote::message_t* msg) {
             resp.size  = sizeof(resp);
             resp.code  = RPC_APPEND;
             resp.error = 0;
-            this->channel->send_message(&resp, sizeof(resp));
+            m_channel->send_message(&resp, sizeof(resp));
         }
         break;
     case RPC_OPENFILE:
         {
             const TOpenChunkRequest* req = (const TOpenChunkRequest*)msg->data;
-            std::map<fileid_t, TFileInfo*>::iterator i;
+            std::map<fileid_t, file_info_t*>::iterator i;
             // -
             // -
             {
                 acto::core::MutexLocker    lock(guard);
 
                 if ((i = ::files.find(req->stream)) != ::files.end()) {
-                    printf("2\n");
-                    TFileInfo* const file = i->second;
+                    file_info_t* const file = i->second;
                     // проверить разрешил ли master открывать данный файл клиенту
-                    if (IsAllowed(file, req->client)) {
-                        this->files[file->uid] = file;
+                    if (is_allowed(file, req->client)) {
+                        m_files[file->uid] = file;
                         const char* mode = 0;
                         // -
                         if (req->mode & ZFS_CREATE)
@@ -101,7 +96,7 @@ void TClientHandler::on_message(const acto::remote::message_t* msg) {
                         }
                     }
                     else
-                        printf("access denided\n"); // Доступ к данному файлу запрещен
+                        fprintf(stderr, "access denided\n"); // Доступ к данному файлу запрещен
                 }
             }
             // -
@@ -115,13 +110,13 @@ void TClientHandler::on_message(const acto::remote::message_t* msg) {
         }
         break;
     case RPC_CLOSE:
-        printf("client close\n");
+        fprintf(stderr, "client close\n");
         break;
     case RPC_READ:
         {
             const TReadReqest* req = (const TReadReqest*)msg->data;
 
-            const FilesMap::iterator i = ::files.find(req->stream);
+            const file_map_t::iterator i = ::files.find(req->stream);
             if (i != ::files.end()) {
                 char            data[255];
                 TReadResponse    rr;

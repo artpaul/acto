@@ -49,7 +49,7 @@ struct zfs_handle_t {
 
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-TZeusFS::TZeusFS() :
+zeusfs_t::zeusfs_t() :
     connected(0),
     m_error(0),
     fdmaster(0),
@@ -58,12 +58,12 @@ TZeusFS::TZeusFS() :
     so_init();
 }
 //------------------------------------------------------------------------------
-TZeusFS::~TZeusFS() {
+zeusfs_t::~zeusfs_t() {
     this->disconnect();
     so_terminate();
 }
 //------------------------------------------------------------------------------
-bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
+bool zeusfs_t::SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
     assert(stream != 0);
 
     int s = so_socket(SOCK_STREAM, 0);
@@ -100,7 +100,7 @@ bool TZeusFS::SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode
 }
 
 //------------------------------------------------------------------------------
-int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
+int zeusfs_t::append(zfs_handle_t* fd, const char* buf, size_t size) {
     assert(fd && fd->id);
 
     TAppendRequest req;
@@ -123,7 +123,7 @@ int TZeusFS::Append(zfs_handle_t* fd, const char* buf, size_t size) {
     }
 }
 //------------------------------------------------------------------------------
-int TZeusFS::Close(zfs_handle_t* fd) {
+int zeusfs_t::close(zfs_handle_t* fd) {
     if (!fd || !fd->id)
         return -1;
     // -
@@ -141,18 +141,18 @@ int TZeusFS::Close(zfs_handle_t* fd) {
         so_readsync(fdmaster, &resp, sizeof(resp), 5);
     }
     // -
-    TStreamMap::iterator i = m_streams.find(fd->id);
-    if (i != m_streams.end()) {
+    file_map_t::iterator i = m_files.find(fd->id);
+    if (i != m_files.end()) {
         // SEND CLOSE TO CHUNK;
         so_close(fd->s);
         delete i->second;
-        m_streams.erase(i);
+        m_files.erase(i);
     }
 
     return 0;
 }
 //------------------------------------------------------------------------------
-int TZeusFS::connect(const char* ip, unsigned short port) {
+int zeusfs_t::connect(const char* ip, unsigned short port) {
     if (!fdmaster) {
         fdmaster = so_socket(SOCK_STREAM);
         // -
@@ -184,7 +184,7 @@ lberror:
     return 1;
 }
 //------------------------------------------------------------------------------
-void TZeusFS::disconnect() {
+void zeusfs_t::disconnect() {
     if (fdmaster != 0) {
         ClientCloseSession  req;
 
@@ -198,11 +198,11 @@ void TZeusFS::disconnect() {
     }
 }
 //------------------------------------------------------------------------------
-int TZeusFS::lock(const char* name, mode_t mode, int wait) {
+int zeusfs_t::lock(const char* name, mode_t mode, int wait) {
     return 0;
 }
 //------------------------------------------------------------------------------
-zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
+zfs_handle_t* zeusfs_t::open(const char* name, mode_t mode) {
     if (not connected)
         return 0;
     //
@@ -229,7 +229,7 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
                 if (SendOpenToNode(rsp.nodeip, rsp.nodeport, rsp.stream, mode, &nc)) {
-                    m_streams[rsp.stream] = nc;
+                    m_files[rsp.stream] = nc;
                     return nc;
                 }
             }
@@ -238,7 +238,7 @@ zfs_handle_t* TZeusFS::Open(const char* name, mode_t mode) {
     return 0;
 }
 //------------------------------------------------------------------------------
-int TZeusFS::Read(zfs_handle_t* fd, void* buf, size_t size) {
+int zeusfs_t::read(zfs_handle_t* fd, void* buf, size_t size) {
     assert(fd && fd->id);
 
     TReadReqest     req;

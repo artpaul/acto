@@ -19,22 +19,22 @@
 #define SERVERIP    "127.0.0.1"
 
 
-TMasterServer       ctx;
+master_server_t     ctx;
 ui64                chunkId = 0;
 ui64                client_id = 0;
 
 acto::core::mutex_t guard;
 
 //------------------------------------------------------------------------------
-TChunk* chunkById(const ui64 uid) {
-    const TChunkMap::iterator i = ctx.chunks.find(uid);
+chunk_t* chunkById(const ui64 uid) {
+    const chunk_map_t::iterator i = ctx.m_chunks.find(uid);
 
-    if (i != ctx.chunks.end())
+    if (i != ctx.m_chunks.end())
         return i->second;
     return 0;
 }
 
-void TMasterServer::Run() {
+void master_server_t::run() {
     chunk_net.open (SERVERIP, CHUNKPORT,  0);
     client_net.open(SERVERIP, CLIENTPORT, 0);
     so_loop(-1, 0, 0);
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     // -
     so_init();
 
-    ctx.Run();
+    ctx.run();
 
     so_terminate();
     return 0;

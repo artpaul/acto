@@ -7,31 +7,31 @@
 #include "filetree.h"
 
 //-----------------------------------------------------------------------------
-TFileDatabase::TFileDatabase() {
+file_database_t::file_database_t() {
 }
 //-----------------------------------------------------------------------------
-int TFileDatabase::OpenFile(
-    const char* path,
-    size_t      len,
-    LockType    lock,
-    NodeType    nt,
-    bool        create,
-    TFileNode** fn)
+int file_database_t::open_file(
+    const char*   path,
+    size_t        len,
+    LockType      lock,
+    NodeType      nt,
+    bool          create,
+    file_node_t** fn)
 {
-    PathParts               parts;
+    path_parts_t            parts;
     cl::const_char_iterator ci(path, len);
     const fileid_t          uid = fnvhash64(path, len);
     // -
     *fn = NULL;
     // -
-    if (!parsePath(ci, parts))
+    if (!parse_path(ci, parts))
         return ERROR_INVALID_FILENAME;
     // -
-    TFileNode* node = NULL;
+    file_node_t* node = NULL;
     // Если необходимо создать файл, то также необходимо
     // создать промежуточные директории
     if (create) {
-        if (!this->MakeupFilepath(parts, &node))
+        if (!this->makeup_filepath(parts, &node))
             return ERROR_INVALID_FILENAME;
         // -
         node->type  = nt;
@@ -40,7 +40,7 @@ int TFileDatabase::OpenFile(
         node->refs++;
     }
     else {
-        node = this->findPath(ci);
+        node = this->find_path(ci);
         if (node == NULL)
             return ERROR_FILE_NOT_EXISTS;
         assert(node->uid == uid);
@@ -53,12 +53,12 @@ int TFileDatabase::OpenFile(
 }
 
 //-----------------------------------------------------------------------------
-bool TFileDatabase::CheckExisting(const char* path, size_t len) const {
-    return this->findPath(cl::const_char_iterator(path, len)) != 0;
+bool file_database_t::check_existing(const char* path, size_t len) const {
+    return this->find_path(cl::const_char_iterator(path, len)) != 0;
 }
 //-----------------------------------------------------------------------------
-TFileNode* TFileDatabase::FileById(const fileid_t uid) const {
-    TFileMap::const_iterator i = mOpenedFiles.find(uid);
+file_node_t* file_database_t::file_by_id(const fileid_t uid) const {
+    file_map_t::const_iterator i = mOpenedFiles.find(uid);
     // -
     if (i != mOpenedFiles.end())
         return i->second;
@@ -66,18 +66,18 @@ TFileNode* TFileDatabase::FileById(const fileid_t uid) const {
 }
 
 //-----------------------------------------------------------------------------
-TFileNode* TFileDatabase::findPath(cl::const_char_iterator path) const {
-    PathParts parts;
+file_node_t* file_database_t::find_path(cl::const_char_iterator path) const {
+    path_parts_t parts;
     // -
-    if (!parsePath(path, parts))
+    if (!parse_path(path, parts))
         return 0;
     // -
-    const TFileNode* node = &mRoot;
-    PathParts::const_iterator j = parts.begin();
+    const file_node_t* node = &mRoot;
+    path_parts_t::const_iterator j = parts.begin();
     // -
     while (node != 0 && j != parts.end()) {
         bool hasPart = false;
-        for (std::list<TFileNode*>::const_iterator i = node->children.begin(); i != node->children.end(); ++i) {
+        for (std::list<file_node_t*>::const_iterator i = node->children.begin(); i != node->children.end(); ++i) {
             if ((*i)->name == *j) {
                 node = (*i);
                 hasPart = true;
@@ -88,10 +88,10 @@ TFileNode* TFileDatabase::findPath(cl::const_char_iterator path) const {
             return NULL;
         ++j;
     }
-    return (node != 0 && j == parts.end()) ? const_cast<TFileNode*>(node) : 0;
+    return (node != 0 && j == parts.end()) ? const_cast<file_node_t*>(node) : 0;
 }
 //-----------------------------------------------------------------------------
-bool TFileDatabase::parsePath(cl::const_char_iterator path, PathParts& parts) const {
+bool file_database_t::parse_path(cl::const_char_iterator path, path_parts_t& parts) const {
     cl::const_char_iterator p  = path;
     cl::const_char_iterator st = p + 1;
     // -
@@ -116,14 +116,14 @@ bool TFileDatabase::parsePath(cl::const_char_iterator path, PathParts& parts) co
     return true;
 }
 
-bool TFileDatabase::MakeupFilepath(const PathParts& parts, TFileNode** fn) {
-    TFileNode* node = &mRoot;
-    PathParts::const_iterator j = parts.begin();
+bool file_database_t::makeup_filepath(const path_parts_t& parts, file_node_t** fn) {
+    file_node_t* node = &mRoot;
+    path_parts_t::const_iterator j = parts.begin();
     // -
     while (j != parts.end()) {
         bool hasPart = false;
         // 1. Поиск имени каталога или файла
-        for (std::list<TFileNode*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
+        for (std::list<file_node_t*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
             if ((*i)->name == *j) {
                 j++;
                 node = (*i);
@@ -141,7 +141,7 @@ bool TFileDatabase::MakeupFilepath(const PathParts& parts, TFileNode** fn) {
             }
         }
         else {
-            TFileNode* const nn = new TFileNode();
+            file_node_t* const nn = new file_node_t();
 
             nn->name = *j;
             nn->uid  = 0;

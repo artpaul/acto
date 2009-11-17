@@ -349,56 +349,6 @@ void message_base_t::do_read_message(int s, SOEVENT* const ev) {
     so_pending(s, SOEVENT_READ, 10, &message_base_t::do_read_message, ev->param);
 }
 
-/*
-
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
-int message_server_t::open(const char* ip, int port, connected_handler_t cb, void* param) {
-    const int s = so_socket(SOCK_STREAM);
-
-    if (s == -1) {
-        return -1;
-    }
-    else {
-        int rval = so_listen(s, inet_addr(ip), port, 5, &message_server_t::do_connected, this);
-
-        if (rval == -1) {
-            so_close(s);
-            return rval;
-        }
-    }
-
-    m_handler = cb;
-    m_param   = param;
-    m_socket  = s;
-    return 0;
-}
-
-//-----------------------------------------------------------------------------
-void message_server_t::do_connected(int s, SOEVENT* const ev) {
-    switch (ev->type) {
-    case SOEVENT_ACCEPTED:
-        {
-            SORESULT_LISTEN*  data  = (SORESULT_LISTEN*)ev->data;
-            message_server_t* pthis = static_cast<message_server_t*>(ev->param);
-
-            message_channel_t* mc = new message_channel_t(pthis, data->client);
-            pthis->m_channels.insert(mc);
-
-            so_pending(data->client, SOEVENT_READ, 10, &message_base_t::do_read_message, mc);
-
-            if (pthis->m_handler)
-                pthis->m_handler(mc, pthis->m_param);
-        }
-        break;
-    case SOEVENT_CLOSED:
-        return;
-    case SOEVENT_TIMEOUT:
-        break;
-    }
-}
-*/
-
 } // namespace remote
 
 } // namespace acto

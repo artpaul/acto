@@ -217,7 +217,7 @@ inline const char* rpcErrorString(const int error) {
     return "";
 }
 
-inline const char* RpcCommandString(const int cmd) {
+inline const char* rpc_command_string(const int cmd) {
     switch (cmd) {
         case RPC_NONE:           return "RPC_NONE";
         case RPC_CLIENT_CONNECT: return "RPC_CLIENT_CONNECT";

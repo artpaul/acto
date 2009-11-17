@@ -13,7 +13,7 @@
 
 #include <rpc/rpc.h>
 
-struct TChunk;
+struct chunk_t;
 
 enum NodeType {
     ntDirectory,
@@ -39,15 +39,15 @@ const ui8 FSTATE_DELETED = 0x04;
 
 
 /** Метаинформация о файле */
-struct TFileNode {
+struct file_node_t {
 /* Структура дерева */
-    TFileNode*              parent;
+    file_node_t*            parent;
     cl::string              name;      //
-    std::list<TFileNode*>   children;  //
+    std::list<file_node_t*> children;  //
     NodeType                type;
 
     fileid_t                uid;        // Идентификатор файла
-    std::vector<TChunk*>    chunks;     // Узлы, на которых расположены данные этого файла
+    std::vector<chunk_t*>   chunks;     // Узлы, на которых расположены данные этого файла
     ui8                     state;
 
 /* Состояние открытого файла */
@@ -64,31 +64,32 @@ const int ERROR_FILE_NOT_EXISTS  = 0x0002;
 /**
  * Дерево файловой системы
  */
-class TFileDatabase {
-    typedef std::map<fileid_t, TFileNode*>  TFileMap;
-    typedef std::list<cl::string>           PathParts;
+class file_database_t {
+    typedef std::map<fileid_t, file_node_t*>    file_map_t;
+    typedef std::list<cl::string>               path_parts_t;
 
 private:
-    TFileNode   mRoot;
+    file_node_t     mRoot;
     /// Таблица открытых файлов
-    TFileMap    mOpenedFiles;
+    file_map_t      mOpenedFiles;
 
-    TFileNode*  findPath(cl::const_char_iterator path) const;
-    bool parsePath(cl::const_char_iterator path, PathParts& parts) const;
-    bool MakeupFilepath(const PathParts& parts, TFileNode** fn);
+    file_node_t*  find_path(cl::const_char_iterator path) const;
+    bool parse_path(cl::const_char_iterator path, path_parts_t& parts) const;
+    bool makeup_filepath(const path_parts_t& parts, file_node_t** fn);
 
 public:
-    TFileDatabase();
+    file_database_t();
 
     ///
-    int CloseFile (fileid_t uid);
+    int close_file(fileid_t uid);
+
     /// Открыть существующий файл или создать новый, если create == true
-    int OpenFile  (const char* path, size_t len, LockType lock, NodeType nt, bool create, TFileNode** fn);
+    int open_file (const char* path, size_t len, LockType lock, NodeType nt, bool create, file_node_t** fn);
 
     ///
-    bool        CheckExisting(const char* path, size_t len) const;
+    bool         check_existing(const char* path, size_t len) const;
     ///
-    TFileNode*  FileById(const fileid_t uid) const;
+    file_node_t* file_by_id(const fileid_t uid) const;
 };
 
 #endif // __master_filetree_h__

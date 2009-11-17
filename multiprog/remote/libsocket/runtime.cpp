@@ -39,7 +39,7 @@ typedef acto::generics::intrusive_queue_t<timeitem>   TimeQueue;
  * Описание группы событий, обслуживаемых в одном потоке
  */
 class cluster_t {
-    std::set<SOCOMMAND*>    reads;
+    std::set<SOCOMMAND*>    m_reads;
     Queue                   writes;
     TimeQueue               timeouts;
     FileDescriptors         fds;        //
@@ -66,7 +66,7 @@ private:
                 tl->cmd->callback(tl->cmd->s, &ev);
                 // Remove item
                 tl = timeouts.remove(tl, prev);
-                reads.erase(tmp->cmd);
+                m_reads.erase(tmp->cmd);
                 free(tmp->cmd);
                 free(tmp);
             }
@@ -100,8 +100,8 @@ private:
             break;
         case SOCODE_PENDING:
             {
-                char      buf[16];
-                const int rval = recv(cmd->s, buf, sizeof(buf), MSG_PEEK);
+                unsigned char buf[8];
+                const int     rval = recv(cmd->s, buf, sizeof(buf), MSG_PEEK);
                 // -
                 if (rval > 0) {
                     SOEVENT ev = {SOEVENT_READ, 0, cmd->param};
@@ -114,7 +114,7 @@ private:
                 }
                 // Remove command form queue
                 this->remove_timequeue(cmd);
-                this->reads.erase(cmd);
+                this->m_reads.erase(cmd);
                 free(cmd);
             }
             break;
@@ -198,37 +198,40 @@ public:
                     this->timeouts.push(item);
                 }
 
-                if (cmd->code & SOFLAG_READ)
-                    this->reads.insert(cmd);
+                if (cmd->code & SOFLAG_READ) {
+                    this->m_reads.insert(cmd);
+                }
+                else if (cmd->code & SOFLAG_WRITE) {
+                    this->writes.push(cmd);
+                }
                 else
-                    if (cmd->code & SOFLAG_WRITE)
-                        this->writes.push(cmd);
+                    free(cmd);
                 cmd = next;
             }
 
             //
             // Reading
             //
-            if (!this->reads.empty())  {
+            if (!this->m_reads.empty())  {
                 typedef std::set<SOCOMMAND*>    cmd_set_t;
 
-                struct pollfd* const fds = this->relocate_descriptors(this->reads.size());
+                struct pollfd* const fds = this->relocate_descriptors(this->m_reads.size());
                 int        rval;
                 int        j = 0;
 
-                for (cmd_set_t::const_iterator i = this->reads.begin(); i != this->reads.end(); ++i) {
+                for (cmd_set_t::const_iterator i = this->m_reads.begin(); i != this->m_reads.end(); ++i) {
                     fds[j].fd     = (*i)->s;
                     fds[j].events = POLLIN;
                     ++j;
                 }
 
-                rval = poll(fds, this->reads.size(), 300);
+                rval = poll(fds, this->m_reads.size(), 300);
                 if (rval == -1) {
-                    printf("error poll()\n");
+                    fprintf(stderr, "error poll()\n");
                 }
                 else if (rval > 0) {
                     j = 0;
-                    for (cmd_set_t::const_iterator i = this->reads.begin(); i != this->reads.end(); ++i) {
+                    for (cmd_set_t::const_iterator i = this->m_reads.begin(); i != this->m_reads.end(); ++i) {
                         if (fds[j].revents & POLLIN)
                             this->process_read(*i);
                         ++j;
@@ -254,7 +257,7 @@ public:
 
                 rval = poll(fds, this->writes.size(), 300);
                 if (rval == -1) {
-                    printf("error poll()\n");
+                    fprintf(stderr, "error poll()\n");
                 }
                 else if (rval > 0) {
                     p = this->writes.front();
@@ -296,8 +299,7 @@ private:
     }
 
 public:
-    so_runtime_t()
-    {
+    so_runtime_t() {
         m_thread.reset(new ThreadType(&so_runtime_t::execute, this));
     }
 
