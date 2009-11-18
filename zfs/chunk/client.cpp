@@ -118,9 +118,9 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
 
             const file_map_t::iterator i = ::files.find(req->stream);
             if (i != ::files.end()) {
-                char            data[255];
-                TReadResponse    rr;
-                int rval = fread(data, 1, 255, i->second->data);
+                char            data[DEFAULT_FILE_BLOCK];
+                TReadResponse   rr;
+                int rval = fread(data, 1, DEFAULT_FILE_BLOCK, i->second->data);
                 if (rval > 0) {
                     rr.size   = sizeof(TReadResponse) + rval;
                     rr.code   = RPC_READ;
@@ -131,15 +131,13 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
                     rr.futher = false;
                     msg->channel->send_message(&rr,  sizeof(rr));
                     msg->channel->send_message(data, rval);
-                    //send(s, &rr, sizeof(rr), 0);
-                    //send(s, data, rr.size, 0);
                     return;
                 }
             }
             TReadResponse    rr;
             rr.size   = sizeof(rr);
             rr.code   = RPC_READ;
-            rr.error  = 1;
+            rr.error  = ERPC_FILE_NOT_EXISTS;
             rr.stream = req->stream;
             rr.bytes  = 0;
             rr.crc    = 0;

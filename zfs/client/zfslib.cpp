@@ -42,6 +42,7 @@ struct zfs_handle_t {
     mode_t      mode;
     uint64_t    offset;    //
     int         s;
+    // data // блок данных, которые были прочитаны с сервера, но не востребованы клиентом
 };
 
 
@@ -224,7 +225,7 @@ zfs_handle_t* zeusfs_t::open(const char* name, mode_t mode) {
         // -
         if (rval > 0) {
             if (rsp.error != 0 || rsp.stream == 0)
-                printf("%s\n", rpcErrorString(rsp.error));
+                fprintf(stderr, "%s\n", rpcErrorString(rsp.error));
             else {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
@@ -237,9 +238,12 @@ zfs_handle_t* zeusfs_t::open(const char* name, mode_t mode) {
     }
     return 0;
 }
-//------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 int zeusfs_t::read(zfs_handle_t* fd, void* buf, size_t size) {
     assert(fd && fd->id);
+
+    if (!buf || !size)
+        return 0;
 
     TReadReqest     req;
     // -
@@ -249,23 +253,42 @@ int zeusfs_t::read(zfs_handle_t* fd, void* buf, size_t size) {
     req.offset = fd->offset;
     req.bytes  = size;
     // -
-    send(fd->s, &req, sizeof(TReadReqest), 0); // POST REQUEST
+    so_sendsync(fd->s, &req, sizeof(TReadReqest)); // POST REQUEST
 
-    {
-        TReadResponse rr;
-        int           rval = so_readsync(fd->s, &rr, sizeof(TReadResponse), 5);
+    TReadResponse       rsp;
 
-        if (rval > 0 && rr.size > 0) {
-            cl::array_ptr<char> replay(new char[rr.bytes]);
-            // -
-            rval = so_readsync(fd->s, replay.get(), rr.bytes, 5);
-            if (rval >= 0) {
-                memcpy(buf, replay.get(), size < rr.bytes ? size : rr.bytes);
-                fd->offset += rr.bytes;
-                return rval;
+    //do {
+        int rval = so_readsync(fd->s, &rsp, sizeof(TReadResponse), 5);
+
+        if (rval <= 0)
+            return -1;
+        else {
+            if (!rsp.bytes) {
+                assert(rsp.size == sizeof(rsp) && !rsp.futher);
+                return 0;
+            }
+            else {
+                if (size >= rsp.bytes) {
+                    rval = so_readsync(fd->s, buf, rsp.bytes, 5);
+                    if (rval >= 0) {
+                        fd->offset += rsp.bytes;
+                        return rval;
+                    }
+                }
+                else {
+                    cl::array_ptr<char> replay(new char[rsp.bytes]);
+
+                    rval = so_readsync(fd->s, replay.get(), rsp.bytes, 5);
+                    if (rval >= 0) {
+                        memcpy(buf, replay.get(), size < rsp.bytes ? size : rsp.bytes);
+                        fd->offset += size;//rsp.bytes;
+                        return rval;
+                    }
+                }
             }
         }
-    }
+    //} while (0/*rr.futher*/);
+
     return -1;
 }
 

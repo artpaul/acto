@@ -9,6 +9,8 @@
 #include <system/platform.h>
 #include <port/macros.h>
 
+#define DEFAULT_FILE_BLOCK  4096
+
 /* */
 
 /// Режим чтения

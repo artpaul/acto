@@ -29,7 +29,7 @@ struct timeitem {
 typedef struct _fdescriptors {
     struct pollfd*  fds;
     size_t          count;
-} FileDescriptors;
+} file_descriptors_t;
 
 
 typedef acto::generics::intrusive_queue_t<SOCOMMAND>  Queue;
@@ -39,10 +39,12 @@ typedef acto::generics::intrusive_queue_t<timeitem>   TimeQueue;
  * Описание группы событий, обслуживаемых в одном потоке
  */
 class cluster_t {
-    std::set<SOCOMMAND*>    m_reads;
+    typedef std::set< SOCOMMAND* >  command_set_t;
+
+    command_set_t           m_reads;
     Queue                   writes;
     TimeQueue               timeouts;
-    FileDescriptors         fds;        //
+    file_descriptors_t      m_fds;        //
 
 public:
     acto::core::mutex_t     m_mutex;
@@ -77,7 +79,29 @@ private:
         } while (tl != NULL);
     }
     //-------------------------------------------------------------------------
-    void process_read(SOCOMMAND* const cmd) {
+    void remove_timequeue(SOCOMMAND* cmd) {
+        if (!cmd->sec_timeout || timeouts.empty())
+            return;
+        // -
+        struct timeitem* prev = NULL;
+        struct timeitem* tl   = timeouts.front();
+        // -
+        do {
+            if (tl->cmd == cmd) {
+                struct timeitem* tmp = tl;
+                // Remove item
+                tl = timeouts.remove(tl, prev);
+                free(tmp);
+                break;
+            }
+            else {
+                prev = tl;
+                tl   = tl->next;
+            }
+        } while (tl != NULL);
+    }
+    //-------------------------------------------------------------------------
+    int process_read(SOCOMMAND* const cmd) {
         switch (cmd->code & ~0x000F) {
         default:
             break;
@@ -112,46 +136,22 @@ private:
                     cmd->callback(cmd->s, &ev);
                     close(cmd->s);
                 }
-                // Remove command form queue
-                this->remove_timequeue(cmd);
-                this->m_reads.erase(cmd);
-                free(cmd);
+                return 1;
             }
             break;
         }
+        return 0;
     }
     //-------------------------------------------------------------------------
     struct pollfd* relocate_descriptors(size_t count) {
-        if (fds.fds == 0 || fds.count < count || (fds.count > count << 1)) {
-            if (fds.fds != 0)
-                free(fds.fds);
+        if (m_fds.fds == 0 || m_fds.count < count || (m_fds.count > count << 1)) {
+            if (m_fds.fds != 0)
+                free(m_fds.fds);
 
-            fds.fds   = (struct pollfd*)malloc(sizeof(struct pollfd) * count);
-            fds.count = count;
+            m_fds.fds   = (struct pollfd*)malloc(sizeof(struct pollfd) * count);
+            m_fds.count = count;
         }
-        return fds.fds;
-    }
-    //-------------------------------------------------------------------------
-    void remove_timequeue(SOCOMMAND* cmd) {
-        if (timeouts.empty())
-            return;
-        // -
-        struct timeitem* prev = NULL;
-        struct timeitem* tl   = timeouts.front();
-        // -
-        do {
-            if (tl->cmd == cmd) {
-                struct timeitem* tmp = tl;
-                // Remove item
-                tl = timeouts.remove(tl, prev);
-                free(tmp);
-                break;
-            }
-            else {
-                prev = tl;
-                tl   = tl->next;
-            }
-        } while (tl != NULL);
+        return m_fds.fds;
     }
 
 public:
@@ -159,18 +159,21 @@ public:
         : m_active(1)
     {
         //thread    = 0;
-        fds.fds   = 0;
-        fds.count = 0;
+        m_fds.fds   = 0;
+        m_fds.count = 0;
     }
 
+    ~cluster_t() {
+        this->clear();
+    }
 public:
     //-------------------------------------------------------------------------
     void clear() {
-        if (fds.fds != 0)
-            free(fds.fds);
+        if (m_fds.fds != 0)
+            free(m_fds.fds);
 
-        fds.fds   = 0;
-        fds.count = 0;
+        m_fds.fds   = 0;
+        m_fds.count = 0;
     }
     //-------------------------------------------------------------------------
     void execute(void* /*param*/) {
@@ -202,6 +205,7 @@ public:
                     this->m_reads.insert(cmd);
                 }
                 else if (cmd->code & SOFLAG_WRITE) {
+                    assert(false); // Временно не допустимо использовать SOFLAG_WRITE
                     this->writes.push(cmd);
                 }
                 else
@@ -213,32 +217,43 @@ public:
             // Reading
             //
             if (!this->m_reads.empty())  {
-                typedef std::set<SOCOMMAND*>    cmd_set_t;
-
-                struct pollfd* const fds = this->relocate_descriptors(this->m_reads.size());
+                struct pollfd* const fds = this->relocate_descriptors(m_reads.size());
                 int        rval;
                 int        j = 0;
 
-                for (cmd_set_t::const_iterator i = this->m_reads.begin(); i != this->m_reads.end(); ++i) {
+                for (command_set_t::const_iterator i = m_reads.begin(); i != m_reads.end(); ++i) {
                     fds[j].fd     = (*i)->s;
                     fds[j].events = POLLIN;
                     ++j;
                 }
 
-                rval = poll(fds, this->m_reads.size(), 300);
+                rval = poll(fds, m_reads.size(), 300);
                 if (rval == -1) {
                     fprintf(stderr, "error poll()\n");
                 }
                 else if (rval > 0) {
+                    command_set_t   removed;
                     j = 0;
-                    for (cmd_set_t::const_iterator i = this->m_reads.begin(); i != this->m_reads.end(); ++i) {
-                        if (fds[j].revents & POLLIN)
-                            this->process_read(*i);
+                    // 1. Обработать события
+                    for (command_set_t::iterator i = m_reads.begin(); i != m_reads.end(); ++i) {
+                        if (fds[j].revents & POLLIN) {
+                            // -
+                            if (this->process_read(*i))
+                                removed.insert(*i);
+                        }
                         ++j;
+                    }
+                    // 2. Удалить отработанные команды
+                    for (command_set_t::iterator i = removed.begin(); i != removed.end(); ++i) {
+                        SOCOMMAND* const cmd = *i;
+                        // Remove command form queue
+                        remove_timequeue(cmd);
+                        m_reads.erase(cmd);
+                        free(cmd);
                     }
                 }
             }
-
+/*
             //
             // Writing
             //
@@ -272,7 +287,7 @@ public:
                     }
                 }
             }
-
+*/
             // -
             this->check_timequeue();
         }

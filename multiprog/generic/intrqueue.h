@@ -65,12 +65,16 @@ public:
     ///
     /// \return Указатель на следующий за удаляемым элемент
     T* remove(T* const item, T* const prev) {
+        assert(!prev || prev->next == item);
+
         if (m_head != NULL) {
             assert(m_size != 0);
 
             --m_size;
 
             if (item == m_head) {
+                assert(prev == NULL);
+
                 if (m_head == m_tail) {
                     m_head = m_tail = NULL;
                     return NULL;
@@ -84,7 +88,8 @@ public:
                 assert(m_head != m_tail);
 
                 m_tail = prev;
-                return 0;
+                m_tail->next = NULL;
+                return NULL;
             }
             else {
                 prev->next = item->next;

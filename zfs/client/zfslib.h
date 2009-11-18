@@ -32,7 +32,7 @@ private:
     volatile int    connected;  //
     int             m_error;    // Код ошибки
     int             fdmaster;   // Connection to master server
-    __int64_t       m_sid;      // Идентификатор сессии
+    ui64            m_sid;      // Идентификатор сессии
     file_map_t      m_files;  //
 
     bool SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc);
