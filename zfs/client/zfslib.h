@@ -35,7 +35,7 @@ private:
     ui64            m_sid;      // Идентификатор сессии
     file_map_t      m_files;  //
 
-    bool SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc);
+    bool send_node_open(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc);
 
 public:
      zeusfs_t();
@@ -65,6 +65,9 @@ public:
 
     /// \brief Прочитать size байт из потока в буфер
     int      read(zfs_handle_t* fd, void* buf, size_t size);
+
+    ///
+    int     remove(const char* path);
 };
 
 }; // namespace zfs

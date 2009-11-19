@@ -4,7 +4,7 @@
 static void send_open_error(acto::remote::message_channel_t* mc, ui64 uid, int error) {
     TOpenResponse  rsp;
     rsp.size   = sizeof(rsp);
-    rsp.code   = RPC_OPENFILE;
+    rsp.code   = RPC_FILE_OPEN;
     rsp.error  = error;
     rsp.stream = uid;
 
@@ -90,7 +90,7 @@ void chunk_handler_t::node_allocated(const acto::remote::message_t* msg) {
             TOpenResponse    rsp;
 
             rsp.size     = sizeof(rsp);
-            rsp.code     = RPC_OPENFILE;
+            rsp.code     = RPC_FILE_OPEN;
             rsp.error    = 0;
             rsp.stream   = node->uid;
             rsp.nodeip   = chunk->ip;
@@ -122,7 +122,7 @@ void chunk_handler_t::node_allow_access(const acto::remote::message_t* msg) {
             TOpenResponse    rsp;
 
             rsp.size     = sizeof(rsp);
-            rsp.code     = RPC_OPENFILE;
+            rsp.code     = RPC_FILE_OPEN;
             rsp.error    = 0;
             rsp.stream   = node->uid;
             rsp.nodeip   = chunk->ip;

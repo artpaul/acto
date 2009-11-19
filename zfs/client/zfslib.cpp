@@ -64,14 +64,14 @@ zeusfs_t::~zeusfs_t() {
     so_terminate();
 }
 //------------------------------------------------------------------------------
-bool zeusfs_t::SendOpenToNode(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
+bool zeusfs_t::send_node_open(sockaddr_in nodeip, int port, fileid_t stream, mode_t mode, zfs_handle_t** nc) {
     assert(stream != 0);
 
     int s = so_socket(SOCK_STREAM, 0);
     fprintf(stderr, "addr: %s\tport: %i\n", inet_ntoa(nodeip.sin_addr), port);
     if (so_connect(s, nodeip.sin_addr.s_addr, port) == 0) {
         TOpenChunkRequest    req;
-        req.code   = RPC_OPENFILE;
+        req.code   = RPC_FILE_OPEN;
         req.size   = sizeof(req);
         req.client = m_sid;
         req.stream = stream;
@@ -106,7 +106,7 @@ int zeusfs_t::append(zfs_handle_t* fd, const char* buf, size_t size) {
 
     TAppendRequest req;
     // -
-    req.code   = RPC_APPEND;
+    req.code   = RPC_FILE_APPEND;
     req.size   = sizeof(TAppendRequest) + size;
     req.stream = fd->id;
     req.crc    = 0;
@@ -130,7 +130,7 @@ int zeusfs_t::close(zfs_handle_t* fd) {
     // -
     CloseRequest   req;
     // -
-    req.code   = RPC_CLOSE;
+    req.code   = RPC_FILE_CLOSE;
     req.size   = sizeof(CloseRequest);
     req.stream = fd->id;
     // -
@@ -204,13 +204,13 @@ int zeusfs_t::lock(const char* name, mode_t mode, int wait) {
 }
 //------------------------------------------------------------------------------
 zfs_handle_t* zeusfs_t::open(const char* name, mode_t mode) {
-    if (not connected)
+    if (!connected)
         return 0;
     //
     const size_t len = strlen(name);
     OpenRequest  req;
 
-    req.code   = RPC_OPENFILE;
+    req.code   = RPC_FILE_OPEN;
     req.size   = sizeof(OpenRequest) + len;
     req.client = m_sid;
     req.mode   = mode;
@@ -225,11 +225,11 @@ zfs_handle_t* zeusfs_t::open(const char* name, mode_t mode) {
         // -
         if (rval > 0) {
             if (rsp.error != 0 || rsp.stream == 0)
-                fprintf(stderr, "%s\n", rpcErrorString(rsp.error));
+                fprintf(stderr, "%s\n", rpc_error_string(rsp.error));
             else {
                 zfs_handle_t*  nc = 0;
                 // установить соединение с node для получения данных
-                if (SendOpenToNode(rsp.nodeip, rsp.nodeport, rsp.stream, mode, &nc)) {
+                if (send_node_open(rsp.nodeip, rsp.nodeport, rsp.stream, mode, &nc)) {
                     m_files[rsp.stream] = nc;
                     return nc;
                 }
@@ -247,7 +247,7 @@ int zeusfs_t::read(zfs_handle_t* fd, void* buf, size_t size) {
 
     TReadReqest     req;
     // -
-    req.code   = RPC_READ;
+    req.code   = RPC_FILE_READ;
     req.size   = sizeof(TReadReqest);
     req.stream = fd->id;
     req.offset = fd->offset;
@@ -289,6 +289,29 @@ int zeusfs_t::read(zfs_handle_t* fd, void* buf, size_t size) {
         }
     //} while (0/*rr.futher*/);
 
+    return -1;
+}
+
+int zeusfs_t::remove(const char* path) {
+    if (connected) {
+        rpc_file_unlink_t   req;
+        rpc_message_t       rsp;
+        int                 rval;
+
+        req.code   = RPC_FILE_UNLINK;
+        req.size   = sizeof(req);
+        req.client = m_sid;
+        req.length = strlen(path);
+        strcpy(req.path, path);
+
+        so_sendsync(fdmaster, &req, sizeof(req));
+
+        // Ответ
+        rval = so_readsync(fdmaster, &rsp, sizeof(rsp), 5);
+
+        if (rval == sizeof(rsp) && !rsp.error)
+            return 0;
+    }
     return -1;
 }
 

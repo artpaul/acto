@@ -13,6 +13,7 @@ static chunk_t* choose_chunk_for_file() {
     return 0;
 }
 
+
 void client_handler_t::send_common_response(acto::remote::message_channel_t* mc, ui16 cmd, i16 err) {
     TMessage resp;
     resp.size  = sizeof(resp);
@@ -22,15 +23,17 @@ void client_handler_t::send_common_response(acto::remote::message_channel_t* mc,
     mc->send_message(&resp, sizeof(resp));
 }
 
+
 void client_handler_t::send_open_error(acto::remote::message_channel_t* mc, ui64 uid, int error) {
     TOpenResponse  rsp;
     rsp.size   = sizeof(rsp);
-    rsp.code   = RPC_OPENFILE;
+    rsp.code   = RPC_FILE_OPEN;
     rsp.error  = error;
     rsp.stream = uid;
 
     mc->send_message(&rsp, sizeof(rsp));
 }
+
 
 void client_handler_t::client_connect(const acto::remote::message_t* msg) {
     const TMasterSession*   req = (const TMasterSession*)msg->data;
@@ -45,11 +48,28 @@ void client_handler_t::client_connect(const acto::remote::message_t* msg) {
     m_channel->send_message(&rsp, sizeof(rsp));
 }
 
+
+void client_handler_t::file_unlink(const acto::remote::message_t* msg) {
+    const rpc_file_unlink_t* req = (const rpc_file_unlink_t*)msg->data;
+    // -
+    const fileid_t uid = file_database_t::path_hash(req->path, req->length);
+
+    // Открыт ли файл в текущей сессии? - оставлять открытым
+    int rval = ctx.m_tree.file_unlink(uid);
+
+    rpc_message_t   rsp;
+    rsp.code  = req->code;
+    rsp.size  = sizeof(rsp);
+    rsp.error = !rval ? 0 : ERPC_GENERIC;
+    m_channel->send_message(&rsp, sizeof(rsp));
+}
+
+
 void client_handler_t::open_file(const acto::remote::message_t* msg) {
     const OpenRequest*  req = (const OpenRequest*)msg->data;
     const char*         name = (const char*)msg->data + sizeof(OpenRequest);
     //
-    const fileid_t uid  = fnvhash64(name, req->length);
+    const fileid_t uid  = file_database_t::path_hash(name, req->length);
     file_node_t*   node = NULL;
     int            ferror = 0;
 
@@ -136,20 +156,12 @@ void client_handler_t::close_file(const acto::remote::message_t* msg) {
 
         m_files.erase(req->stream);
         // !!! Отметить файл как закрытый
-        if (file_node_t* node = ctx.m_tree.file_by_id(req->stream)) {
-            if (node->refs == 0)
-                throw "node->refs == 0";
-            node->refs--;
-            //
-            if (node->refs == 0) {
-                fprintf(stderr, "refs gose to zero\n");
-                // файл больше ни кем не используется
-                //streams.erase(i);
-            }
-        }
+        int rval = ctx.m_tree.close_file(req->stream);
+        if (rval != 0)
+            send_common_response(m_channel, RPC_FILE_CLOSE, ERPC_FILE_GENERIC);
+        else
+            send_common_response(m_channel, RPC_FILE_CLOSE, 0);
     }
-    // -
-    send_common_response(m_channel, RPC_CLOSE, 0);
 }
 
 void client_handler_t::close_session(const acto::remote::message_t* msg) {
@@ -201,9 +213,11 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
     switch (msg->code) {
     case RPC_CLIENT_CONNECT: client_connect(msg);
         break;
-    case RPC_OPENFILE:       open_file(msg);
+    case RPC_FILE_OPEN:      open_file(msg);
         break;
-    case RPC_CLOSE:          close_file(msg);
+    case RPC_FILE_CLOSE:     close_file(msg);
+        break;
+    case RPC_FILE_UNLINK:    file_unlink(msg);
         break;
     case RPC_CLOSESESSION:   close_session(msg);
         break;

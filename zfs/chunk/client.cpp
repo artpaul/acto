@@ -41,7 +41,7 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
     fprintf(stderr, "client on_message : %s\n", rpc_command_string(msg->code));
     // -
     switch (msg->code) {
-    case RPC_APPEND:
+    case RPC_FILE_APPEND:
         {
             const TAppendRequest* req  = (const TAppendRequest*)msg->data;
             const char*           data = (const char*)msg->data + sizeof(TAppendRequest);
@@ -54,12 +54,12 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
             // -
             TMessage resp;
             resp.size  = sizeof(resp);
-            resp.code  = RPC_APPEND;
+            resp.code  = RPC_FILE_APPEND;
             resp.error = 0;
             m_channel->send_message(&resp, sizeof(resp));
         }
         break;
-    case RPC_OPENFILE:
+    case RPC_FILE_OPEN:
         {
             const TOpenChunkRequest* req = (const TOpenChunkRequest*)msg->data;
             std::map<fileid_t, file_info_t*>::iterator i;
@@ -88,7 +88,7 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
                             // -
                             TOpenChunkResponse   rsp;
                             rsp.size  = sizeof(rsp);
-                            rsp.code  = RPC_OPENFILE;
+                            rsp.code  = RPC_FILE_OPEN;
                             rsp.file  = file->uid;
                             rsp.error = 0;
                             msg->channel->send_message(&rsp, sizeof(rsp));
@@ -102,17 +102,17 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
             // -
             TOpenChunkResponse   rsp;
             rsp.size  = sizeof(rsp);
-            rsp.code  = RPC_OPENFILE;
+            rsp.code  = RPC_FILE_OPEN;
             rsp.error = 1;
             rsp.file  = req->stream;
 
             msg->channel->send_message(&rsp, sizeof(rsp));
         }
         break;
-    case RPC_CLOSE:
+    case RPC_FILE_CLOSE:
         fprintf(stderr, "client close\n");
         break;
-    case RPC_READ:
+    case RPC_FILE_READ:
         {
             const TReadReqest* req = (const TReadReqest*)msg->data;
 
@@ -123,7 +123,7 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
                 int rval = fread(data, 1, DEFAULT_FILE_BLOCK, i->second->data);
                 if (rval > 0) {
                     rr.size   = sizeof(TReadResponse) + rval;
-                    rr.code   = RPC_READ;
+                    rr.code   = RPC_FILE_READ;
                     rr.error  = 0;
                     rr.stream = i->first;
                     rr.crc    = 0;
@@ -136,7 +136,7 @@ void client_handler_t::on_message(const acto::remote::message_t* msg) {
             }
             TReadResponse    rr;
             rr.size   = sizeof(rr);
-            rr.code   = RPC_READ;
+            rr.code   = RPC_FILE_READ;
             rr.error  = ERPC_FILE_NOT_EXISTS;
             rr.stream = req->stream;
             rr.bytes  = 0;

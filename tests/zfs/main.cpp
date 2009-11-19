@@ -21,6 +21,7 @@ int main() {
 
     zeusfs_t        fs;
     zfs_handle_t*   fd = 0;
+    const char*     file_name = "/tmp/text.ascii";
 
     // Initialize library
     if (fs.connect(MASTER_IP, MASTER_CLIENTPORT) != 0) {
@@ -29,7 +30,7 @@ int main() {
     }
 
     // Создать файл и записать данные
-    if ((fd = fs.open("/tmp/text.ascii", ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
+    if ((fd = fs.open(file_name, ZFS_CREATE | ZFS_EXCLUSIVE | ZFS_APPEND))) {
         for (int i = 0; i < 50; ++i)
             fs.append(fd, text, strlen(text));
         //exit(EXIT_SUCCESS);
@@ -44,7 +45,9 @@ int main() {
     }
 
     // Открыть только-что созданный файл и прочитать данные
-    if ((fd = fs.open("/tmp/text.ascii", ZFS_READ | ZFS_SHARED))) {
+    if ((fd = fs.open(file_name, ZFS_READ | ZFS_SHARED))) {
+        fs.remove(file_name);
+        // -
         assert(fd);
         char    buf[5 * DEFAULT_FILE_BLOCK];
         // -
@@ -55,9 +58,11 @@ int main() {
                 break;
             printf("%s", buf);
         }
-        printf("\n");
         // -
         fs.close(fd);
     }
+
+    fs.disconnect();
+
     return 0;
 }

@@ -6,10 +6,11 @@
 
 #include <list>
 #include <map>
+#include <string>
 #include <vector>
 
 #include <system/platform.h>
-#include <port/strings.h>
+#include <port/fnv.h>
 
 #include <rpc/rpc.h>
 
@@ -38,47 +39,67 @@ const ui8 FSTATE_CLOSED  = 0x03;
 const ui8 FSTATE_DELETED = 0x04;
 
 
-/** Метаинформация о файле */
+///
+#define ERROR_INVALID_FILENAME  0x0001
+///
+#define ERROR_FILE_NOT_EXISTS   0x0002
+///
+#define ERROR_FILE_EXISTS       0x0003
+///
+#define ERROR_FILE_LOCKED       0x0004
+
+
+/**
+ * Метаинформация о файле
+ */
 struct file_node_t {
-/* Структура дерева */
+    ui64                    uid;        // Идентификатор файла
+    ui32                    count;      // Количество ссылок на файл
+    ui32                    locks;      //
     file_node_t*            parent;
-    cl::string              name;      //
-    std::list<file_node_t*> children;  //
-    NodeType                type;
-
-    fileid_t                uid;        // Идентификатор файла
     std::vector<chunk_t*>   chunks;     // Узлы, на которых расположены данные этого файла
+    NodeType                type;
     ui8                     state;
-
-/* Состояние открытого файла */
-    i32                     refs;       // Счетчик ссылок на файл
-    i32                     locks;      //
 };
 
-
-///
-const int ERROR_INVALID_FILENAME = 0x0001;
-const int ERROR_FILE_NOT_EXISTS  = 0x0002;
+/** */
+struct file_path_t {
+    file_node_t*        node;
+    fileid_t            uid;        // Идентификатор имени
+    std::string         name;
+};
 
 
 /**
  * Дерево файловой системы
  */
 class file_database_t {
-    typedef std::map<fileid_t, file_node_t*>    file_map_t;
-    typedef std::list<cl::string>               path_parts_t;
+    typedef std::map<ui64,     file_node_t*>    file_map_t;
+    typedef std::map<fileid_t, file_path_t*>    file_catalog_t;
 
 private:
-    file_node_t     mRoot;
-    /// Таблица открытых файлов
-    file_map_t      mOpenedFiles;
+    ///
+    ui64            m_node_counter;
 
-    file_node_t*  find_path(cl::const_char_iterator path) const;
-    bool parse_path(cl::const_char_iterator path, path_parts_t& parts) const;
-    bool makeup_filepath(const path_parts_t& parts, file_node_t** fn);
+    /// Таблица каталога файловой системы
+    file_catalog_t  m_catalog;
+    /// Таблица открытых файлов
+    file_catalog_t  m_opened;
+    /// Таблица удалённых узлов
+    file_map_t      m_deleted;
+    /// Таблица существующих узлов
+    file_map_t      m_nodes;
+
+    bool check_path(const char* path, size_t len) const;
+    ///
+    void release_node(file_node_t* node);
 
 public:
     file_database_t();
+
+    static ui64 path_hash(const char* path, size_t len) {
+        return fnvhash64(path, len);
+    }
 
     ///
     int close_file(fileid_t uid);
@@ -90,6 +111,8 @@ public:
     bool         check_existing(const char* path, size_t len) const;
     ///
     file_node_t* file_by_id(const fileid_t uid) const;
+    ///
+    int          file_unlink(const fileid_t uid);
 };
 
 #endif // __master_filetree_h__

@@ -1,14 +1,54 @@
 
 #include <assert.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include <port/fnv.h>
 
 #include "filetree.h"
 
 //-----------------------------------------------------------------------------
-file_database_t::file_database_t() {
+file_database_t::file_database_t()
+    : m_node_counter(1)
+{
 }
+
+bool file_database_t::check_path(const char* path, size_t len) const {
+    return true;
+}
+
+void file_database_t::release_node(file_node_t* node) {
+    assert(node != 0);
+    assert(node->count > 0);
+
+    const ui32 result = --node->count;
+
+    if (result == 0) {
+        DEBUG_LOG("file removed");
+        node->state = FSTATE_DELETED;
+
+        m_nodes.erase(node->uid);
+        // -
+        m_deleted[node->uid] = node;
+    }
+}
+
+//-----------------------------------------------------------------------------
+int file_database_t::close_file(fileid_t uid) {
+    file_catalog_t::const_iterator i = m_opened.find(uid);
+    // -
+    if (i != m_opened.end()) {
+        file_node_t* const node = i->second->node;
+        // -
+        m_opened.erase(uid);
+        // -
+        node->state = FSTATE_CLOSED;
+        this->release_node(node);
+        return 0;
+    }
+    return -1;
+}
+
 //-----------------------------------------------------------------------------
 int file_database_t::open_file(
     const char*   path,
@@ -18,53 +58,91 @@ int file_database_t::open_file(
     bool          create,
     file_node_t** fn)
 {
-    path_parts_t            parts;
-    cl::const_char_iterator ci(path, len);
-    const fileid_t          uid = fnvhash64(path, len);
-    // -
     *fn = NULL;
-    // -
-    if (!parse_path(ci, parts))
+
+    if (!check_path(path, len))
         return ERROR_INVALID_FILENAME;
-    // -
+
+    const fileid_t uid = file_database_t::path_hash(path, len);
+
+    const file_catalog_t::iterator i = m_catalog.find(uid);
+
     file_node_t* node = NULL;
+
+    // -
+    //if (m_opened.find(uid) != m_opened.end())
+    //    return ERROR_FILE_LOCKED;
+
     // Если необходимо создать файл, то также необходимо
     // создать промежуточные директории
     if (create) {
-        if (!this->makeup_filepath(parts, &node))
-            return ERROR_INVALID_FILENAME;
+        file_path_t* ppath;
+
+        if (i != m_catalog.end())
+            return ERROR_FILE_EXISTS;
+
+        node  = new file_node_t();
+        ppath = new file_path_t();
         // -
-        node->type  = nt;
-        node->uid   = uid;
-        node->locks = 0;
-        node->refs++;
+        ppath->node = node;
+        ppath->name = std::string(path, len);
+        ppath->uid  = uid;
+        // -
+        node->parent = 0;
+        node->type   = nt;
+        node->uid    = uid;//++m_node_counter;
+        node->locks  = 0;
+        node->count  = 1 + 1;
+        node->state  = FSTATE_NEW;
+
+        m_nodes[node->uid] = node;
+        m_catalog[uid] = ppath;
+        m_opened[uid]  = ppath;
     }
     else {
-        node = this->find_path(ci);
-        if (node == NULL)
+        if (i == m_catalog.end())
             return ERROR_FILE_NOT_EXISTS;
-        assert(node->uid == uid);
+
+        node = i->second->node;
+
+        assert(i->second->uid == uid);
         // -
-        node->refs++;
+        node->state = FSTATE_OPENED;
+        node->count++;
+        // -
+        m_opened[uid] = i->second;
     }
-    mOpenedFiles[uid] = node;
+    // -
     *fn = node;
     return 0;
 }
 
 //-----------------------------------------------------------------------------
 bool file_database_t::check_existing(const char* path, size_t len) const {
-    return this->find_path(cl::const_char_iterator(path, len)) != 0;
+    return m_catalog.find(file_database_t::path_hash(path, len)) != m_catalog.end();
 }
 //-----------------------------------------------------------------------------
 file_node_t* file_database_t::file_by_id(const fileid_t uid) const {
-    file_map_t::const_iterator i = mOpenedFiles.find(uid);
+    file_catalog_t::const_iterator i = m_catalog.find(uid);
     // -
-    if (i != mOpenedFiles.end())
-        return i->second;
+    if (i != m_catalog.end())
+        return i->second->node;
     return NULL;
 }
-
+//-----------------------------------------------------------------------------
+int file_database_t::file_unlink(const fileid_t uid) {
+    file_catalog_t::iterator i = m_catalog.find(uid);
+    // -
+    if (i != m_catalog.end()) {
+        file_node_t* node = i->second->node;
+        // 1. Удалить запись из каталога (сам файл физически продолжает существовать)
+        m_catalog.erase(uid);
+        // -
+        this->release_node(node);
+    }
+    return 0;
+}
+/*
 //-----------------------------------------------------------------------------
 file_node_t* file_database_t::find_path(cl::const_char_iterator path) const {
     path_parts_t parts;
@@ -115,44 +193,4 @@ bool file_database_t::parse_path(cl::const_char_iterator path, path_parts_t& par
         parts.push_back(cl::string(~st, p - st));
     return true;
 }
-
-bool file_database_t::makeup_filepath(const path_parts_t& parts, file_node_t** fn) {
-    file_node_t* node = &mRoot;
-    path_parts_t::const_iterator j = parts.begin();
-    // -
-    while (j != parts.end()) {
-        bool hasPart = false;
-        // 1. Поиск имени каталога или файла
-        for (std::list<file_node_t*>::iterator i = node->children.begin(); i != node->children.end(); ++i) {
-            if ((*i)->name == *j) {
-                j++;
-                node = (*i);
-                hasPart = true;
-                break;
-            }
-        }
-
-        if (hasPart) {
-            // Текущий компонент пути файл, а значит он не может быть
-            // не конечным элементом пути
-            if (node->type == ntFile) {
-                *fn = node;
-                return false;
-            }
-        }
-        else {
-            file_node_t* const nn = new file_node_t();
-
-            nn->name = *j;
-            nn->uid  = 0;
-            nn->type = ntDirectory;
-
-            node->children.push_back(nn);
-            node = nn;
-            j++;
-        }
-    }
-
-    *fn = node;
-    return true;
-}
+*/

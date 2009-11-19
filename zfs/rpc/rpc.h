@@ -7,7 +7,6 @@
 #define rpc_h__
 
 #include <system/platform.h>
-#include <port/macros.h>
 
 #define DEFAULT_FILE_BLOCK  4096
 
@@ -45,35 +44,41 @@ const uint64_t  ZFS_DIRECTORY   = (1 << 9);
 
 /* Сообщения инициируемые клиентом */
 
-const uint16_t  RPC_NONE            = 0x0000;
-///
-const uint16_t  RPC_CLIENT_CONNECT  = 0x0001;
+const ui16  RPC_NONE            = 0x0000;
+
 /// Открыть/создать файл
-const uint16_t  RPC_OPENFILE        = 0x0002;
+const ui16  RPC_FILE_OPEN       = 0x0001;
 /// Режим чтения данных
-const uint16_t  RPC_READ            = 0x0003;
+const ui16  RPC_FILE_READ       = 0x0002;
 /// Добавить данные к файлу
-const uint16_t  RPC_APPEND          = 0x0004;
+const ui16  RPC_FILE_APPEND     = 0x0003;
 /// Закрыть файл
-const uint16_t  RPC_CLOSE           = 0x0005;
+const ui16  RPC_FILE_CLOSE      = 0x0004;
+///
+const ui16  RPC_FILE_UNLINK     = 0x0005;
+///
+const ui16  RPC_FILE_WRITE      = 0x0006;
+
+///
+const ui16  RPC_CLIENT_CONNECT  = 0x0007;
 /// Закрыть текущее соединение и завершить сессию
-const uint16_t  RPC_CLOSESESSION    = 0x0009;
+const ui16  RPC_CLOSESESSION    = 0x0008;
 
 
 /* Сообщения инициируемые мастер-сервером */
 
 /// Выделить область под хранения данных
-const uint16_t  RPC_ALLOCATE        = 0x0101;
+const ui16  RPC_ALLOCATE        = 0x0101;
 /// Разрешить доступ к определенному файлу
-const uint16_t  RPC_ALLOWACCESS     = 0x0102;
+const ui16  RPC_ALLOWACCESS     = 0x0102;
 
 
 /* Сообщения инициируемые узлом данных */
 
 /// Установка соединения с мастер-сервером
-const uint16_t  RPC_NODECONNECT     = 0x0501;
+const ui16  RPC_NODECONNECT     = 0x0501;
 /// Передать список файлов, хранящихся на узле
-const uint16_t  RPC_NODE_FILETABLE  = 0x0502;
+const ui16  RPC_NODE_FILETABLE  = 0x0502;
 
 
 ///
@@ -91,6 +96,8 @@ const uint16_t  RPC_NODE_FILETABLE  = 0x0502;
 /// Сообщение уже было обработано
 #define ERPC_ALREADY_PROCESSED  0x0007
 
+#define ERPC_FILE_GENERIC       0x0008
+
 
 /// Идентификатор файла
 typedef ui64    fileid_t;
@@ -105,6 +112,8 @@ struct TMessage {
     ui16    code;       // Command code
     i16     error;      // Код ошибки
 };
+
+typedef TMessage    rpc_message_t;
 
 ///////////////
 
@@ -183,7 +192,7 @@ struct TChunkConnecting : TMessage {
 };
 
 ///
-struct ALIGNING(4) TFileTableMessage : TMessage {
+struct TFileTableMessage : TMessage {
     ui64        uid;        // Идентификатор узла
     ui64        count;      // Кол-во идентификаторов файлов
 
@@ -204,17 +213,24 @@ struct AllocateResponse : TMessage {
     ui64        chunk;
 };
 
+struct rpc_file_unlink_t : rpc_message_t {
+    sid_t       client;
+    ui32        length;
+    char        path[1024];
+};
+
 #pragma pack(pop)
 
 
-inline const char* rpcErrorString(const int error) {
+inline const char* rpc_error_string(const int error) {
     switch (error) {
-        case ERPC_GENERIC:    return "ERPC_GENERIC";
-        case ERPC_FILEEXISTS: return "ERPC_FILEEXISTS";
-        case ERPC_OUTOFSPACE: return "ERPC_OUTOFSPACE";
-        case ERPC_FILE_NOT_EXISTS: return "ERPC_FILE_NOT_EXISTS";
-        case ERPC_FILE_BUSY:  return "ERPC_FILE_BUSY";
+        case ERPC_GENERIC:           return "ERPC_GENERIC";
+        case ERPC_FILEEXISTS:        return "ERPC_FILEEXISTS";
+        case ERPC_OUTOFSPACE:        return "ERPC_OUTOFSPACE";
+        case ERPC_FILE_NOT_EXISTS:   return "ERPC_FILE_NOT_EXISTS";
+        case ERPC_FILE_BUSY:         return "ERPC_FILE_BUSY";
         case ERPC_ALREADY_PROCESSED: return "ERPC_ALREADY_PROCESSED";
+        case ERPC_FILE_GENERIC:      return "ERPC_FILE_GENERIC";
     }
     return "";
 }
@@ -223,10 +239,11 @@ inline const char* rpc_command_string(const int cmd) {
     switch (cmd) {
         case RPC_NONE:           return "RPC_NONE";
         case RPC_CLIENT_CONNECT: return "RPC_CLIENT_CONNECT";
-        case RPC_OPENFILE:       return "RPC_OPENFILE";
-        case RPC_READ:           return "RPC_READ";
-        case RPC_APPEND:         return "RPC_APPEND";
-        case RPC_CLOSE:          return "RPC_CLOSE";
+        case RPC_FILE_OPEN:      return "RPC_FILE_OPEN";
+        case RPC_FILE_READ:      return "RPC_FILE_READ";
+        case RPC_FILE_APPEND:    return "RPC_FILE_APPEND";
+        case RPC_FILE_CLOSE:     return "RPC_FILE_CLOSE";
+        case RPC_FILE_UNLINK:    return "RPC_FILE_UNLINK";
         case RPC_CLOSESESSION:   return "RPC_CLOSESESSION";
         case RPC_ALLOCATE:       return "RPC_ALLOCATE";
         case RPC_ALLOWACCESS:    return "RPC_ALLOWACCESS";

@@ -61,6 +61,7 @@ private:
     void send_common_response(acto::remote::message_channel_t* mc, ui16 cmd, i16 err);
     void send_open_error     (acto::remote::message_channel_t* mc, ui64 uid, int error);
 
+    void file_unlink   (const acto::remote::message_t* msg);
     void client_connect(const acto::remote::message_t* msg);
     void open_file     (const acto::remote::message_t* msg);
     void close_file    (const acto::remote::message_t* msg);

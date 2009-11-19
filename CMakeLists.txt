@@ -13,6 +13,8 @@ PROJECT (ACTO-SOLUTION)
     INCLUDE_DIRECTORIES(multiprog)
     INCLUDE_DIRECTORIES(zfs)
 
+    SET(CMAKE_CXX_FLAGS "-std=c++0x")
+
     SUBDIRS (
         multiprog
         multiprog/system
