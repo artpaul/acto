@@ -11,7 +11,6 @@ ENDFUNCTION (SUBDIRS)
 PROJECT (ACTO-SOLUTION)
 
     INCLUDE_DIRECTORIES(multiprog)
-    INCLUDE_DIRECTORIES(zfs)
 
     SET(CMAKE_CXX_FLAGS "-std=c++0x")
 
@@ -23,14 +22,9 @@ PROJECT (ACTO-SOLUTION)
         multiprog/remote
         multiprog/remote/libsocket
 
-        zfs/client
-        zfs/master
-        zfs/chunk
-
         samples/cycles
         samples/ping-pong
         samples/sotest
 
         tests/thread
-        tests/zfs
     )
