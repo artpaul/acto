@@ -142,12 +142,12 @@ void master_handler_t::on_message(const acto::remote::message_t* msg) {
         break;
     case RPC_ALLOCATE:
         {
-            const AllocateSpace* req = (const AllocateSpace*)msg->data;
-            uint16_t        error = 0;
+            const rpc_allocate_space_t* req = (const rpc_allocate_space_t*)msg->data;
+            i16 error = 0;
             {
                 acto::core::MutexLocker lock(guard);
                 // -
-                if (files.find(req->fileid) != files.end()) {
+                if (files.find(req->uid) != files.end()) {
                     fprintf(stderr, "file already exists\n");
                     error = ERPC_FILEEXISTS;
                 }
@@ -156,35 +156,37 @@ void master_handler_t::on_message(const acto::remote::message_t* msg) {
                     master_pending_t* const mp   = new master_pending_t();
                     // -
                     mp->client   = req->client;
-                    mp->file     = req->fileid;
+                    mp->file     = req->uid;
                     mp->deadline = time(0) + req->lease;
                     // -
-                    info->uid = req->fileid;
+                    info->uid = req->uid;
                     info->pendings.push_back(mp);
 
-                    files[req->fileid] = info;
+                    files[req->uid] = info;
                 }
             }
 
-            AllocateResponse    rsp;
+            rpc_allocate_response_t    rsp;
             rsp.code   = RPC_ALLOCATE;
-            rsp.size   = sizeof(AllocateResponse);
+            rsp.size   = sizeof(rsp);
             rsp.error  = error;
             rsp.client = req->client;
-            rsp.fileid = req->fileid;
+            rsp.cid    = req->cid;
+            rsp.uid    = req->uid;
             rsp.chunk  = ctx.uid;
             this->channel->send_message(&rsp, sizeof(rsp));
         }
         break;
     case RPC_ALLOWACCESS:
         {
-            const AllocateSpace* req = (const AllocateSpace*)msg->data;
-            uint16_t             error = 0;
+            const rpc_allocate_space_t* req = (const rpc_allocate_space_t*)msg->data;
+            i16 error = 0;
 
             // -
             {
                 acto::core::MutexLocker lock(guard);
-                file_map_t::iterator      i = files.find(req->fileid);
+
+                file_map_t::iterator      i = files.find(req->uid);
 
                 if (i == files.end()) {
                     fprintf(stderr, "file not exists\n");
@@ -195,20 +197,21 @@ void master_handler_t::on_message(const acto::remote::message_t* msg) {
                     master_pending_t* const mp   = new master_pending_t();
                     // -
                     mp->client   = req->client;
-                    mp->file     = req->fileid;
+                    mp->file     = req->uid;
                     mp->deadline = time(0) + req->lease;
 
                     info->pendings.push_back(mp);
                 }
             }
 
-            AllocateResponse    rsp;
+            rpc_allocate_response_t    rsp;
 
             rsp.size   = sizeof(rsp);
             rsp.code   = RPC_ALLOWACCESS;
             rsp.error  = error;
             rsp.client = req->client;
-            rsp.fileid = req->fileid;
+            rsp.cid    = req->cid;
+            rsp.uid    = req->uid;
             rsp.chunk  = ctx.uid;
             this->channel->send_message(&rsp, sizeof(rsp));
         }

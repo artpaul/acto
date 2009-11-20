@@ -25,11 +25,11 @@ void client_handler_t::send_common_response(acto::remote::message_channel_t* mc,
 
 
 void client_handler_t::send_open_error(acto::remote::message_channel_t* mc, ui64 uid, int error) {
-    TOpenResponse  rsp;
-    rsp.size   = sizeof(rsp);
-    rsp.code   = RPC_FILE_OPEN;
-    rsp.error  = error;
-    rsp.stream = uid;
+    rpc_open_response_t  rsp;
+    rsp.size  = sizeof(rsp);
+    rsp.code  = RPC_FILE_OPEN;
+    rsp.error = error;
+    rsp.uid   = uid;
 
     mc->send_message(&rsp, sizeof(rsp));
 }
@@ -51,11 +51,8 @@ void client_handler_t::client_connect(const acto::remote::message_t* msg) {
 
 void client_handler_t::file_unlink(const acto::remote::message_t* msg) {
     const rpc_file_unlink_t* req = (const rpc_file_unlink_t*)msg->data;
-    // -
-    const fileid_t uid = file_database_t::path_hash(req->path, req->length);
-
     // Открыт ли файл в текущей сессии? - оставлять открытым
-    int rval = ctx.m_tree.file_unlink(uid);
+    int rval = ctx.m_tree.file_unlink(req->path, req->length);
 
     rpc_message_t   rsp;
     rsp.code  = req->code;
@@ -66,17 +63,11 @@ void client_handler_t::file_unlink(const acto::remote::message_t* msg) {
 
 
 void client_handler_t::open_file(const acto::remote::message_t* msg) {
-    const OpenRequest*  req = (const OpenRequest*)msg->data;
-    const char*         name = (const char*)msg->data + sizeof(OpenRequest);
+    const rpc_open_request_t* req = (const rpc_open_request_t*)msg->data;
     //
-    const fileid_t uid  = file_database_t::path_hash(name, req->length);
-    file_node_t*   node = NULL;
+    const fileid_t cid  = file_database_t::path_hash(req->path, req->length);
+    file_path_t*   node = NULL;
     int            ferror = 0;
-
-    if (m_files.find(uid) != m_files.end()) {
-        ferror = ERPC_FILE_BUSY;
-        goto send_error;
-    }
 
     // -
     if (req->mode & ZFS_CREATE) {
@@ -86,10 +77,13 @@ void client_handler_t::open_file(const acto::remote::message_t* msg) {
             goto send_error;
         }
         // -
-        int error = ctx.m_tree.open_file(name, req->length, LOCK_WRITE, (req->mode & ZFS_DIRECTORY) ? ntDirectory : ntFile, true, &node);
+        int error = ctx.m_tree.open_file(req->path, req->length, LOCK_WRITE, (req->mode & ZFS_DIRECTORY) ? ntDirectory : ntFile, true, &node);
 
         if (error != 0) {
             ferror = ERPC_FILEEXISTS;
+            goto send_error;
+        } else if (node == 0) {
+            ferror = ERPC_FILE_GENERIC;
             goto send_error;
         }
 
@@ -99,13 +93,14 @@ void client_handler_t::open_file(const acto::remote::message_t* msg) {
 
         // Выбрать узел для хранения данных
         if (!chunk || !chunk->channel)
-            send_open_error(m_channel, uid, ERPC_OUTOFSPACE);
+            send_open_error(m_channel, cid, ERPC_OUTOFSPACE);
         else {
-            AllocateSpace  msg;
+            rpc_allocate_space_t  msg;
             msg.code   = RPC_ALLOCATE;
-            msg.size   = sizeof(AllocateSpace);
+            msg.size   = sizeof(msg);
             msg.client = req->client;
-            msg.fileid = uid;
+            msg.cid    = node->cid;
+            msg.uid    = node->node->uid;
             msg.lease  = 180;
             // -
             chunk->channel->send_message(&msg, sizeof(msg));
@@ -113,10 +108,10 @@ void client_handler_t::open_file(const acto::remote::message_t* msg) {
         return;
     }
     else {
-        int error = ctx.m_tree.open_file(name, req->length, LOCK_READ, ntFile, false, &node);
+        int error = ctx.m_tree.open_file(req->path, req->length, LOCK_READ, ntFile, false, &node);
 
-        if (error != 0) {
-            send_open_error(m_channel, uid, ERPC_FILE_NOT_EXISTS);
+        if (error != 0 || !node) {
+            send_open_error(m_channel, cid, ERPC_FILE_NOT_EXISTS);
             return;
         }
         else {
@@ -125,18 +120,19 @@ void client_handler_t::open_file(const acto::remote::message_t* msg) {
             // Послать узлам команду открытия файла
             // Отправить карту клиенту
             // -
-            for (size_t i = 0; i < node->chunks.size(); ++i) {
-                if (!node->chunks[i]->channel)
+            for (size_t i = 0; i < node->node->chunks.size(); ++i) {
+                if (!node->node->chunks[i]->channel)
                     continue;
 
-                AllocateSpace  msg;
+                rpc_allocate_space_t  msg;
                 msg.code   = RPC_ALLOWACCESS;
-                msg.size   = sizeof(AllocateSpace);
+                msg.size   = sizeof(msg);
                 msg.client = req->client;
-                msg.fileid = node->uid;
+                msg.cid    = node->cid;
+                msg.uid    = node->node->uid;
                 msg.lease  = 180;
                 // -
-                node->chunks[i]->channel->send_message(&msg, sizeof(msg));
+                node->node->chunks[i]->channel->send_message(&msg, sizeof(msg));
             }
             return;
         }
@@ -145,18 +141,18 @@ void client_handler_t::open_file(const acto::remote::message_t* msg) {
     ferror = ERPC_GENERIC;
 
 send_error:
-    send_open_error(m_channel, uid, ferror);
+    send_open_error(m_channel, cid, ferror);
 }
 
 void client_handler_t::close_file(const acto::remote::message_t* msg) {
-    const CloseRequest* req = (const CloseRequest*)msg->data;
+    const rpc_close_file_t* req = (const rpc_close_file_t*)msg->data;
     // -
     {
         acto::core::MutexLocker lock(guard);
 
-        m_files.erase(req->stream);
+        m_files.erase(req->uid);
         // !!! Отметить файл как закрытый
-        int rval = ctx.m_tree.close_file(req->stream);
+        int rval = ctx.m_tree.close_file(req->cid);
         if (rval != 0)
             send_common_response(m_channel, RPC_FILE_CLOSE, ERPC_FILE_GENERIC);
         else

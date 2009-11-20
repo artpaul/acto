@@ -8,7 +8,13 @@
 
 #include <system/platform.h>
 
-#define DEFAULT_FILE_BLOCK  4096
+
+/* Глобальные константы */
+
+#define DEFAULT_FILE_BLOCK      4096
+
+#define ZFS_MAX_PATH            1024
+
 
 /* */
 
@@ -99,6 +105,7 @@ const ui16  RPC_NODE_FILETABLE  = 0x0502;
 #define ERPC_FILE_GENERIC       0x0008
 
 
+
 /// Идентификатор файла
 typedef ui64    fileid_t;
 
@@ -127,9 +134,10 @@ struct TAppendRequest : TMessage {
 };
 
 /// Запрос закрытия файла
-struct CloseRequest : TMessage {
+struct rpc_close_file_t : rpc_message_t {
     sid_t       client;     // Идентификатор клиента
-    fileid_t    stream;
+    ui64        cid;        //
+    ui64        uid;        //
 };
 
 /// Закрытие сессии со стороны клиента
@@ -152,15 +160,17 @@ struct TReadResponse : TMessage {
 };
 
 /// Запрос открытия / создания файла
-struct OpenRequest : TMessage {
+struct rpc_open_request_t : rpc_message_t {
     sid_t       client;     // Идентификатор клиента
-    uint64_t    mode;       // Режим открытия
-    uint16_t    length;     // Длинна имени файла
+    ui64        mode;       // Режим открытия
+    ui32        length;     // Длинна имени файла
+    char        path[ZFS_MAX_PATH];
 };
 
 /// Ответ открытия файла
-struct TOpenResponse : TMessage {
-    fileid_t    stream;     // Идентификатор потока
+struct rpc_open_response_t : rpc_message_t {
+    ui64        cid;        // Идентификатор в каталоге
+    ui64        uid;        // Идентификатор физического файла
     sockaddr_in nodeip;     //
     ui16        nodeport;   //
 };
@@ -200,23 +210,25 @@ struct TFileTableMessage : TMessage {
 };
 
 ///
-struct AllocateSpace : TMessage {
+struct rpc_allocate_space_t : rpc_message_t {
     sid_t       client;     // Идентификатор клиента
-    fileid_t    fileid;     // Идентификатор файла
+    ui64        cid;        //
+    ui64        uid;        // Идентификатор файла
     ui64        mode;       // Режим открытия
     ui32        lease;      // Максимально допустимое время ожидание запроса клиента
 };
 
-struct AllocateResponse : TMessage {
+struct rpc_allocate_response_t : rpc_message_t {
     sid_t       client;     // Идентификатор клиента
-    fileid_t    fileid;     // Идентификатор файла
+    ui64        cid;        //
+    ui64        uid;        // Идентификатор файла
     ui64        chunk;
 };
 
 struct rpc_file_unlink_t : rpc_message_t {
     sid_t       client;
     ui32        length;
-    char        path[1024];
+    char        path[ZFS_MAX_PATH];
 };
 
 #pragma pack(pop)

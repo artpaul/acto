@@ -2,11 +2,11 @@
 #include "master.h"
 
 static void send_open_error(acto::remote::message_channel_t* mc, ui64 uid, int error) {
-    TOpenResponse  rsp;
-    rsp.size   = sizeof(rsp);
-    rsp.code   = RPC_FILE_OPEN;
-    rsp.error  = error;
-    rsp.stream = uid;
+    rpc_open_response_t  rsp;
+    rsp.size  = sizeof(rsp);
+    rsp.code  = RPC_FILE_OPEN;
+    rsp.error = error;
+    rsp.uid   = uid;
 
     mc->send_message(&rsp, sizeof(rsp));
 }
@@ -74,31 +74,32 @@ void chunk_handler_t::node_allocated(const acto::remote::message_t* msg) {
 
     acto::core::MutexLocker lock(guard);
 
-    const AllocateResponse* req = (const AllocateResponse*)msg->data;
+    const rpc_allocate_response_t* req = (const rpc_allocate_response_t*)msg->data;
     TIterator i = ctx.m_clients.find(req->client);
 
     if (i != ctx.m_clients.end()) {
         client_handler_t* cs    = i->second;
         chunk_t*          chunk = chunkById(req->chunk);
-        file_node_t*      node  = ctx.m_tree.file_by_id(req->fileid);
+        file_path_t*      node  = ctx.m_tree.file_by_cid(req->cid);
         // -
         if (node && chunk) {
-            node->chunks.push_back(chunk);
+            node->node->chunks.push_back(chunk);
             // Множество открытых файлов
-            cs->m_files[node->uid] = node;
+            cs->m_files[node->cid] = node;
             // Отправить ответ клиенту
-            TOpenResponse    rsp;
+            rpc_open_response_t rsp;
 
             rsp.size     = sizeof(rsp);
             rsp.code     = RPC_FILE_OPEN;
             rsp.error    = 0;
-            rsp.stream   = node->uid;
+            rsp.cid      = node->cid;
+            rsp.uid      = node->node->uid;
             rsp.nodeip   = chunk->ip;
             rsp.nodeport = chunk->clientport;
             cs->m_channel->send_message(&rsp, sizeof(rsp));
         }
         else
-            send_open_error(cs->m_channel, req->fileid, ERPC_GENERIC);
+            send_open_error(cs->m_channel, req->cid, ERPC_GENERIC);
     }
 }
 
@@ -107,30 +108,31 @@ void chunk_handler_t::node_allow_access(const acto::remote::message_t* msg) {
 
     acto::core::MutexLocker lock(guard);
 
-    const AllocateResponse* req = (const AllocateResponse*)msg->data;
+    const rpc_allocate_response_t* req = (const rpc_allocate_response_t*)msg->data;
     TIterator i = ctx.m_clients.find(req->client);
 
     if (i != ctx.m_clients.end()) {
         client_handler_t* cs    = i->second;
         chunk_t*          chunk = chunkById(req->chunk);
-        file_node_t*      node  = ctx.m_tree.file_by_id(req->fileid);
+        file_path_t*      node  = ctx.m_tree.file_by_cid(req->cid);
         // -
         if (node && chunk) {
             // Множество открытых файлов
-            cs->m_files[node->uid] = node;
+            cs->m_files[node->cid] = node;
             // Отправить ответ клиенту
-            TOpenResponse    rsp;
+            rpc_open_response_t     rsp;
 
             rsp.size     = sizeof(rsp);
             rsp.code     = RPC_FILE_OPEN;
             rsp.error    = 0;
-            rsp.stream   = node->uid;
+            rsp.cid      = node->cid;
+            rsp.uid      = node->node->uid;
             rsp.nodeip   = chunk->ip;
             rsp.nodeport = chunk->clientport;
             cs->m_channel->send_message(&rsp, sizeof(rsp));
         }
         else
-            send_open_error(cs->m_channel, req->fileid, ERPC_FILE_NOT_EXISTS);
+            send_open_error(cs->m_channel, req->cid, ERPC_FILE_NOT_EXISTS);
     }
 }
 

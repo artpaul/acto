@@ -73,7 +73,7 @@ public:
 
 public:
     typedef acto::remote::message_channel_t     msg_channel_t;
-    typedef std::map<fileid_t, file_node_t*>    files_map_t;
+    typedef std::map< ui64, file_path_t* >      files_map_t;
 
     sid_t           m_sid;        // Уникальный идентификатор сессии
     sockaddr_in     m_addr;       //

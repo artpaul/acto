@@ -65,7 +65,7 @@ struct file_node_t {
 /** */
 struct file_path_t {
     file_node_t*        node;
-    fileid_t            uid;        // Идентификатор имени
+    ui64                cid;        // Идентификатор имени
     std::string         name;
 };
 
@@ -74,8 +74,9 @@ struct file_path_t {
  * Дерево файловой системы
  */
 class file_database_t {
-    typedef std::map<ui64,     file_node_t*>    file_map_t;
-    typedef std::map<fileid_t, file_path_t*>    file_catalog_t;
+    typedef std::map< ui64, file_node_t* >    file_map_t;
+    typedef std::map< ui64, file_path_t* >    file_catalog_t;
+    // cid -> uid
 
 private:
     ///
@@ -101,18 +102,21 @@ public:
         return fnvhash64(path, len);
     }
 
+public:
     ///
-    int close_file(fileid_t uid);
+    int close_file(ui64 cid);
 
     /// Открыть существующий файл или создать новый, если create == true
-    int open_file (const char* path, size_t len, LockType lock, NodeType nt, bool create, file_node_t** fn);
+    int open_file (const char* path, size_t len, LockType lock, NodeType nt, bool create, file_path_t** fn);
 
     ///
     bool         check_existing(const char* path, size_t len) const;
     ///
+    file_path_t* file_by_cid(ui64 cid) const;
+    ///
     file_node_t* file_by_id(const fileid_t uid) const;
     ///
-    int          file_unlink(const fileid_t uid);
+    int          file_unlink(const char* path, size_t len);
 };
 
 #endif // __master_filetree_h__
