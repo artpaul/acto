@@ -95,6 +95,8 @@ class Client : public acto::implementation_t {
         if (serv.assigned()) {
             serv.send< msg_get >("test message data via message");
         }
+        else
+            printf("no server\n");
     }
 
 public:
@@ -104,14 +106,25 @@ public:
     }
 };
 
+class hook_t : public acto::remote::remote_hook_t {
+public:
+    void on_connecting(const char* target) {
+        printf("%s\n", target);
+    }
+};
+
 int main(int argc, char* argv[]) {
     acto::startup();
     {
+        hook_t  h;
+
         acto::remote::enable();
         // Локальный объект
         acto::actor_t serv = acto::instance< Server >();
         // Зарегистрировать в словаре
-        acto::remote::register_actor(serv, "server");
+        acto::remote::register_actor(serv, "server1");
+        acto::remote::register_hook(&h);
+        // acto::remote::register_handler( on_message | on_send | on_error );
 
         // Эмуляция клиента
         acto::actor_t cl = acto::instance< Client >();

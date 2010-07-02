@@ -1,3 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//                           The act-o Library                               //
+//---------------------------------------------------------------------------//
+// Copyright © 2007 - 2010                                                   //
+//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// ------------------------------------------------------------------ -------//
+// License:                                                                  //
+//     Code covered by the MIT License.                                      //
+//     The authors make no representations about the suitability of this     //
+//     software for any purpose. It is provided "as is" without express or   //
+//     implied warranty.                                                     //
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
 #define acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
@@ -11,6 +23,7 @@
 
 #include "protocol.h"
 #include "transport.h"
+#include "remote.h"
 
 namespace acto {
 
@@ -71,6 +84,8 @@ public:
     void         enable_server();
     /// -
     void         register_actor(const actor_t& actor, const char* path);
+    /// -
+    void         register_hook(remote_hook_t* const hook);
 
 private:
     static void do_client_commands(command_event_t* const ev);
@@ -87,9 +102,9 @@ private:
     volatile ui64   m_last;
     /// Генератор идентификаторов для объектов
     ui64            m_counter;
+    remote_hook_t*  m_hook;
 
     transport_t     m_transport;
-
 };
 
 } // namespace remote

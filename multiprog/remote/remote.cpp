@@ -2,6 +2,7 @@
 #include <act_user.h>
 
 #include "client.h"
+#include "remote.h"
 
 namespace acto {
 
@@ -25,6 +26,10 @@ void enable() {
 // Вызывается на стороне сервера
 void register_actor(const actor_t& actor, const char* path) {
     remote_module_t::instance()->register_actor(actor, path);
+}
+
+void register_hook(remote_hook_t* const hook) {
+    remote_module_t::instance()->register_hook(hook);
 }
 
 } // namespace remote

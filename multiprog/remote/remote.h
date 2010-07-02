@@ -1,3 +1,4 @@
+
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
@@ -9,31 +10,36 @@
 //     The authors make no representations about the suitability of this     //
 //     software for any purpose. It is provided "as is" without express or   //
 //     implied warranty.                                                     //
-//---------------------------------------------------------------------------//
-// File: acto.h                                                              //
-//     Главный файл библиотеки.                                              //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef acto_h_73A5B4AE25EE4295BD7B080FBD29FFC0
-#define acto_h_73A5B4AE25EE4295BD7B080FBD29FFC0
+#ifndef remote_h_23b53cd0cc8f428ba1db96556463e0f3
+#define remote_h_23b53cd0cc8f428ba1db96556463e0f3
 
-#pragma once
+namespace acto {
 
-// Реализация делегатов
-#include "generic/delegates.h"
+namespace remote {
 
-// Обертка над API операционных систем
-#include "system/platform.h"
+/** */
+class remote_hook_t {
+public:
+    virtual void on_connecting(const char* /*target*/) { }
+};
 
-// Интерфейс библиотеки (пользовательский уровень)
-#include "act_user.h"
+/// Получить ссылку на удаленный объект
+ACTO_API actor_t connect(const char* path, unsigned int port);
 
-// Дополнительные сервисы (пользовательский уровень)
-#include "extension/services.h"
+/// Активировать возможность подключения с других хотов
+ACTO_API void    enable();
 
-#ifndef ACTO_EXCLUDE_REMOTE
-#   include "remote/remote.h"
-#endif // ACTO_EXCLUDE_REMOTE
+/// Зарегистрировать объект в глобальном каталоге
+ACTO_API void    register_actor(const actor_t& actor, const char* path);
 
+///
+ACTO_API void    register_hook(remote_hook_t* const hook);
 
-#endif // acto_h_73A5B4AE25EE4295BD7B080FBD29FFC0
+} // namespace remote
+
+} // namespace acto
+
+#endif // remote_h_23b53cd0cc8f428ba1db96556463e0f3
+

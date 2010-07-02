@@ -14,6 +14,7 @@ namespace remote {
 remote_module_t::remote_module_t()
     : m_last(0)
     , m_counter(0)
+    , m_hook(0)
 {
     core::runtime_t::instance()->register_module(this, 1);
 }
@@ -148,6 +149,10 @@ void remote_module_t::register_actor(const actor_t& actor, const char* path) {
         m_registered[std::string(path)] = info;
     }
 }
+//-----------------------------------------------------------------------------
+void remote_module_t::register_hook(remote_hook_t* const hook) {
+    m_hook = hook;
+}
 
 //-----------------------------------------------------------------------------
 void remote_module_t::do_send_message(command_event_t* const ev, bool is_client) {
@@ -212,7 +217,7 @@ void remote_module_t::do_client_commands(command_event_t* const ev) {
                 ev->stream->read(&aid, sizeof(aid));
                 ev->stream->read(&oid, sizeof(oid));
 
-                if (oid > 0 && aid > 0) {
+                if (/*oid > 0 && */aid > 0) {
                     core::MutexLocker   lock(pthis->m_cs);
                     ask_map_t::iterator i = pthis->m_asks.find(aid);
 
@@ -249,7 +254,10 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
                     buf[len] = '\0';
                     name = buf.get();
                 }
-
+                // -
+                if (pthis->m_hook)
+                    pthis->m_hook->on_connecting(name.c_str());
+                // -
                 {
                     ui64 oid = 0;
                     ui16 cmd = ACTOR_REFERENCE;

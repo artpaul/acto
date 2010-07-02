@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
+// Copyright © 2007 - 2010                                                   //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                               //
 // ------------------------------------------------------------------ -------//
 // License:                                                                  //
@@ -168,26 +168,6 @@ ACTO_API void shutdown();
 
 /* Инициализировать библиотеку */
 ACTO_API void startup();
-
-
-#ifndef ACTO_EXCLUDE_REMOTE
-
-namespace remote {
-
-/// Получить ссылку на удаленный объект
-ACTO_API actor_t connect(const char* path, unsigned int port);
-
-/// Активировать возможность подключения с других хотов
-ACTO_API void    enable();
-
-/// Зарегистрировать объект в глобальном каталоге
-ACTO_API void    register_actor(const actor_t& actor, const char* path);
-
-} // namespace remote
-
-
-#endif // ACTO_EXCLUDE_REMOTE
-
 
 //-----------------------------------------------------------------------------
 template <typename T>
