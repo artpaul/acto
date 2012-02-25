@@ -1,28 +1,17 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiprog", "multiprog\multiprog.vcproj", "{5EF36991-6818-48D4-9226-E801AD489FE8}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cycles", "samples\cycles\cycles.vcproj", "{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5EF36991-6818-48D4-9226-E801AD489FE8} = {5EF36991-6818-48D4-9226-E801AD489FE8}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong", "samples\ping-pong\ping-pong.vcproj", "{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5EF36991-6818-48D4-9226-E801AD489FE8} = {5EF36991-6818-48D4-9226-E801AD489FE8}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{548A14F6-CDF5-41BB-9642-9212DB8DD4AD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thread", "tests\thread\thread.vcproj", "{3F60C206-0AE9-4A97-9D41-8F0AB9813779}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5EF36991-6818-48D4-9226-E801AD489FE8} = {5EF36991-6818-48D4-9226-E801AD489FE8}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multiprog", "multiprog\multiprog.vcxproj", "{5EF36991-6818-48D4-9226-E801AD489FE8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mr", "tests\mr\mr.vcproj", "{A5CC107B-ACB8-46C5-9D5F-1239234A039C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cycles", "samples\cycles\cycles.vcxproj", "{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ping-pong", "samples\ping-pong\ping-pong.vcxproj", "{14E3D48F-E1A9-41D8-A458-1A27B0C8097B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thread", "tests\thread\thread.vcxproj", "{3F60C206-0AE9-4A97-9D41-8F0AB9813779}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,12 +47,6 @@ Global
 		{3F60C206-0AE9-4A97-9D41-8F0AB9813779}.Release|Win32.ActiveCfg = Release|Win32
 		{3F60C206-0AE9-4A97-9D41-8F0AB9813779}.Release|Win32.Build.0 = Release|Win32
 		{3F60C206-0AE9-4A97-9D41-8F0AB9813779}.Release|x64.ActiveCfg = Release|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Debug|Win32.ActiveCfg = Debug|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Debug|Win32.Build.0 = Debug|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Debug|x64.ActiveCfg = Debug|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Release|Win32.ActiveCfg = Release|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Release|Win32.Build.0 = Release|Win32
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -72,6 +55,5 @@ Global
 		{FA69508B-8FB8-46A2-A6BA-2DC69D77D2AB} = {A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}
 		{14E3D48F-E1A9-41D8-A458-1A27B0C8097B} = {A3A85EF1-7092-40DF-8F3D-B747CE5E1C1A}
 		{3F60C206-0AE9-4A97-9D41-8F0AB9813779} = {548A14F6-CDF5-41BB-9642-9212DB8DD4AD}
-		{A5CC107B-ACB8-46C5-9D5F-1239234A039C} = {548A14F6-CDF5-41BB-9642-9212DB8DD4AD}
 	EndGlobalSection
 EndGlobal
