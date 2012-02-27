@@ -42,7 +42,7 @@ package_t* object_t::select_message() {
     }
     else {
         local_stack.push(input_stack.extract());
-        // -
+
         return local_stack.pop();
     }
 }
@@ -50,10 +50,10 @@ package_t* object_t::select_message() {
 
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-package_t::package_t(msg_t* const data_, const TYPEID type_) :
-    data  (data_),
-    sender(NULL),
-    type  (type_)
+package_t::package_t(msg_t* const data_, const TYPEID type_)
+    : data  (data_)
+    , sender(NULL)
+    , type  (type_)
 {
     next = NULL;
 }
@@ -62,7 +62,7 @@ package_t::~package_t() {
     // Освободить ссылки на объекты
     if (sender)
         runtime_t::instance()->release(sender);
-    // -
+
     runtime_t::instance()->release(target);
     // Удалить данные сообщения
     delete data;

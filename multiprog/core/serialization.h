@@ -1,6 +1,7 @@
-
 #ifndef acto_core_serialization_h_4C3F226E1E554aedB52F0EE5648C87C2
 #define acto_core_serialization_h_4C3F226E1E554aedB52F0EE5648C87C2
+
+#include <cstddef>
 
 namespace acto {
 

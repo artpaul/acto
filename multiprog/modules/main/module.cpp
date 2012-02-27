@@ -66,20 +66,19 @@ private:
                 yield();
             }
 
-            // -
             if (pthis->m_terminating || (pthis->m_event.wait(60 * 1000) == WR_TIMEOUT)) {
                 generics::stack_t< worker_t >   queue(pthis->m_workers.idle.extract());
                 // Удалить все потоки
                 while (worker_t* const item = queue.pop())
                     pthis->delete_worker(item);
-                // -
+
                 yield();
             }
             else {
                 if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
                     if (worker_t* const item = pthis->m_workers.idle.pop())
                         pthis->delete_worker(item);
-                    // -
+
                     lastCleanupTime = clock();
                 }
             }
@@ -99,7 +98,7 @@ private:
 
         if (atomic_increment(&m_workers.count) == 1)
             m_evnoworkers.reset();
-        // -
+
         return result;
     }
     //-------------------------------------------------------------------------
@@ -107,7 +106,7 @@ private:
         // Прежде чем извлекать объект из очереди, необходимо проверить,
         // что есть вычислительные ресурсы для его обработки
         worker_t* worker = m_workers.idle.pop();
-        // -
+
         if (!worker) {
             // Если текущее количество потоков меньше оптимального,
             // то создать новый поток
@@ -116,21 +115,21 @@ private:
             else {
                 // Подождать некоторое время осовобождения какого-нибудь потока
                 const WaitResult result = m_evworker.wait(wait_timeout * 1000);
-                // -
+
                 worker = m_workers.idle.pop();
-                // -
+
                 if (!worker && (result == WR_TIMEOUT)) {
-                    // -
                     wait_timeout += 2;
-                    // -
+
                     if (m_workers.count < MAX_WORKERS)
                         worker = create_worker();
                     else
                         m_evworker.wait();
-                }
-                else
-                    if (wait_timeout > 2)
+                } else {
+                    if (wait_timeout > 2) {
                         wait_timeout -= 2;
+                    }
+                }
             }
         }
         // -
@@ -163,14 +162,14 @@ public:
     ~impl() {
         // Дождаться, когда все потоки будут удалены
         m_terminating = true;
-        // -
+
         m_event.signaled();
         m_evnoworkers.wait();
 
         m_active = false;
-        // -
+
         m_event.signaled();
-        // -
+
         delete m_scheduler, m_scheduler = NULL;
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);
@@ -188,11 +187,11 @@ public:
             worker_t* const worker = this->create_worker();
 
             result->scheduled  = true;
-            // -
+
             body->m_thread     = worker;
-            // -
+
             atomic_increment(&m_workers.reserved);
-            // -
+
             worker->assign(result, 0);
         }
 
@@ -206,7 +205,7 @@ public:
 
         if (impl->m_thread != NULL) {
             atomic_decrement(&m_workers.reserved);
-            // -
+
             impl->m_thread->wakeup();
         }
     }
@@ -221,9 +220,9 @@ public:
     //-------------------------------------------------------------------------
     void push_idle(worker_t* const worker) {
         assert(worker != 0);
-        // -
+
         m_workers.idle.push(worker);
-        // -
+
         m_evworker.signaled();
     }
     //-------------------------------------------------------------------------
@@ -264,9 +263,9 @@ void do_handle_message(package_t* const package) {
             // TN: Данный параметр читает только функция determine_sender,
             //     которая всегда выполняется в контексте этого потока.
             active_actor = obj;
-            // -
+
             handler->invoke(package->sender, package->data);
-            // -
+
             active_actor = NULL;
         }
         catch (...) {
@@ -320,16 +319,16 @@ void base_t::set_handler(i_handler* const handler, const TYPEID type) {
                 delete (*i)->handler;
             // 2. Установить новый
             (*i)->handler = handler;
-            // -
+
             return;
         }
     }
     // Запись для данного типа сообщения еще не существует
     {
         HandlerItem* const item = new HandlerItem(type);
-        // -
+
         item->handler = handler;
-        // -
+
         m_handlers.push_back(item);
     }
 }
@@ -376,7 +375,7 @@ void main_module_t::send_message(package_t* const package) {
         // 2. Подобрать для него необходимый поток
         if (!target->binded) {
             worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
-            // -
+
             if (thread != NULL)
                 thread->wakeup();
             else {

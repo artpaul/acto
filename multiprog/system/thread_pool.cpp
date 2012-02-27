@@ -1,13 +1,12 @@
-
-#include <cstdlib>
-#include <memory>
+#include "thread_pool.h"
 
 #include <generic/intrlist.h>
 #include <generic/stack.h>
 #include <system/thread.h>
 #include <system/event.h>
 
-#include "thread_pool.h"
+#include <cstdlib>
+#include <memory>
 
 namespace acto {
 
@@ -96,18 +95,15 @@ bool thread_pool_t::delete_idle_worker(thread_data_t* const ctx) {
 
     {
         core::MutexLocker lock(m_cs);
-        // -
-        {
-            // -
-            if (!ctx->deleting && m_idles.front() != ctx) {
-                idle = m_idles.pop();
 
-                if (idle) {
-                    if (ctx == idle)
-                        m_idles.push(idle);
-                    else
-                        idle->deleting = true;
-                }
+        if (!ctx->deleting && m_idles.front() != ctx) {
+            idle = m_idles.pop();
+
+            if (idle) {
+                if (ctx == idle)
+                    m_idles.push(idle);
+                else
+                    idle->deleting = true;
             }
         }
     }
@@ -120,15 +116,15 @@ bool thread_pool_t::delete_idle_worker(thread_data_t* const ctx) {
 //-----------------------------------------------------------------------------
 void thread_pool_t::delete_worker(thread_data_t* const item) {
     item->active = 0;
-    // -
+
     if (item->thread.get() != NULL) {
         item->event.signaled();
         // Дождаться завершения системного потока
         item->thread->join();
     }
-    // -
+
     delete item;
-    // -
+
     atomic_decrement(&m_count);
 }
 
@@ -167,10 +163,11 @@ void thread_pool_t::execute_loop(void* param) {
             // Случайный разброс в перидах ожидания для того, чтобы уменьшить
             // вероятность одновременного удаления нескольких потоков
             const core::WaitResult rval = timed ? pthis->event.wait((60 + rand() % 30) * 1000) : pthis->event.wait();
-            if (rval != core::WR_TIMEOUT)
+            if (rval != core::WR_TIMEOUT) {
                 break;
-            else
+            } else {
                 timed = powner->delete_idle_worker(pthis);
+            }
         }
     }
 }

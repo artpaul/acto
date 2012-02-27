@@ -1,10 +1,8 @@
+#include "runtime.h"
 
 #include <generic/stack.h>
 #include <generic/queue.h>
-
 #include <system/thread.h>
-
-#include "runtime.h"
 
 namespace acto {
 
@@ -54,9 +52,8 @@ private:
         //     полей объекта, если ссылкой на объект могут владеть
         //     два и более потока
 
-        // -
         m_modules[obj->module]->destroy_object_body(obj->impl);
-        // -
+
         obj->unimpl = true;
         delete obj->impl, obj->impl = NULL;
         obj->unimpl = false;
@@ -99,22 +96,22 @@ public:
         assert(body != NULL);
 
         object_t* const result = new core::object_t(body, module);
-        // -
+
         result->references = 1;
         // Зарегистрировать объект в системе
         if (options & acto::aoBindToThread) {
             result->references += 1;
             result->binded      = true;
-            // -
+
             threadCtx->actors.insert(result);
         }
         else {
             MutexLocker  lock(m_cs);
-            // -
+
             result->exclusive = options & acto::aoExclusive;
-            // -
+
             m_actors.insert(result);
-            // -
+
             m_clean.reset();
         }
         // -
@@ -153,9 +150,9 @@ public:
             // Удалить регистрацию объекта
             if (!obj->binded) {
                 MutexLocker   lock(m_cs);
-                // -
+
                 m_actors.erase(obj);
-                // -
+
                 if (m_actors.size() == 0)
                     m_clean.signaled();
             }
@@ -196,12 +193,12 @@ public:
     long release(object_t* const obj) {
         assert(obj != 0);
         assert(obj->references > 0);
-        // -
+
         const long result = atomic_decrement(&obj->references);
 
         if (result == 0)
             deconstruct_object(obj);
-        // -
+
         return result;
     }
     //-----------------------------------------------------------------------------
@@ -209,7 +206,7 @@ public:
         assert(inst != NULL && m_modules[id] == NULL);
 
         m_modules[id] = inst;
-        // -
+
         inst->startup();
     }
     //-----------------------------------------------------------------------------
@@ -217,13 +214,13 @@ public:
         // 1. Инициировать процедуру удаления для всех оставшихся объектов
         {
             MutexLocker lock(m_cs);
-            // -
+
             Actors  temporary(m_actors);
-            // -
+
             for (Actors::iterator i = temporary.begin(); i != temporary.end(); ++i)
                 deconstruct_object(*i);
         }
-        // -
+
         m_clean.wait();
 
         // 2.
@@ -237,7 +234,6 @@ public:
             m_modules[i] = NULL;
         }
 
-        // -
         assert(m_actors.size() == 0);
     }
     //-------------------------------------------------------------------------
@@ -257,7 +253,7 @@ public:
         package->target = target;
         // 3.
         acquire(target);
-        // -
+
         if (sender)
             acquire(sender);
 
@@ -317,7 +313,7 @@ void runtime_t::destroy_thread_binding() {
     if (threadCtx) {
         if (atomic_decrement(&threadCtx->counter) == 0) {
             this->process_binded_actors(threadCtx->actors, true);
-            // -
+
             delete threadCtx, threadCtx = 0;
         }
     }
@@ -363,18 +359,18 @@ void runtime_t::startup() {
 void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
     for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
         object_t* const actor = *i;
-        // -
+
         while (package_t* const package = actor->select_message())
             this->handle_message(package);
 
         if (need_delete)
             this->deconstruct_object(actor);
     }
-    // -
+
     if (need_delete) {
-        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) 
+        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i)
             this->release(*i);
-        // -
+
         actors.clear();
     }
 }

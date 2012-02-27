@@ -1,7 +1,5 @@
-
-#include <core/runtime.h>
-
 #include "worker.h"
+#include <core/runtime.h>
 
 namespace acto {
 
@@ -18,7 +16,7 @@ worker_t::worker_t(worker_callback_i* const slots, thread_pool_t* const pool)
     , m_slots (slots)
 {
     next = NULL;
-    // -
+
     m_complete.reset();
 
     pool->queue_task(&worker_t::execute, this);
@@ -66,16 +64,15 @@ void worker_t::execute(void* param) {
         //
         pthis->m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
     }
-    // -
+
     pthis->m_complete.signaled();
 }
 //-----------------------------------------------------------------------------
 bool worker_t::check_deleting(object_t* const obj) {
     // TN: В контексте рабочего потока
     MutexLocker lock(obj->cs);
-    // -
+
     if (!obj->has_messages()) {
-        // -
         if (!obj->exclusive || obj->deleting) {
             obj->scheduled = false;
             m_object       = NULL;
@@ -122,7 +119,7 @@ bool worker_t::process() {
                     m_object = NULL;
                     break;
                 }
-            }            
+            }
         }
 
         //
@@ -137,8 +134,7 @@ bool worker_t::process() {
         if (m_object != NULL) {
             if (m_object->exclusive)
                 return true;
-        }
-        else {
+        } else {
             // 1. Освободить ссылку на предыдущий объект
             if (!released)
                 runtime_t::instance()->release(obj);
@@ -150,8 +146,7 @@ bool worker_t::process() {
                 m_start = clock();
                 // -
                 runtime_t::instance()->acquire(m_object);
-            }
-            else {
+            } else {
                 // Поместить текущий поток в список свободных
                 return false;
             }
@@ -160,6 +155,6 @@ bool worker_t::process() {
     return true;
 }
 
-}; // namespace core
+} // namespace core
 
-}; // namespace acto
+} // namespace acto

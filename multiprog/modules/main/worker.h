@@ -14,12 +14,11 @@
 #ifndef actocore_worker_h
 #define actocore_worker_h
 
-#include <ctime>
-
 #include <generic/intrlist.h>
-
 #include <system/atomic.h>
 #include <system/thread_pool.h>
+
+#include <ctime>
 
 namespace acto {
 

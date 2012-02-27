@@ -14,8 +14,7 @@
 #ifndef acto_core_types_h_D3A964BDF70B498293D671F01F4DF126
 #define acto_core_types_h_D3A964BDF70B498293D671F01F4DF126
 
-#include <vector>
-#include <set>
+#include "message.h"
 
 #include <generic/delegates.h>
 #include <generic/intrlist.h>
@@ -23,15 +22,17 @@
 
 #include <system/event.h>
 
-#include "message.h"
+#include <vector>
+#include <set>
 
 namespace acto {
 
-// Индивидуальный поток для актера
+/// Индивидуальный поток для актера
 const int aoExclusive    = 0x01;
-// Привязать актера к текущему системному потоку.
-// Не имеет эффекта, если используется в контексте потока,
-// созданного самой библиотекой.
+
+/// Привязать актера к текущему системному потоку.
+/// Не имеет эффекта, если используется в контексте потока,
+/// созданного самой библиотекой.
 const int aoBindToThread = 0x02;
 
 
@@ -53,14 +54,20 @@ public:
  */
 class module_t {
 public:
+    virtual ~module_t() { }
+
     /// -
     virtual void destroy_object_body(actor_body_t* const /*body*/) {  }
+
     ///
     virtual void handle_message(package_t* const package) = 0;
+
     /// Отправить сообщение соответствующему объекту
     virtual void send_message(package_t* const package)   = 0;
+
     ///
     virtual void shutdown(event_t& event) = 0;
+
     /// -
     virtual void startup() = 0;
 };
@@ -104,8 +111,10 @@ public:
 
     /// Поставить сообщение в очередь
     void enqueue(package_t* const msg);
+
     /// Есть ли сообщения
     bool has_messages() const;
+
     /// Выбрать сообщение из очереди
     package_t* select_message();
 };

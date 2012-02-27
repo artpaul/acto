@@ -1,9 +1,8 @@
-
 #ifndef sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
 #define sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
 
-namespace acto { 
-    
+namespace acto {
+
 namespace generics {
 
 /** */
@@ -12,9 +11,9 @@ class sequence_t {
     T*  m_head;
 
 public:
-    sequence_t(T* const item) 
-        : m_head(item) 
-    { 
+    sequence_t(T* const item)
+        : m_head(item)
+    {
     }
 
     T* extract() {

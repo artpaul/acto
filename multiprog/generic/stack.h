@@ -14,11 +14,10 @@
 #ifndef acto_stack_h_F8AF8212D6484ce1BEE630FF7D614D9D
 #define acto_stack_h_F8AF8212D6484ce1BEE630FF7D614D9D
 
-#include <assert.h>
-
+#include "sequence.h"
 #include <system/atomic.h>
 
-#include "sequence.h"
+#include <assert.h>
 
 namespace acto {
 

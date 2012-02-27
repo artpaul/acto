@@ -23,7 +23,7 @@
 
 namespace acto {
 
-// -
+///
 class actor_t;
 
 

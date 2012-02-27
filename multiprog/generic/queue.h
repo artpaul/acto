@@ -14,11 +14,10 @@
 #ifndef acto_queue_h_5BC02FC754954131B69D316CACBCFE1A
 #define acto_queue_h_5BC02FC754954131B69D316CACBCFE1A
 
-#include <assert.h>
-
+#include "sequence.h"
 #include <system/mutex.h>
 
-#include "sequence.h"
+#include <assert.h>
 
 namespace acto {
 
@@ -65,9 +64,9 @@ public:
         if (m_tail) {
             node->next   = m_tail->next;
             m_tail->next = node;
-        }
-        else
+        } else {
             node->next = node;
+        }
         m_tail = node;
     }
 
@@ -81,7 +80,7 @@ public:
                 m_tail = NULL;
             else
                 m_tail->next = m_tail->next->next;
-            // -
+
             result->next = NULL;
             return result;
         }

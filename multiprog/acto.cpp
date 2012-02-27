@@ -1,8 +1,7 @@
+#include "act_user.h"
 
 #include <core/runtime.h>
 #include <extension/services.h>
-
-#include "act_user.h"
 
 namespace acto {
 

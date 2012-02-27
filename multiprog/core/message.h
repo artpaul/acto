@@ -14,15 +14,15 @@
 #ifndef message_h_EA18085F0CF7480fA57FBF6C0E610820
 #define message_h_EA18085F0CF7480fA57FBF6C0E610820
 
-#include <map>
-#include <string>
-#include <typeinfo>
+#include "serialization.h"
 
 #include <system/platform.h>
 #include <system/atomic.h>
 #include <system/mutex.h>
 
-#include "serialization.h"
+#include <map>
+#include <string>
+#include <typeinfo>
 
 namespace acto {
 
@@ -91,14 +91,17 @@ public:
     /// Найти метакласс по его идентификатору
     /// \return Если класса не существует, то возвращается 0
     msg_metaclass_t* find_metaclass(const TYPEID tid);
+
     /// Получить уникальный идентификатор типа для сообщения по его имени
     inline TYPEID  get_typeid(const char* const type_name) {
         return this->get_metaclass< detail::dumy_serializer_t >(type_name)->tid;
     }
+
     /// -
     inline msg_metaclass_t* get_metaclass(const char* const type_name) {
         return this->get_metaclass< detail::dumy_serializer_t >(type_name);
     }
+
     /// -
     template <typename Serializer>
     msg_metaclass_t* get_metaclass(const char* const type_name) {

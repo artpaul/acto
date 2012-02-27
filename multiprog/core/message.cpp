@@ -1,4 +1,3 @@
-
 #include "message.h"
 
 namespace acto {
