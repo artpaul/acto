@@ -1,11 +1,8 @@
-
-#include <system/platform.h>
-#include <system/thread.h>
-
-#include <modules/main/module.h>
-
 #include "types.h"
 #include "runtime.h"
+#include <modules/main/module.h>
+#include <util/system/platform.h>
+#include <util/system/thread.h>
 
 namespace acto {
 
@@ -39,8 +36,7 @@ bool object_t::has_messages() const {
 package_t* object_t::select_message() {
     if (package_t* const p = local_stack.pop()) {
         return p;
-    }
-    else {
+    } else {
         local_stack.push(input_stack.extract());
 
         return local_stack.pop();
@@ -55,17 +51,14 @@ package_t::package_t(msg_t* const data_, const TYPEID type_)
     , sender(NULL)
     , type  (type_)
 {
-    next = NULL;
 }
 //-----------------------------------------------------------------------------
 package_t::~package_t() {
     // Освободить ссылки на объекты
-    if (sender)
+    if (sender) {
         runtime_t::instance()->release(sender);
-
+	}
     runtime_t::instance()->release(target);
-    // Удалить данные сообщения
-    delete data;
 }
 
 

@@ -14,9 +14,8 @@
 #ifndef acto_services_h_86A045F6D3CC4790A6E798C909C88279
 #define acto_services_h_86A045F6D3CC4790A6E798C909C88279
 
-#include <system/platform.h>
-
 #include <act_user.h>
+#include <util/system/platform.h>
 
 namespace acto {
 

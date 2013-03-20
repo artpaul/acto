@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
-// Copyright © 2007 - 2010                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
+// Copyright © 2007 - 2012                                                   //
+//     Pavel A. Artemkin (artmkin@gmail.com)                               //
 // ------------------------------------------------------------------ -------//
 // License:                                                                  //
 //     Code covered by the MIT License.                                      //
@@ -20,20 +20,15 @@
 #pragma once
 
 // Реализация делегатов
-#include "generic/delegates.h"
+#include "util/generic/delegates.h"
 
 // Обертка над API операционных систем
-#include "system/platform.h"
+#include "util/system/platform.h"
 
 // Интерфейс библиотеки (пользовательский уровень)
 #include "act_user.h"
 
 // Дополнительные сервисы (пользовательский уровень)
 #include "extension/services.h"
-
-#ifndef ACTO_EXCLUDE_REMOTE
-#   include "remote/remote.h"
-#endif // ACTO_EXCLUDE_REMOTE
-
 
 #endif // acto_h_73A5B4AE25EE4295BD7B080FBD29FFC0

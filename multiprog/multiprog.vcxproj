@@ -84,30 +84,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="acto.cpp" />
-    <ClCompile Include="system\event.cpp" />
     <ClCompile Include="core\message.cpp" />
     <ClCompile Include="modules\main\module.cpp" />
-    <ClCompile Include="system\mutex.cpp" />
     <ClCompile Include="core\runtime.cpp" />
     <ClCompile Include="extension\services.cpp" />
-    <ClCompile Include="system\thread.cpp" />
-    <ClCompile Include="system\thread_pool.cpp" />
     <ClCompile Include="core\types.cpp" />
     <ClCompile Include="modules\main\worker.cpp" />
+    <ClCompile Include="util\system\event.cpp" />
+    <ClCompile Include="util\system\mutex.cpp" />
+    <ClCompile Include="util\system\thread.cpp" />
+    <ClCompile Include="util\system\thread_pool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="act_user.h" />
     <ClInclude Include="acto.h" />
-    <ClInclude Include="system\atomic.h" />
-    <ClInclude Include="system\event.h" />
-    <ClInclude Include="system\mutex.h" />
-    <ClInclude Include="system\platform.h" />
-    <ClInclude Include="system\thread.h" />
-    <ClInclude Include="system\thread_pool.h" />
-    <ClInclude Include="generic\intrlist.h" />
-    <ClInclude Include="generic\queue.h" />
-    <ClInclude Include="generic\sequence.h" />
-    <ClInclude Include="generic\stack.h" />
+    <ClInclude Include="core\bus.h" />
     <ClInclude Include="core\message.h" />
     <ClInclude Include="modules\main\module.h" />
     <ClInclude Include="core\runtime.h" />
@@ -115,6 +106,21 @@
     <ClInclude Include="core\types.h" />
     <ClInclude Include="modules\main\worker.h" />
     <ClInclude Include="extension\services.h" />
+    <ClInclude Include="util\generic\delegates.h" />
+    <ClInclude Include="util\generic\intrlist.h" />
+    <ClInclude Include="util\generic\intrqueue.h" />
+    <ClInclude Include="util\generic\memory.h" />
+    <ClInclude Include="util\generic\noncopyable.h" />
+    <ClInclude Include="util\generic\ptr.h" />
+    <ClInclude Include="util\generic\queue.h" />
+    <ClInclude Include="util\generic\sequence.h" />
+    <ClInclude Include="util\generic\stack.h" />
+    <ClInclude Include="util\system\atomic.h" />
+    <ClInclude Include="util\system\event.h" />
+    <ClInclude Include="util\system\mutex.h" />
+    <ClInclude Include="util\system\platform.h" />
+    <ClInclude Include="util\system\thread.h" />
+    <ClInclude Include="util\system\thread_pool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

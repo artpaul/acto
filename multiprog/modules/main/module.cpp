@@ -1,8 +1,8 @@
-
-#include <core/runtime.h>
-
 #include "module.h"
 #include "worker.h"
+
+#include <core/runtime.h>
+#include <util/generic/ptr.h>
 
 namespace acto {
 
@@ -45,7 +45,7 @@ private:
     /// Очередь объектов, которым пришли сообщения
     HeaderQueue         m_queue;
     /// Экземпляр системного потока
-    thread_t*           m_scheduler;
+	holder_t<thread_t>	m_scheduler;
     /// -
     workers_t           m_workers;
     /// -
@@ -110,9 +110,9 @@ private:
         if (!worker) {
             // Если текущее количество потоков меньше оптимального,
             // то создать новый поток
-            if (m_workers.count < (m_workers.reserved + (m_processors << 1)))
+            if (m_workers.count < (m_workers.reserved + (m_processors << 1))) {
                 worker = create_worker();
-            else {
+			} else {
                 // Подождать некоторое время осовобождения какого-нибудь потока
                 const WaitResult result = m_evworker.wait(wait_timeout * 1000);
 
@@ -121,10 +121,11 @@ private:
                 if (!worker && (result == WR_TIMEOUT)) {
                     wait_timeout += 2;
 
-                    if (m_workers.count < MAX_WORKERS)
+                    if (m_workers.count < MAX_WORKERS) {
                         worker = create_worker();
-                    else
+					} else {
                         m_evworker.wait();
+					}
                 } else {
                     if (wait_timeout > 2) {
                         wait_timeout -= 2;
@@ -156,7 +157,7 @@ public:
         // 2.
         m_evnoworkers.signaled();
         // 3.
-        m_scheduler = new thread_t(&impl::execute, this);
+		m_scheduler.reset(new thread_t(&impl::execute, this));
     }
 
     ~impl() {
@@ -170,7 +171,7 @@ public:
 
         m_event.signaled();
 
-        delete m_scheduler, m_scheduler = NULL;
+		m_scheduler.destroy();
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
@@ -239,20 +240,21 @@ public:
 
 
 //-----------------------------------------------------------------------------
-void do_handle_message(package_t* const package) {
-    assert(package != NULL && package->target != NULL);
+void do_handle_message(package_t* const p) {
+    assert(p != NULL && p->target != NULL);
 
-    object_t* const obj = package->target;
-    i_handler* handler  = 0;
-    base_t* const impl  = static_cast< base_t* >(obj->impl);
+	holder_t<package_t>	package(p);
+    object_t* const		obj     = package->target;
+    base_t* const		impl    = static_cast< base_t* >(obj->impl);
+	i_handler*			handler = 0;
 
     assert(obj->module == 0);
     assert(obj->impl   != 0);
 
     // 1. Найти обработчик соответствующий данному сообщению
     for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
-        if (package->type == (*i)->type) {
-            handler = (*i)->handler;
+		if (package->type == (*i)->type) {
+			handler = (*i)->handler.get();
             break;
         }
     }
@@ -264,19 +266,17 @@ void do_handle_message(package_t* const package) {
             //     которая всегда выполняется в контексте этого потока.
             active_actor = obj;
 
-            handler->invoke(package->sender, package->data);
+			handler->invoke(package->sender, package->data.get());
 
             active_actor = NULL;
-        }
-        catch (...) {
+        } catch (...) {
             active_actor = NULL;
         }
-        // -
-        if (impl->m_terminating)
+
+        if (impl->m_terminating) {
             runtime_t::instance()->deconstruct_object(obj);
+		}
     }
-
-    delete package;
 }
 
 
@@ -294,15 +294,10 @@ base_t::base_t()
     : m_thread(NULL)
     , m_terminating(false)
 {
-    // -
 }
 //-----------------------------------------------------------------------------
 base_t::~base_t() {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
-        // Удалить обработчик
-        if ((*i)->handler)
-            delete (*i)->handler;
-        // Удалить элемент списка
         delete (*i);
     }
 }
@@ -314,23 +309,13 @@ void base_t::terminate() {
 void base_t::set_handler(i_handler* const handler, const TYPEID type) {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
         if ((*i)->type == type) {
-            // 1. Удалить предыдущий обработчик
-            if ((*i)->handler)
-                delete (*i)->handler;
-            // 2. Установить новый
-            (*i)->handler = handler;
-
+			(*i)->handler.reset(handler);
             return;
         }
     }
+
     // Запись для данного типа сообщения еще не существует
-    {
-        HandlerItem* const item = new HandlerItem(type);
-
-        item->handler = handler;
-
-        m_handlers.push_back(item);
-    }
+	m_handlers.push_back(new HandlerItem(type, handler));
 }
 
 
@@ -359,38 +344,43 @@ void main_module_t::handle_message(package_t* const package) {
     m_pimpl->handle_message(package);
 }
 //-----------------------------------------------------------------------------
-void main_module_t::send_message(package_t* const package) {
-    object_t* const target      = package->target;
-    bool            undelivered = true;
+void main_module_t::send_message(package_t* const p) {
+	holder_t<package_t> package(p);
+	object_t* const		target = package->target;
+	bool				should_push = false;
 
-    // Эксклюзивный доступ
-    MutexLocker lock(target->cs);
+	{
+		// Эксклюзивный доступ
+		MutexLocker lock(target->cs);
 
-    // Если объект отмечен для удалдения,
-    // то ему более нельзя посылать сообщения
-    if (!target->deleting) {
-        assert(target->impl && target->module == 0);
-        // 1. Поставить сообщение в очередь объекта
-        target->enqueue(package);
-        // 2. Подобрать для него необходимый поток
-        if (!target->binded) {
-            worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
+		// Если объект отмечен для удалдения,
+		// то ему более нельзя посылать сообщения
+		if (!target->deleting) {
+			assert(target->impl && target->module == 0);
+			// 1. Поставить сообщение в очередь объекта
+			target->enqueue(package.release());
+			// 2. Подобрать для него необходимый поток
+			if (!target->binded) {
+				// Если с объектом связан эксклюзивный поток
+				worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
 
-            if (thread != NULL)
-                thread->wakeup();
-            else {
-                if (!target->scheduled) {
-                    target->scheduled = true;
-                    // Добавить объект в очередь
-                    m_pimpl->push_object(target);
-                }
-            }
-        }
-        undelivered = false;
-    }
+				if (thread != NULL) {
+					thread->wakeup();
+				} else {
+					if (!target->scheduled) {
+						target->scheduled = true;
+						// Добавить объект в очередь
+						should_push = true;
+					}
+				}
+			}
+		}
+	}
 
-    if (undelivered)
-        delete package;
+	// Добавить объект в очередь
+	if (should_push) {
+		m_pimpl->push_object(target);
+	}
 }
 //-----------------------------------------------------------------------------
 void main_module_t::shutdown(event_t& event) {

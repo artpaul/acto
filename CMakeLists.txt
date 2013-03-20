@@ -16,15 +16,12 @@ PROJECT (ACTO-SOLUTION)
 
     SUBDIRS (
         multiprog
-        multiprog/system
+        multiprog/util/system
         multiprog/core
         multiprog/extension
-        multiprog/remote
-        multiprog/remote/libsocket
 
         samples/cycles
         samples/ping-pong
-        samples/sotest
 
         tests/thread
     )

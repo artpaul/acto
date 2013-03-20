@@ -1,8 +1,8 @@
 #include "runtime.h"
 
-#include <generic/stack.h>
-#include <generic/queue.h>
-#include <system/thread.h>
+#include <util/generic/stack.h>
+#include <util/generic/queue.h>
+#include <util/system/thread.h>
 
 namespace acto {
 

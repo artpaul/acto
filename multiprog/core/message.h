@@ -16,13 +16,14 @@
 
 #include "serialization.h"
 
-#include <system/platform.h>
-#include <system/atomic.h>
-#include <system/mutex.h>
+#include <util/system/platform.h>
+#include <util/system/atomic.h>
+#include <util/system/mutex.h>
 
 #include <map>
 #include <string>
 #include <typeinfo>
+#include <vector>
 
 namespace acto {
 
@@ -81,6 +82,14 @@ class message_map_t {
     // Тип множества зарегистрированных типов сообщений
     typedef std::map< std::string, msg_metaclass_t* > Types;
 
+	typedef std::vector<msg_metaclass_t*>	Tids;
+
+	struct tid_compare_t {
+		inline bool operator () (const msg_metaclass_t* a, const TYPEID b) const throw () {
+			return a->tid < b;
+		}
+	};
+
 public:
     message_map_t();
     ~message_map_t();
@@ -90,7 +99,7 @@ public:
 public:
     /// Найти метакласс по его идентификатору
     /// \return Если класса не существует, то возвращается 0
-    msg_metaclass_t* find_metaclass(const TYPEID tid);
+    const msg_metaclass_t* find_metaclass(const TYPEID tid) const;
 
     /// Получить уникальный идентификатор типа для сообщения по его имени
     inline TYPEID  get_typeid(const char* const type_name) {
@@ -110,28 +119,30 @@ public:
 
         // Найти этот тип
         Types::const_iterator i = m_types.find(name);
-        // -
-        if (i != m_types.end())
+       
+        if (i != m_types.end()) {
             return (*i).second;
-        else {
+		} else {
             msg_metaclass_t* const meta = new msg_metaclass_t();
 
             meta->tid = atomic_increment(&m_counter);
             meta->serializer.reset(new Serializer());
 
             m_types[name] = meta;
-            // -
+			m_tids.push_back(meta);
+            
             return meta;
         }
     }
 
 private:
     /// Критическая секция для доступа к полям
-    mutex_t     m_cs;
+    mutable mutex_t m_cs;
     /// Генератор идентификаторов
-    TYPEID      m_counter;
+    TYPEID			m_counter;
     /// Типы сообщений
-    Types       m_types;
+    Types			m_types;
+	Tids			m_tids;
 };
 
 ///
@@ -152,7 +163,7 @@ class msg_box_t {
 public:
     explicit msg_box_t(T* val) : m_msg(val) { }
 
-    inline T* operator * () const {
+    inline T* operator * () const throw () {
         return m_msg;
     }
 };
@@ -161,19 +172,6 @@ public:
 /** */
 template <typename MsgT, typename Serializer = detail::dumy_serializer_t >
 class message_class_t {
-    msg_metaclass_t* const  m_meta;
-
-    inline msg_box_t< MsgT > _assign_info(MsgT* const msg) const {
-        msg->meta = m_meta;
-        return msg_box_t< MsgT >(msg);
-    }
-
-    static msg_t* instance_constructor() {
-        msg_t* const result = new MsgT();
-        result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).name());
-        return result;
-    }
-
 public:
     message_class_t()
         : m_meta(message_map_t::instance()->get_metaclass< Serializer >(typeid(MsgT).name()))
@@ -210,6 +208,21 @@ public:
     inline msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) const {
         return _assign_info(new MsgT(p1, p2, p3, p4, p5));
     }
+
+private:
+    inline msg_box_t< MsgT > _assign_info(MsgT* const msg) const {
+        msg->meta = m_meta;
+        return msg_box_t< MsgT >(msg);
+    }
+
+    static msg_t* instance_constructor() {
+        msg_t* const result = new MsgT();
+        result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).name());
+        return result;
+    }
+
+private:
+	msg_metaclass_t* const  m_meta;
 };
 
 } // namespace core

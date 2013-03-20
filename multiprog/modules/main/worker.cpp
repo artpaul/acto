@@ -15,8 +15,6 @@ worker_t::worker_t(worker_callback_i* const slots, thread_pool_t* const pool)
     , m_event(true)
     , m_slots (slots)
 {
-    next = NULL;
-
     m_complete.reset();
 
     pool->queue_task(&worker_t::execute, this);

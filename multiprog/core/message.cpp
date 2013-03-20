@@ -1,4 +1,5 @@
 #include "message.h"
+#include <algorithm>
 
 namespace acto {
 
@@ -26,15 +27,15 @@ message_map_t* message_map_t::instance() {
     return &value;
 }
 
-msg_metaclass_t* message_map_t::find_metaclass(const TYPEID tid) {
-    MutexLocker lock(m_cs);
+const msg_metaclass_t* message_map_t::find_metaclass(const TYPEID tid) const {
+    MutexLocker		     lock(m_cs);
+	Tids::const_iterator i = std::lower_bound(m_tids.begin(), m_tids.end(), tid, tid_compare_t());
 
-    for (Types::iterator i = m_types.begin(); i != m_types.end(); ++i) {
-        if ((*i).second->tid == tid)
-            return (*i).second;
-    }
+	if (i != m_tids.end()) {
+		return *i;
+	}
 
-    return NULL;
+	return 0;
 }
 
 } // namespace core
