@@ -56,7 +56,7 @@ void remote_module_t::send_message(core::package_t* const package) {
         }
         if (sid == 0) {
             sid = ++m_last;
-            m_actors[sid] = actor_t(sender);
+            m_actors[sid] = actor_ref(sender);
         }
     }
 
@@ -87,7 +87,7 @@ void remote_module_t::startup() {
     // -
 }
 //-----------------------------------------------------------------------------
-actor_t remote_module_t::connect(const char* path, unsigned int port) {
+actor_ref remote_module_t::connect(const char* path, unsigned int port) {
     // !!! Parse path
 
     network_node_t* const node = m_transport.connect("127.0.0.1", port, &remote_module_t::do_client_commands, this);
@@ -123,22 +123,22 @@ actor_t remote_module_t::connect(const char* path, unsigned int port) {
             // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
             core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
 
-            m_actors[value->m_id] = actor_t(result);
+            m_actors[value->m_id] = actor_ref(result);
             // -
-            return actor_t(result);
+            return actor_ref(result);
         }
 
         m_asks.erase(aid);
         delete ask;
     }
-    return actor_t();
+    return actor_ref();
 }
 //-----------------------------------------------------------------------------
 void remote_module_t::enable_server() {
     m_transport.open_node(CLIENTPORT, &remote_module_t::do_server_commands, this);
 }
 //-----------------------------------------------------------------------------
-void remote_module_t::register_actor(const actor_t& actor, const char* path) {
+void remote_module_t::register_actor(const actor_ref& actor, const char* path) {
     if (actor.assigned()) {
         core::MutexLocker lock(m_cs);
         actor_info_t      info;
@@ -182,7 +182,7 @@ void remote_module_t::do_send_message(command_event_t* const ev, bool is_client)
             for (global_t::iterator i = m_registered.begin(); i != m_registered.end(); ++i) {
                 if ((*i).second.id == oid) {
                     // Сформировать заглушку для удалённого объекта
-                    actor_t sender;
+                    actor_ref sender;
                     {
                         remote_base_t* const value = new remote_base_t();
                         // 1.
@@ -191,7 +191,7 @@ void remote_module_t::do_send_message(command_event_t* const ev, bool is_client)
                         // 2. Создать объект ядра (счетчик ссылок увеличивается автоматически)
                         core::object_t* const result = core::runtime_t::instance()->create_actor(value, 0, 1);
 
-                        sender = actor_t(result);
+                        sender = actor_ref(result);
                     }
                     // -
                     core::runtime_t::instance()->send(sender.data(), (*i).second.actor.data(), msg);

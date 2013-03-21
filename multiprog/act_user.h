@@ -1,7 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
-// Copyright © 2007 - 2010                                                   //
+// Copyright © 2007 - 2013                                                   //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                               //
 // ------------------------------------------------------------------ -------//
 // License:                                                                  //
@@ -18,11 +18,10 @@
 #include <modules/main/module.h>
 
 namespace acto {
-
 namespace detail {
 
 template <typename Impl>
-inline core::object_t* make_instance(const actor_t& context, const int options) {
+inline core::object_t* make_instance(const actor_ref& context, const int options) {
     return core::main_module_t::instance()->make_instance< Impl >(context, options);
 }
 
@@ -38,17 +37,17 @@ using core::message_class_t;
 /**
  * Пользовательский объект (актер)
  */
-class actor_t {
-    friend void join(actor_t& obj);
-    friend void destroy(actor_t& object);
+class actor_ref {
+    friend void join(actor_ref& obj);
+    friend void destroy(actor_ref& object);
 
 private:
     core::object_t* volatile  m_object;
 
     /// Присваивает новое значение текущему объекту
-    void assign(const actor_t& rhs);
+    void assign(const actor_ref& rhs);
     ///
-    bool same(const actor_t& rhs) const;
+    bool same(const actor_ref& rhs) const;
     ///
     template <typename T>
     void send_message(T* const msg) const {
@@ -63,13 +62,13 @@ private:
     }
 
 public:
-    actor_t();
-    // -
-    explicit actor_t(core::object_t* const an_object, const bool acquire = true);
-    // -
-    actor_t(const actor_t& rhs);
+    actor_ref();
 
-    ~actor_t();
+    explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
+
+    actor_ref(const actor_ref& rhs);
+
+    ~actor_ref();
 
 public:
     /// Инициализирован ли текущий объект
@@ -113,11 +112,11 @@ public:
 
 /* Операторы */
 public:
-    actor_t& operator = (const actor_t& rhs);
+    actor_ref& operator = (const actor_ref& rhs);
     // -
-    bool operator == (const actor_t& rhs) const;
+    bool operator == (const actor_ref& rhs) const;
     // -
-    bool operator != (const actor_t& rhs) const;
+    bool operator != (const actor_ref& rhs) const;
 };
 
 
@@ -129,9 +128,9 @@ class implementation_t : public core::base_t {
 
 protected:
     // Ссылка на контекстный объект для данного
-    actor_t     context;
+    actor_ref   context;
     // Ссылка на самого себя
-    actor_t     self;
+    actor_ref   self;
 };
 
 
@@ -147,7 +146,7 @@ struct msg_time : public msg_t { };
 ///////////////////////////////////////////////////////////////////////////////
 
 /* Уничтожить указанный объект */
-ACTO_API void destroy(actor_t& object);
+ACTO_API void destroy(actor_ref& object);
 
 //
 ACTO_API void finalize_thread();
@@ -157,7 +156,7 @@ ACTO_API void finalize_thread();
 ACTO_API void initialize_thread();
 
 /* Дождаться завершения работы указанног актера */
-ACTO_API void join(actor_t& obj);
+ACTO_API void join(actor_ref& obj);
 
 // Обработать все сообщения для объектов,
 // привязанных к текущему системному потоку (опция aoBindToThread)
@@ -171,25 +170,25 @@ ACTO_API void startup();
 
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_t instance() {
-    actor_t a;
-    return actor_t(detail::make_instance< T >(a, 0), false);
+inline actor_ref instance() {
+    actor_ref a;
+    return actor_ref(detail::make_instance< T >(a, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_t instance(actor_t& context) {
-    return actor_t(detail::make_instance< T >(context, 0), false);
+inline actor_ref instance(actor_ref& context) {
+    return actor_ref(detail::make_instance< T >(context, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_t instance(const int options) {
-    actor_t a;
-    return actor_t(detail::make_instance< T >(a, options), false);
+inline actor_ref instance(const int options) {
+    actor_ref a;
+    return actor_ref(detail::make_instance< T >(a, options), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_t instance(actor_t& context, const int options) {
-    return actor_t(detail::make_instance< T >(context, options), false);
+inline actor_ref instance(actor_ref& context, const int options) {
+    return actor_ref(detail::make_instance< T >(context, options), false);
 }
 
 } // namespace acto

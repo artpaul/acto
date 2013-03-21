@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
+// Copyright © 2007 - 2013                                                   //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
+//---------------------------------------------------------------------------//
 // License:                                                                  //
 //     Code covered by the MIT License.                                      //
 //     The authors make no representations about the suitability of this     //
@@ -59,14 +59,14 @@ public:
 
 public:
 	// Отключить таймер для указанного актера
-	void cancel(acto::actor_t& actor);
+	void cancel(acto::actor_ref& actor);
 
 	// Установить таймер для указанного актера
-	void setup(acto::actor_t& actor, const int time, const bool once);
+	void setup(acto::actor_ref& actor, const int time, const bool once);
 
 private:
 	// -
-	actor_t		m_actor;
+	actor_ref   m_actor;
 };
 
 

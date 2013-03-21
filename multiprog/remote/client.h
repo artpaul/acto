@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                           The act-o Library                               //
 //---------------------------------------------------------------------------//
-// Copyright © 2007 - 2010                                                   //
+// Copyright © 2007 - 2013                                                   //
 //     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
+//---------------------------------------------------------------------------//
 // License:                                                                  //
 //     Code covered by the MIT License.                                      //
 //     The authors make no representations about the suitability of this     //
@@ -27,7 +27,7 @@
 
 namespace acto {
 
-class actor_t;
+class actor_ref;
 
 namespace remote {
 
@@ -47,7 +47,7 @@ class remote_module_t : public core::module_t {
     /// Регистрационная информация об объекте
     /// который выступает в роли сервера
     struct actor_info_t {
-        actor_t     actor;
+        actor_ref   actor;
         ui64        id;
     };
 
@@ -56,7 +56,7 @@ class remote_module_t : public core::module_t {
         ui64            oid;
     };
 
-    typedef std::map< ui64, actor_t >               actors_t;
+    typedef std::map< ui64, actor_ref >             actors_t;
 
     typedef std::map< std::string, actor_info_t >   global_t;
 
@@ -79,11 +79,11 @@ public:
 
     virtual void startup();
 
-    actor_t      connect(const char* path, unsigned int port);
+    actor_ref    connect(const char* path, unsigned int port);
     /// -
     void         enable_server();
     /// -
-    void         register_actor(const actor_t& actor, const char* path);
+    void         register_actor(const actor_ref& actor, const char* path);
     /// -
     void         register_hook(remote_hook_t* const hook);
 

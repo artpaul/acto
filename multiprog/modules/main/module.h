@@ -24,10 +24,11 @@
 
 namespace acto {
 
-    ///
-    class actor_t;
+class actor_ref;
 
+}
 
+namespace acto {
 namespace core {
 
     /** */
@@ -50,7 +51,7 @@ namespace core {
     template <typename MsgT, typename C>
     class mem_handler_t : public i_handler {
     public:
-        typedef std::function< void (C*, acto::actor_t&, const MsgT&) > delegate_t;
+        typedef std::function< void (C*, acto::actor_ref&, const MsgT&) > delegate_t;
 
     public:
         mem_handler_t(const delegate_t& delegate_, C* c, const TYPEID type_)
@@ -62,7 +63,7 @@ namespace core {
 
         // Вызвать обработчик
         virtual void invoke(object_t* const sender, msg_t* const msg) const {
-            acto::actor_t   actor(sender);
+            acto::actor_ref actor(sender);
 
             m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
         }
@@ -78,7 +79,7 @@ namespace core {
     template <typename MsgT>
     class handler_t : public i_handler {
     public:
-        typedef std::function< void (acto::actor_t&, const MsgT&) > delegate_t;
+        typedef std::function< void (acto::actor_ref&, const MsgT&) > delegate_t;
 
     public:
         handler_t(const delegate_t& delegate_, const TYPEID type_)
@@ -89,7 +90,7 @@ namespace core {
 
         // Вызвать обработчик
         virtual void invoke(object_t* const sender, msg_t* const msg) const {
-            acto::actor_t   actor(sender);
+            acto::actor_ref actor(sender);
 
             m_delegate(actor, *static_cast< const MsgT* const >(msg));
         }
@@ -150,8 +151,7 @@ namespace core {
 
         /// Установка обработчика для сообщения данного типа
         template < typename MsgT, typename ClassName >
-            inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
-            //inline void Handler( void (ClassName::*func)(acto::actor_t& sender, const MsgT& msg) ) {
+            inline void Handler( void (ClassName::*func)(acto::actor_ref& sender, const MsgT& msg) ) {
                 // Тип сообщения
                 const TYPEID                            a_type     = get_message_type< MsgT >();
                 // Метод, обрабатывающий сообщение
@@ -165,7 +165,7 @@ namespace core {
 
         /// Установка обработчика для сообщения данного типа
         template <typename MsgT>
-            inline void Handler(std::function< void (acto::actor_t& sender, const MsgT& msg) > func) {
+            inline void Handler(std::function< void (acto::actor_ref& sender, const MsgT& msg) > func) {
                 // Тип сообщения
                 const TYPEID                            a_type     = get_message_type< MsgT >();
                 // Метод, обрабатывающий сообщение
@@ -223,14 +223,14 @@ namespace core {
 
         /// Создать экземпляр актёра
         template <typename Impl>
-        object_t* make_instance(const actor_t& context, const int options) {
+        object_t* make_instance(const actor_ref& context, const int options) {
             Impl* const value = new Impl();
             // Создать объект ядра (счетчик ссылок увеличивается автоматически)
             core::object_t* const result = this->create_actor(value, options);
 
             if (result) {
                 value->context = context;
-                value->self    = actor_t(result);
+                value->self    = actor_ref(result);
             }
 
             return result;

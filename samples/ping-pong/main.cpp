@@ -46,10 +46,10 @@ static const int PLAYERS  = 10 * 1000;
 struct msg_start : public acto::msg_t {
     // Кол-во мячей в игре
     int             balls;
-    acto::actor_t   console;
+    acto::actor_ref console;
 
 public:
-    msg_start(int balls_, acto::actor_t& console_) : balls( balls_ ), console( console_ ) { }
+    msg_start(int balls_, acto::actor_ref& console_) : balls( balls_ ), console( console_ ) { }
 };
 
 
@@ -90,7 +90,7 @@ public:
         // Метод Handler связывает конкретную процедуру с библиотекой
         // для обработки сообщения указанного типа.
         //Handler< msg_out >( &Console::do_out );
-        Handler< msg_out >( [] (acto::actor_t& sender, const msg_out& msg)
+        Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
             { std::cout << msg.text << std::endl; }
         );
 
@@ -99,7 +99,7 @@ public:
         // Ex:
         //    Handler< msg_out >( &Console::another_proc );
         //
-        //    Handler< msg_out >( [] (acto::actor_t& sender, const msg_out& msg)
+        //    Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
         //        { ; }
         //    );
         // Для того, чтобы отключить обработку указанного сообщения необходимо вызвать
@@ -118,7 +118,7 @@ public:
 // Desc: Отбивает мяч
 class Player : public acto::implementation_t {
 private:
-    void do_ball(acto::actor_t& sender, const msg_ball& msg) {
+    void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
         // Отправить мяч обратно
         sender.send( msg_ball_class.create() );
     }
@@ -133,9 +133,9 @@ public:
 // Desc: Мяч отскакивает одному из игроков
 class Wall : public acto::implementation_t {
     // Консоль
-    acto::actor_t   m_console;
+    acto::actor_ref m_console;
     // Множество игроков
-    acto::actor_t   m_players[ PLAYERS ];
+    acto::actor_ref m_players[ PLAYERS ];
     // Счетчик отскоков мячей от стены
     long long       m_counter;
     // Признак окончания игры
@@ -163,7 +163,7 @@ public:
 
 private:
     //-------------------------------------------------------------------------
-    void do_ball(acto::actor_t& sender, const msg_ball& msg) {
+    void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
         if (!m_finished) {
             // Увеличить счетчик отскоков от стены
             m_counter++;
@@ -172,7 +172,7 @@ private:
         }
     }
     //-------------------------------------------------------------------------
-    void do_finish(acto::actor_t& sender, const msg_finish& msg) {
+    void do_finish(acto::actor_ref& sender, const msg_finish& msg) {
         m_finished = true;
         // -
         char    buffer[255];
@@ -184,7 +184,7 @@ private:
         this->terminate();
     }
     //-------------------------------------------------------------------------
-    void do_start(acto::actor_t& sender, const msg_start& msg) {
+    void do_start(acto::actor_ref& sender, const msg_start& msg) {
         m_console = msg.console;
 
         // Послать мячи в игру
@@ -212,13 +212,13 @@ int main() {
             // Создать консоль.
             // Все актеры должны создаваться с использованием шаблона act_o::instance_t<>.
             // Использование оператора new недопустимо.
-            acto::actor_t   console = acto::instance< Console >(acto::aoBindToThread);
+            acto::actor_ref console = acto::instance< Console >(acto::aoBindToThread);
 
             for(unsigned int j = 0; j < 3; j++) {
                 // Создать стену.
                 // Опция "acto::aoExclusive" создает для объекта отдельный поток,
                 // в котором будут выполнятся все обработчики этого объекта
-                acto::actor_t wall = acto::instance< Wall >();
+                acto::actor_ref wall = acto::instance< Wall >();
 
                 // -
                 console.send< msg_out >("send start");

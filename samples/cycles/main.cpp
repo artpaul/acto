@@ -1,4 +1,3 @@
-
 ///////////////////////////////////////////////////////////////////////////////
 // Desc:                                                                     //
 //    Данный пример предназначен для тестирования round-robin алгоритма      //
@@ -70,7 +69,7 @@ public:
 
 public:
     //-------------------------------------------------------------------------
-    void doLoop(acto::actor_t& sender, const msg_loop& msg) {
+    void doLoop(acto::actor_ref& sender, const msg_loop& msg) {
         if (m_active) {
             m_counter++;
             // Продолжить цикл
@@ -78,13 +77,13 @@ public:
         }
     }
     //-------------------------------------------------------------------------
-    void doStart(acto::actor_t& sender, const msg_start& msg) {
+    void doStart(acto::actor_ref& sender, const msg_start& msg) {
         m_active  = true;
         // Начать цикл
         self.send(msg_loop_class.create());
     }
     //-------------------------------------------------------------------------
-    void doStop(acto::actor_t& sender, const msg_stop& msg) {
+    void doStop(acto::actor_ref& sender, const msg_stop& msg) {
         m_active = false;
         // -
         msg_complete    rval;
@@ -119,23 +118,20 @@ public:
     }
 
 private:
-    //-------------------------------------------------------------------------
-    void doComplete(acto::actor_t& sender, const msg_complete& msg) {
+    void doComplete(acto::actor_ref& sender, const msg_complete& msg) {
         std::cout << msg.cycles << std::endl;
     }
-    //-------------------------------------------------------------------------
-    void doStart(acto::actor_t& sender, const msg_start& msg) {
+
+    void doStart(acto::actor_ref& sender, const msg_start& msg) {
         for (size_t i = 0; i < LISTENERS; i++) {
-            // -
-            acto::actor_t   actor = acto::instance< Listener >(self);
-            // -
+            acto::actor_ref actor = acto::instance< Listener >(self);
+
             actor.send(msg_start());
-            // -
             m_listeners.push_back(actor);
         }
     }
-    //-------------------------------------------------------------------------
-    void doStop(acto::actor_t& sender, const msg_stop& msg) {
+
+    void doStop(acto::actor_ref& sender, const msg_stop& msg) {
         for (size_t i = 0; i < m_listeners.size(); i++) {
             m_listeners[i].send(msg_stop());
             // Ждать завершения работы агента
@@ -145,7 +141,7 @@ private:
     }
 
 private:
-    std::vector< acto::actor_t > m_listeners;
+    std::vector<acto::actor_ref> m_listeners;
 };
 
 
@@ -155,17 +151,17 @@ int main() {
     acto::startup();
     {
         // -
-        acto::actor_t   analizer = acto::instance< Analizer >(acto::aoExclusive);
+        acto::actor_ref analizer = acto::instance< Analizer >(acto::aoExclusive);
         // -
         std::cout << "Statistic is being collected." << std::endl;
         std::cout << "Please wait some seconds..." << std::endl;
         // Запустить выполнение примера
         analizer.send(msg_start());
-        // -
+
         acto::core::sleep(5 * 1000);
         // Оставноваить выполнение и собрать статистику
         analizer.send(msg_stop());
-        // -
+
         acto::join(analizer);
     }
     // Освободить ресурсы

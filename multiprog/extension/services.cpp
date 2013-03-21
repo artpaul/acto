@@ -22,16 +22,16 @@ namespace impl {
 class TimerActor : public acto::implementation_t {
 public:
 	struct msg_cancel : public msg_t {
-		actor_t		actor;
+		actor_ref   actor;
 	};
 
 	struct msg_delete : public msg_t {
-		actor_t		actor;
+		actor_ref   actor;
 	};
 
 	struct msg_setup  : public msg_t {
 		// Актер, которому будет послано уведомление
-		actor_t		actor;
+		actor_ref	actor;
 		// Должно ли событие произойти только один раз или постоянно
 		bool		once;
 		// Интервал, через который событие должно произойти
@@ -45,12 +45,12 @@ public:
 private:
 	/* Обработчики сообщений */
 
-	void do_cancel(acto::actor_t& sender, const msg_cancel& msg);
-	void do_delete(acto::actor_t& sender, const msg_delete& msg);
-	void do_setup (acto::actor_t& sender, const msg_setup&  msg);
+	void do_cancel(acto::actor_ref& sender, const msg_cancel& msg);
+	void do_delete(acto::actor_ref& sender, const msg_delete& msg);
+	void do_setup (acto::actor_ref& sender, const msg_setup&  msg);
 
 	// Удалить событие для уазанного актера
-	void delete_event(const acto::actor_t& actor);
+	void delete_event(const acto::actor_ref& actor);
 
 	// -
 	static void CALLBACK TimerProc(PVOID lpParam, BOOLEAN TimerOrWaitFired);
@@ -59,18 +59,18 @@ private:
 	// Зарегистрированное событие
 	struct event_t {
 		// Актер, которому будет послано уведомление
-		actor_t		actor;
+		actor_ref	actor;
 		// Должно ли событие произойти только один раз или постоянно
 		bool		once;
 		// Интервал, через который событие должно произойти
 		int			time;
 		// -
-		actor_t		owner;
+		actor_ref	owner;
 		// -
 		HANDLE		timer;
 
 	public:
-		event_t(actor_t& owner_);
+		event_t(actor_ref& owner_);
 		// -
 		void invoke();
 	};
@@ -103,16 +103,16 @@ TimerActor::~TimerActor() {
 }
 
 //-------------------------------------------------------------------------------------------------
-void TimerActor::do_cancel(acto::actor_t& sender, const TimerActor::msg_cancel& msg) {
+void TimerActor::do_cancel(acto::actor_ref& sender, const TimerActor::msg_cancel& msg) {
 	this->delete_event( msg.actor );
 }
 //-------------------------------------------------------------------------------------------------
-void TimerActor::do_delete(acto::actor_t& sender, const TimerActor::msg_delete& msg) {
+void TimerActor::do_delete(acto::actor_ref& sender, const TimerActor::msg_delete& msg) {
 	this->delete_event( msg.actor );
 }
 //-------------------------------------------------------------------------------------------------
-void TimerActor::do_setup (acto::actor_t& sender, const TimerActor::msg_setup& msg) {
-	event_t* const	p_event = new event_t( actor_t() );
+void TimerActor::do_setup (acto::actor_ref& sender, const TimerActor::msg_setup& msg) {
+	event_t* const	p_event = new event_t( actor_ref() );
 	// -
 	p_event->actor = msg.actor;
 	p_event->once  = msg.once;
@@ -145,7 +145,7 @@ void TimerActor::do_setup (acto::actor_t& sender, const TimerActor::msg_setup& m
 }
 
 //-------------------------------------------------------------------------------------------------
-void TimerActor::delete_event(const acto::actor_t& actor) {
+void TimerActor::delete_event(const acto::actor_ref& actor) {
 	for (Events::iterator i = m_events.begin(); i != m_events.end(); i++) {
 		if ((*i)->actor == actor) {
 			// 1. Удалить системный таймер
@@ -171,7 +171,7 @@ void CALLBACK TimerActor::TimerProc(PVOID lpParam, BOOLEAN TimerOrWaitFired) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //-------------------------------------------------------------------------------------------------
-TimerActor::event_t::event_t(actor_t& owner_) :
+TimerActor::event_t::event_t(actor_ref& owner_) :
 	owner( owner_ )
 {
 }
@@ -226,7 +226,7 @@ timer_t::~timer_t() {
 
 
 //-------------------------------------------------------------------------------------------------
-void timer_t::cancel(acto::actor_t& actor) {
+void timer_t::cancel(acto::actor_ref& actor) {
 	if (actor.assigned()) {
         impl::TimerActor::msg_cancel	msg;
 		// -
@@ -236,7 +236,7 @@ void timer_t::cancel(acto::actor_t& actor) {
 	}
 }
 //-------------------------------------------------------------------------------------------------
-void timer_t::setup(acto::actor_t& actor, const int time, const bool once) {
+void timer_t::setup(acto::actor_ref& actor, const int time, const bool once) {
     // Инициализация актера
     if (!m_actor.assigned())
         m_actor = acto::instance< impl::TimerActor >(aoExclusive);

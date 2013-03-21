@@ -5,10 +5,13 @@
 
 namespace acto {
 
+///////////////////////////////////////////////////////////////////////////////
+
 static atomic_t startup_counter = 0;
 
-//-----------------------------------------------------------------------------
-ACTO_API void destroy(actor_t& object) {
+///////////////////////////////////////////////////////////////////////////////
+
+void destroy(actor_ref& object) {
     if (core::object_t* const obj = object.m_object) {
         object.m_object = NULL;
         // Освободить ссылку на объект и удалить его
@@ -16,25 +19,26 @@ ACTO_API void destroy(actor_t& object) {
             core::runtime_t::instance()->deconstruct_object(obj);
     }
 }
-//-----------------------------------------------------------------------------
-ACTO_API void finalize_thread() {
+
+void finalize_thread() {
     core::runtime_t::instance()->destroy_thread_binding();
 }
-//-----------------------------------------------------------------------------
-ACTO_API void initialize_thread() {
+
+void initialize_thread() {
     core::runtime_t::instance()->create_thread_binding();
 }
-//-----------------------------------------------------------------------------
-ACTO_API void join(actor_t& obj) {
-    if (obj.m_object)
+
+void join(actor_ref& obj) {
+    if (obj.m_object) {
         core::runtime_t::instance()->join(obj.m_object);
+    }
 }
-//-----------------------------------------------------------------------------
-ACTO_API void process_messages() {
+
+void process_messages() {
     core::runtime_t::instance()->process_binded_actors();
 }
-//-----------------------------------------------------------------------------
-ACTO_API void shutdown() {
+
+void shutdown() {
     if (startup_counter > 0) {
         // Заврешить работу ядра
         if (atomic_decrement(&startup_counter) == 0) {
@@ -43,8 +47,8 @@ ACTO_API void shutdown() {
         }
     }
 }
-//-----------------------------------------------------------------------------
-ACTO_API void startup() {
+
+void startup() {
     if (atomic_increment(&startup_counter) == 1) {
         //
         // Инициализировать ядро
@@ -54,39 +58,37 @@ ACTO_API void startup() {
     }
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
-actor_t::actor_t()
+
+actor_ref::actor_ref()
     : m_object(NULL)
 {
 }
-//-----------------------------------------------------------------------------
-actor_t::actor_t(core::object_t* const an_object, const bool acquire)
+
+actor_ref::actor_ref(core::object_t* const an_object, const bool acquire)
     : m_object(an_object)
 {
     if (m_object && acquire)
         core::runtime_t::instance()->acquire(m_object);
 }
-//-----------------------------------------------------------------------------
-actor_t::actor_t(const actor_t& rhs)
+
+actor_ref::actor_ref(const actor_ref& rhs)
     : m_object(rhs.m_object)
 {
     if (m_object)
         core::runtime_t::instance()->acquire(m_object);
 }
-//-----------------------------------------------------------------------------
-actor_t::~actor_t() {
+
+actor_ref::~actor_ref() {
     if (m_object)
         core::runtime_t::instance()->release(m_object);
 }
 
-//-----------------------------------------------------------------------------
-bool actor_t::assigned() const {
+bool actor_ref::assigned() const {
     return (m_object != NULL);
 }
-//-----------------------------------------------------------------------------
-void actor_t::assign(const actor_t& rhs) {
+
+void actor_ref::assign(const actor_ref& rhs) {
     // 1.
     if (rhs.m_object)
         core::runtime_t::instance()->acquire(rhs.m_object);
@@ -96,25 +98,26 @@ void actor_t::assign(const actor_t& rhs) {
     // -
     m_object = rhs.m_object;
 }
-//-----------------------------------------------------------------------------
-bool actor_t::same(const actor_t& rhs) const {
+
+bool actor_ref::same(const actor_ref& rhs) const {
     return (m_object == rhs.m_object);
 }
 
-//-----------------------------------------------------------------------------
-actor_t& actor_t::operator = (const actor_t& rhs) {
+actor_ref& actor_ref::operator = (const actor_ref& rhs) {
     if (this != &rhs)
         this->assign(rhs);
-    // -
+
     return *this;
 }
-//-----------------------------------------------------------------------------
-bool actor_t::operator == (const actor_t& rhs) const {
+
+bool actor_ref::operator == (const actor_ref& rhs) const {
     return this->same(rhs);
 }
-//-----------------------------------------------------------------------------
-bool actor_t::operator != (const actor_t& rhs) const {
+
+bool actor_ref::operator != (const actor_ref& rhs) const {
     return !this->same(rhs);
 }
 
-}; // namespace acto
+///////////////////////////////////////////////////////////////////////////////
+
+} // namespace acto
