@@ -16,7 +16,6 @@
 
 #include "message.h"
 
-#include <util/generic/delegates.h>
 #include <util/generic/intrlist.h>
 #include <util/generic/ptr.h>
 #include <util/generic/stack.h>
@@ -123,13 +122,13 @@ public:
 /** Транспортный пакет для сообщения */
 struct ACTO_API package_t : public intrusive_t< package_t > {
     // Данные сообщения
-	holder_t<msg_t>		data;
+    holder_t<msg_t>     data;
     // Отправитель сообщения
-    object_t*			sender;
+    object_t*           sender;
     // Получатель сообщения
-    object_t*			target;
+    object_t*           target;
     // Код типа сообщения
-    const TYPEID		type;
+    const TYPEID        type;
 
 public:
     package_t(msg_t* const data_, const TYPEID type_);

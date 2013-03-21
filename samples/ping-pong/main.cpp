@@ -85,21 +85,23 @@ acto::message_class_t< msg_ball >   msg_ball_class;
 //       необходимости использовать примитивы синхронизации при
 //       выводе из разных потоков.
 class Console : public acto::implementation_t {
-private:
-    void do_out(acto::actor_t& sender, const msg_out& msg) {
-        std::cout << msg.text << std::endl;
-    }
-
 public:
     Console() {
         // Метод Handler связывает конкретную процедуру с библиотекой
         // для обработки сообщения указанного типа.
-        Handler< msg_out >( &Console::do_out );
+        //Handler< msg_out >( &Console::do_out );
+        Handler< msg_out >( [] (acto::actor_t& sender, const msg_out& msg)
+            { std::cout << msg.text << std::endl; }
+        );
+
 
         // Во время работы программы можно сменить обработчик просто указав другой метод.
         // Ex:
         //    Handler< msg_out >( &Console::another_proc );
         //
+        //    Handler< msg_out >( [] (acto::actor_t& sender, const msg_out& msg)
+        //        { ; }
+        //    );
         // Для того, чтобы отключить обработку указанного сообщения необходимо вызвать
         // метод Handler без параметров.
         // Ex:

@@ -19,9 +19,6 @@
 
 #pragma once
 
-// Реализация делегатов
-#include "util/generic/delegates.h"
-
 // Обертка над API операционных систем
 #include "util/system/platform.h"
 
