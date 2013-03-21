@@ -3,11 +3,13 @@
 #include <core/runtime.h>
 #include <extension/services.h>
 
+#include <atomic>
+
 namespace acto {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static atomic_t startup_counter = 0;
+static std::atomic_long startup_counter(0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -41,7 +43,7 @@ void process_messages() {
 void shutdown() {
     if (startup_counter > 0) {
         // Заврешить работу ядра
-        if (atomic_decrement(&startup_counter) == 0) {
+        if (--startup_counter == 0) {
             // -
             core::runtime_t::instance()->shutdown();
         }
@@ -49,7 +51,7 @@ void shutdown() {
 }
 
 void startup() {
-    if (atomic_increment(&startup_counter) == 1) {
+    if (++startup_counter == 1) {
         //
         // Инициализировать ядро
         //
