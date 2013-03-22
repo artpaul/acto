@@ -1,24 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2013                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-//---------------------------------------------------------------------------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acto_services_h_86A045F6D3CC4790A6E798C909C88279
-#define acto_services_h_86A045F6D3CC4790A6E798C909C88279
+#pragma once
 
 #include <act_user.h>
 #include <util/system/platform.h>
 
 namespace acto {
-
 
 // Дополнительные сервисы
 namespace services {
@@ -76,7 +61,4 @@ extern timer_t  timer;
 #endif // ACTO_WIN
 
 }; // namespace services
-
 }; // namespace acto
-
-#endif // acto_services_h_86A045F6D3CC4790A6E798C909C88279

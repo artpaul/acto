@@ -1,20 +1,6 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2013                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
+#pragma once
 
-#ifndef acto_core_module_h_cbc7f72e6ef34806b94705e9abc98295
-#define acto_core_module_h_cbc7f72e6ef34806b94705e9abc98295
-
-#include <core/types.h>
+#include "types.h"
 
 #include <util/system/event.h>
 #include <util/system/thread.h>
@@ -31,218 +17,216 @@ class actor_ref;
 namespace acto {
 namespace core {
 
-    /** */
-    struct ACTO_API i_handler {
-        // Идентификатор типа сообщения
-        const TYPEID    m_type;
+/** */
+struct i_handler {
+    // Идентификатор типа сообщения
+    const TYPEID    m_type;
+
+public:
+    i_handler(const TYPEID type_);
+    virtual ~i_handler() { }
+
+public:
+    virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
+};
+
+
+/**
+  * Обертка для вызова обработчика сообщения конкретного типа
+  */
+template <typename MsgT, typename C>
+class mem_handler_t : public i_handler {
+public:
+    typedef std::function< void (C*, acto::actor_ref&, const MsgT&) > delegate_t;
+
+public:
+    mem_handler_t(const delegate_t& delegate_, C* c, const TYPEID type_)
+        : i_handler ( type_ )
+        , m_delegate( delegate_ )
+        , m_c       (c)
+    {
+    }
+
+    // Вызвать обработчик
+    virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        acto::actor_ref actor(sender);
+
+        m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
+    }
+
+private:
+    /// Делегат, хранящий указатель на
+    /// метод конкретного объекта.
+    const delegate_t    m_delegate;
+
+    C* const            m_c;
+};
+
+template <typename MsgT>
+class handler_t : public i_handler {
+public:
+    typedef std::function< void (acto::actor_ref&, const MsgT&) > delegate_t;
+
+public:
+    handler_t(const delegate_t& delegate_, const TYPEID type_)
+        : i_handler ( type_ )
+        , m_delegate( delegate_ )
+    {
+    }
+
+    // Вызвать обработчик
+    virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        acto::actor_ref actor(sender);
+
+        m_delegate(actor, *static_cast< const MsgT* const >(msg));
+    }
+
+private:
+    /// Делегат, хранящий указатель на
+    /// метод конкретного объекта.
+    const delegate_t    m_delegate;
+};
+
+
+/**
+ * Базовый класс для локальных актеров.
+ */
+class base_t : public actor_body_t {
+    friend class main_module_t;
+    friend void do_handle_message(package_t* const package);
+
+    ///
+    struct HandlerItem {
+        // Тип обработчика
+        const TYPEID        type;
+        // Обработчик
+        holder_t<i_handler> handler;
 
     public:
-        i_handler(const TYPEID type_);
-        virtual ~i_handler() { }
-
-    public:
-        virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
-    };
-
-
-    /**
-      * Обертка для вызова обработчика сообщения конкретного типа
-      */
-    template <typename MsgT, typename C>
-    class mem_handler_t : public i_handler {
-    public:
-        typedef std::function< void (C*, acto::actor_ref&, const MsgT&) > delegate_t;
-
-    public:
-        mem_handler_t(const delegate_t& delegate_, C* c, const TYPEID type_)
-            : i_handler ( type_ )
-            , m_delegate( delegate_ )
-            , m_c       (c)
+        HandlerItem(const TYPEID t, i_handler* h)
+            : type   (t)
+            , handler(h)
         {
         }
-
-        // Вызвать обработчик
-        virtual void invoke(object_t* const sender, msg_t* const msg) const {
-            acto::actor_ref actor(sender);
-
-            m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
-        }
-
-    private:
-        /// Делегат, хранящий указатель на
-        /// метод конкретного объекта.
-        const delegate_t    m_delegate;
-
-        C* const            m_c;
     };
 
+    /// Карта обработчиков сообщений
+    typedef std::vector< HandlerItem* >         Handlers;
+
+private:
+    // Карта обработчиков сообщений для данного объекта
+    Handlers        m_handlers;
+    // Поток, в котором должен выполнятся объект
+    class worker_t* m_thread;
+    // -
+    bool            m_terminating;
+
+public:
+    struct msg_destroy : public msg_t {
+        // Объект, который необходимо удалить
+        object_t*   object;
+    };
+
+public:
+    base_t();
+    virtual ~base_t();
+
+protected:
+    /// Завершить собственную работу
+    void terminate();
+
+    /// Установка обработчика для сообщения данного типа
+    template < typename MsgT, typename ClassName >
+        inline void Handler( void (ClassName::*func)(acto::actor_ref& sender, const MsgT& msg) ) {
+            // Тип сообщения
+            const TYPEID                            a_type     = get_message_type< MsgT >();
+            // Метод, обрабатывающий сообщение
+            typename mem_handler_t< MsgT, ClassName >::delegate_t  a_delegate = func;
+            // Обрабочик
+            mem_handler_t< MsgT, ClassName >* const                handler    = new mem_handler_t< MsgT, ClassName >(a_delegate, static_cast<ClassName*>(this), a_type);
+
+            // Установить обработчик
+            set_handler(handler, a_type);
+        }
+
+    /// Установка обработчика для сообщения данного типа
     template <typename MsgT>
-    class handler_t : public i_handler {
-    public:
-        typedef std::function< void (acto::actor_ref&, const MsgT&) > delegate_t;
+        inline void Handler(std::function< void (acto::actor_ref& sender, const MsgT& msg) > func) {
+            // Тип сообщения
+            const TYPEID                            a_type     = get_message_type< MsgT >();
+            // Метод, обрабатывающий сообщение
+            typename handler_t< MsgT >::delegate_t  a_delegate = func;
+            // Обрабочик
+            handler_t< MsgT >* const                handler    = new handler_t< MsgT >(a_delegate, a_type);
 
-    public:
-        handler_t(const delegate_t& delegate_, const TYPEID type_)
-            : i_handler ( type_ )
-            , m_delegate( delegate_ )
-        {
+            // Установить обработчик
+            set_handler(handler, a_type);
         }
 
-        // Вызвать обработчик
-        virtual void invoke(object_t* const sender, msg_t* const msg) const {
-            acto::actor_ref actor(sender);
-
-            m_delegate(actor, *static_cast< const MsgT* const >(msg));
+    /// Сброс обработчика для сообщения данного типа
+    template < typename MsgT >
+        inline void Handler() {
+            // Сбросить обработчик указанного типа
+            set_handler(0, get_message_type< MsgT >());
         }
 
-    private:
-        /// Делегат, хранящий указатель на
-        /// метод конкретного объекта.
-        const delegate_t    m_delegate;
-    };
+private:
+    void set_handler(i_handler* const handler, const TYPEID type);
+};
 
 
-    /**
-     * Базовый класс для локальных актеров.
-     */
-    class ACTO_API base_t : public actor_body_t {
-        friend class main_module_t;
-        friend void do_handle_message(package_t* const package);
+/**
+ * Модуль, обеспечивающий обработку локальных актёров
+ */
+class main_module_t : public module_t {
+    /// -
+    core::object_t* create_actor(base_t* const body, const int options);
 
-        ///
-        struct HandlerItem {
-            // Тип обработчика
-            const TYPEID        type;
-            // Обработчик
-            holder_t<i_handler> handler;
+public:
+    main_module_t();
+    ~main_module_t();
 
-        public:
-            HandlerItem(const TYPEID t, i_handler* h)
-                : type   (t)
-                , handler(h)
-            {
-            }
-        };
+    static main_module_t* instance() {
+        static main_module_t    value;
 
-        /// Карта обработчиков сообщений
-        typedef std::vector< HandlerItem* >         Handlers;
+        return &value;
+    }
 
-    private:
-        // Карта обработчиков сообщений для данного объекта
-        Handlers        m_handlers;
-        // Поток, в котором должен выполнятся объект
-        class worker_t* m_thread;
-        // -
-        bool            m_terminating;
+    /// Определить отправителя сообщения
+    static object_t* determine_sender();
 
-    public:
-        struct msg_destroy : public msg_t {
-            // Объект, который необходимо удалить
-            object_t*   object;
-        };
+public:
+    /// -
+    virtual void destroy_object_body(actor_body_t* const body);
+    /// -
+    virtual void handle_message(package_t* const package);
+    /// Отправить сообщение соответствующему объекту
+    virtual void send_message(package_t* const package);
+    /// -
+    virtual void shutdown(event_t& event);
+    /// -
+    virtual void startup();
 
-    public:
-        base_t();
-        virtual ~base_t();
+    /// Создать экземпляр актёра
+    template <typename Impl>
+    object_t* make_instance(const actor_ref& context, const int options) {
+        Impl* const value = new Impl();
+        // Создать объект ядра (счетчик ссылок увеличивается автоматически)
+        core::object_t* const result = this->create_actor(value, options);
 
-    protected:
-        /// Завершить собственную работу
-        void terminate();
-
-        /// Установка обработчика для сообщения данного типа
-        template < typename MsgT, typename ClassName >
-            inline void Handler( void (ClassName::*func)(acto::actor_ref& sender, const MsgT& msg) ) {
-                // Тип сообщения
-                const TYPEID                            a_type     = get_message_type< MsgT >();
-                // Метод, обрабатывающий сообщение
-                typename mem_handler_t< MsgT, ClassName >::delegate_t  a_delegate = func;
-                // Обрабочик
-                mem_handler_t< MsgT, ClassName >* const                handler    = new mem_handler_t< MsgT, ClassName >(a_delegate, static_cast<ClassName*>(this), a_type);
-
-                // Установить обработчик
-                set_handler(handler, a_type);
-            }
-
-        /// Установка обработчика для сообщения данного типа
-        template <typename MsgT>
-            inline void Handler(std::function< void (acto::actor_ref& sender, const MsgT& msg) > func) {
-                // Тип сообщения
-                const TYPEID                            a_type     = get_message_type< MsgT >();
-                // Метод, обрабатывающий сообщение
-                typename handler_t< MsgT >::delegate_t  a_delegate = func;
-                // Обрабочик
-                handler_t< MsgT >* const                handler    = new handler_t< MsgT >(a_delegate, a_type);
-
-                // Установить обработчик
-                set_handler(handler, a_type);
-            }
-
-        /// Сброс обработчика для сообщения данного типа
-        template < typename MsgT >
-            inline void Handler() {
-                // Сбросить обработчик указанного типа
-                set_handler(0, get_message_type< MsgT >());
-            }
-
-    private:
-        void set_handler(i_handler* const handler, const TYPEID type);
-    };
-
-
-    /**
-     * Модуль, обеспечивающий обработку локальных актёров
-     */
-    class main_module_t : public module_t {
-        /// -
-        core::object_t* create_actor(base_t* const body, const int options);
-
-    public:
-        main_module_t();
-        ~main_module_t();
-
-        static main_module_t* instance() {
-            static main_module_t    value;
-
-            return &value;
+        if (result) {
+            value->context = context;
+            value->self    = actor_ref(result);
         }
 
-        /// Определить отправителя сообщения
-        static object_t* determine_sender();
+        return result;
+    }
 
-    public:
-        /// -
-        virtual void destroy_object_body(actor_body_t* const body);
-        /// -
-        virtual void handle_message(package_t* const package);
-        /// Отправить сообщение соответствующему объекту
-        virtual void send_message(package_t* const package);
-        /// -
-        virtual void shutdown(event_t& event);
-        /// -
-        virtual void startup();
+private:
+    class impl;
 
-        /// Создать экземпляр актёра
-        template <typename Impl>
-        object_t* make_instance(const actor_ref& context, const int options) {
-            Impl* const value = new Impl();
-            // Создать объект ядра (счетчик ссылок увеличивается автоматически)
-            core::object_t* const result = this->create_actor(value, options);
-
-            if (result) {
-                value->context = context;
-                value->self    = actor_ref(result);
-            }
-
-            return result;
-        }
-
-    private:
-        class impl;
-
-        std::auto_ptr< impl >   m_pimpl;
-    };
+    std::auto_ptr< impl >   m_pimpl;
+};
 
 } // namespace core
 } // namespace acto
-
-#endif // acto_core_module_h_cbc7f72e6ef34806b94705e9abc98295

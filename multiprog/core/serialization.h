@@ -1,5 +1,4 @@
-#ifndef acto_core_serialization_h_4C3F226E1E554aedB52F0EE5648C87C2
-#define acto_core_serialization_h_4C3F226E1E554aedB52F0EE5648C87C2
+#pragma once
 
 #include <cstddef>
 
@@ -32,5 +31,3 @@ public:
 };
 
 } // namepsace acto
-
-#endif // acto_core_serialization_h_4C3F226E1E554aedB52F0EE5648C87C2

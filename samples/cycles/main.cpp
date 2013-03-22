@@ -56,7 +56,7 @@ acto::message_class_t< msg_loop >   msg_loop_class;
 // Desc:
 //    Актер, который эмитирует некоторого абстрактного слушателя,
 //    который в цикле проверяет какие-то значения.
-class Listener : public acto::implementation_t {
+class Listener : public acto::actor {
 public:
     Listener()
         : m_active(false)
@@ -103,7 +103,7 @@ private:
 // Desc:
 //    Управляющий объект. Инициализирует "слушателей"
 //    и собирает статистику их работы.
-class Analizer : public acto::implementation_t {
+class Analizer : public acto::actor {
 public:
     Analizer() {
         Handler< msg_complete >(&Analizer::doComplete);

@@ -84,7 +84,7 @@ acto::message_class_t< msg_ball >   msg_ball_class;
 //       Инкапсулирует системную консоль для того, чтобы небыло
 //       необходимости использовать примитивы синхронизации при
 //       выводе из разных потоков.
-class Console : public acto::implementation_t {
+class Console : public acto::actor {
 public:
     Console() {
         // Метод Handler связывает конкретную процедуру с библиотекой
@@ -107,7 +107,7 @@ public:
         // Ex:
         //    Handler< msg_out >();
         //
-        // Метод Handler является защищенным методом класса act_o::implementation_t.
+        // Метод Handler является защищенным методом класса act_o::actor.
         // Это означает, что его невозможно использовать во вне класса-актера.
         // Также это означает, что Handler устанавливает обработчики только
         // для объектов данного класса и никакого другого.
@@ -116,7 +116,7 @@ public:
 
 
 // Desc: Отбивает мяч
-class Player : public acto::implementation_t {
+class Player : public acto::actor {
 private:
     void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
         // Отправить мяч обратно
@@ -124,14 +124,14 @@ private:
     }
 
 public:
-    Player() : implementation_t() {
+    Player() {
         Handler< msg_ball >( &Player::do_ball );
     }
 };
 
 
 // Desc: Мяч отскакивает одному из игроков
-class Wall : public acto::implementation_t {
+class Wall : public acto::actor {
     // Консоль
     acto::actor_ref m_console;
     // Множество игроков

@@ -1,18 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2013                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef act_user_h_02821F1061B24ad28024E630DDF1DC9E
-#define act_user_h_02821F1061B24ad28024E630DDF1DC9E
+#pragma once
 
 #include <core/runtime.h>
 #include <core/module.h>
@@ -123,7 +109,7 @@ public:
 /**
  * Базовый класс для реализации пользовательских объектов (актеров)
  */
-class implementation_t : public core::base_t {
+class actor : public core::base_t {
     friend class core::main_module_t;
 
 protected:
@@ -192,5 +178,3 @@ inline actor_ref instance(actor_ref& context, const int options) {
 }
 
 } // namespace acto
-
-#endif // _act_user_h_02821F1061B24ad28024E630DDF1DC9E

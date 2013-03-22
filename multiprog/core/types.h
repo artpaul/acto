@@ -1,18 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acto_core_types_h_D3A964BDF70B498293D671F01F4DF126
-#define acto_core_types_h_D3A964BDF70B498293D671F01F4DF126
+#pragma once
 
 #include "message.h"
 
@@ -137,5 +123,3 @@ public:
 
 } // namespace core
 } // namespace acto
-
-#endif // acto_core_types_h_D3A964BDF70B498293D671F01F4DF126

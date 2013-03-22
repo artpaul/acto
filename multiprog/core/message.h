@@ -1,18 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef message_h_EA18085F0CF7480fA57FBF6C0E610820
-#define message_h_EA18085F0CF7480fA57FBF6C0E610820
+#pragma once
 
 #include "serialization.h"
 
@@ -51,7 +37,10 @@ struct msg_t {
     msg_metaclass_t*    meta;
 
 public:
-    msg_t() : meta(NULL) { }
+    msg_t()
+        : meta(NULL)
+    { }
+
     virtual ~msg_t() { }
 };
 
@@ -82,13 +71,13 @@ class message_map_t {
     // Тип множества зарегистрированных типов сообщений
     typedef std::map< std::string, msg_metaclass_t* > Types;
 
-	typedef std::vector<msg_metaclass_t*>	Tids;
+    typedef std::vector<msg_metaclass_t*>   Tids;
 
-	struct tid_compare_t {
-		inline bool operator () (const msg_metaclass_t* a, const TYPEID b) const throw () {
-			return a->tid < b;
-		}
-	};
+    struct tid_compare_t {
+        inline bool operator () (const msg_metaclass_t* a, const TYPEID b) const throw () {
+            return a->tid < b;
+        }
+    };
 
 public:
     message_map_t();
@@ -119,18 +108,18 @@ public:
 
         // Найти этот тип
         Types::const_iterator i = m_types.find(name);
-       
+
         if (i != m_types.end()) {
             return (*i).second;
-		} else {
+        } else {
             msg_metaclass_t* const meta = new msg_metaclass_t();
 
             meta->tid = atomic_increment(&m_counter);
             meta->serializer.reset(new Serializer());
 
             m_types[name] = meta;
-			m_tids.push_back(meta);
-            
+            m_tids.push_back(meta);
+
             return meta;
         }
     }
@@ -139,10 +128,10 @@ private:
     /// Критическая секция для доступа к полям
     mutable mutex_t m_cs;
     /// Генератор идентификаторов
-    TYPEID			m_counter;
+    TYPEID          m_counter;
     /// Типы сообщений
-    Types			m_types;
-	Tids			m_tids;
+    Types           m_types;
+    Tids            m_tids;
 };
 
 ///
@@ -222,11 +211,8 @@ private:
     }
 
 private:
-	msg_metaclass_t* const  m_meta;
+    msg_metaclass_t* const  m_meta;
 };
 
 } // namespace core
-
 } // namespace acto
-
-#endif // message_h_EA18085F0CF7480fA57FBF6C0E610820

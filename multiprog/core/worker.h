@@ -1,18 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef actocore_worker_h
-#define actocore_worker_h
+#pragma once
 
 #include <util/generic/intrlist.h>
 #include <util/system/atomic.h>
@@ -20,8 +6,7 @@
 
 #include <ctime>
 
-namespace acto { 
-
+namespace acto {
 namespace core {
 
 	struct object_t;
@@ -75,7 +60,4 @@ namespace core {
 	};
 
 } // namespace core
-
 } // namespace acto
-
-#endif // actocore_worker_h
