@@ -20,7 +20,6 @@ PROJECT (ACTO-SOLUTION)
         multiprog
         multiprog/util/system
         multiprog/core
-        multiprog/extension
 
         samples/cycles
         samples/ping-pong
