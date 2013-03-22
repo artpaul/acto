@@ -156,25 +156,25 @@ ACTO_API void startup();
 
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_ref instance() {
+inline actor_ref spawn() {
     actor_ref a;
-    return actor_ref(detail::make_instance< T >(a, 0), false);
+    return actor_ref(detail::make_instance<T>(a, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_ref instance(actor_ref& context) {
-    return actor_ref(detail::make_instance< T >(context, 0), false);
+inline actor_ref spawn(actor_ref& context) {
+    return actor_ref(detail::make_instance<T>(context, 0), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_ref instance(const int options) {
+inline actor_ref spawn(const int options) {
     actor_ref a;
-    return actor_ref(detail::make_instance< T >(a, options), false);
+    return actor_ref(detail::make_instance<T>(a, options), false);
 }
 //-----------------------------------------------------------------------------
 template <typename T>
-inline actor_ref instance(actor_ref& context, const int options) {
-    return actor_ref(detail::make_instance< T >(context, options), false);
+inline actor_ref spawn(actor_ref& context, const int options) {
+    return actor_ref(detail::make_instance<T>(context, options), false);
 }
 
 } // namespace acto

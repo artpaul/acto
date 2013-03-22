@@ -152,7 +152,7 @@ public:
 
         // Инициализация игроков
         for (int i = 0; i < PLAYERS; i++)
-            m_players[i] = acto::instance< Player >();
+            m_players[i] = acto::spawn< Player >();
     }
 
     ~Wall() {
@@ -210,15 +210,15 @@ int main() {
         acto::startup();
         {
             // Создать консоль.
-            // Все актеры должны создаваться с использованием шаблона act_o::instance_t<>.
+            // Все актеры должны создаваться с использованием шаблона act_o::spawn<>.
             // Использование оператора new недопустимо.
-            acto::actor_ref console = acto::instance< Console >(acto::aoBindToThread);
+            acto::actor_ref console = acto::spawn< Console >(acto::aoBindToThread);
 
             for(unsigned int j = 0; j < 3; j++) {
                 // Создать стену.
                 // Опция "acto::aoExclusive" создает для объекта отдельный поток,
                 // в котором будут выполнятся все обработчики этого объекта
-                acto::actor_ref wall = acto::instance< Wall >();
+                acto::actor_ref wall = acto::spawn< Wall >();
 
                 // -
                 console.send< msg_out >("send start");
