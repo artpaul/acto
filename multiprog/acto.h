@@ -7,4 +7,4 @@
 #include "act_user.h"
 
 // Дополнительные сервисы (пользовательский уровень)
-#include "extension/services.h"
+#include "core/services.h"

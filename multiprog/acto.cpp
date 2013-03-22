@@ -1,7 +1,7 @@
 #include "act_user.h"
 
 #include <core/runtime.h>
-#include <extension/services.h>
+#include <core/services.h>
 
 #include <atomic>
 
