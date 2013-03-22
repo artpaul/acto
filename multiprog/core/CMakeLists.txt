@@ -1,10 +1,9 @@
-
 ADD_LIBRARY (acto-core STATIC
     types.cpp
     message.cpp
     runtime.cpp
-    ../modules/main/worker.cpp
-    ../modules/main/module.cpp
+    worker.cpp
+    module.cpp
 )
 
 TARGET_LINK_LIBRARIES (acto-core

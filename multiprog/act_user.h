@@ -15,7 +15,7 @@
 #define act_user_h_02821F1061B24ad28024E630DDF1DC9E
 
 #include <core/runtime.h>
-#include <modules/main/module.h>
+#include <core/module.h>
 
 namespace acto {
 namespace detail {

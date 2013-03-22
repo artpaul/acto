@@ -136,7 +136,6 @@ public:
 };
 
 } // namespace core
-
 } // namespace acto
 
 #endif // acto_core_types_h_D3A964BDF70B498293D671F01F4DF126
