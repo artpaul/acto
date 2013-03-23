@@ -46,7 +46,6 @@ public:
 
 
 namespace core {
-
 namespace detail {
 
 /** */
@@ -150,7 +149,9 @@ template <typename T>
 class msg_box_t {
     T* const    m_msg;
 public:
-    explicit msg_box_t(T* val) : m_msg(val) { }
+    explicit msg_box_t(T* val)
+        : m_msg(val)
+    { }
 
     inline T* operator * () const throw () {
         return m_msg;
@@ -159,7 +160,10 @@ public:
 
 
 /** */
-template <typename MsgT, typename Serializer = detail::dumy_serializer_t >
+template <
+    typename MsgT,
+    typename Serializer = detail::dumy_serializer_t
+>
 class message_class_t {
 public:
     message_class_t()
@@ -169,41 +173,16 @@ public:
             m_meta->make_instance = &message_class_t::instance_constructor;
     }
 
-    inline msg_box_t< MsgT > create() const {
-        return _assign_info(new MsgT());
-    }
+    template <typename ... P>
+    inline msg_box_t<MsgT> create(P&& ... p) const {
+        MsgT* const msg = new MsgT(std::forward<P>(p) ... );
 
-    template <typename P1>
-    inline msg_box_t< MsgT > create(P1 p1) const {
-        return _assign_info(new MsgT(p1));
-    }
+        msg->meta = m_meta;
 
-    template <typename P1, typename P2>
-    inline msg_box_t< MsgT > create(P1 p1, P2 p2) const {
-        return _assign_info(new MsgT(p1, p2));
-    }
-
-    template <typename P1, typename P2, typename P3>
-    inline msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3) const {
-        return _assign_info(new MsgT(p1, p2, p3));
-    }
-
-    template <typename P1, typename P2, typename P3, typename P4>
-    inline msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3, P4 p4) const {
-        return _assign_info(new MsgT(p1, p2, p3, p4));
-    }
-
-    template <typename P1, typename P2, typename P3, typename P4, typename P5>
-    inline msg_box_t< MsgT > create(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) const {
-        return _assign_info(new MsgT(p1, p2, p3, p4, p5));
+        return msg_box_t<MsgT>(msg);
     }
 
 private:
-    inline msg_box_t< MsgT > _assign_info(MsgT* const msg) const {
-        msg->meta = m_meta;
-        return msg_box_t< MsgT >(msg);
-    }
-
     static msg_t* instance_constructor() {
         msg_t* const result = new MsgT();
         result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).name());

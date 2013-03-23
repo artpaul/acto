@@ -10,14 +10,6 @@
 #include <core/module.h>
 
 namespace acto {
-namespace detail {
-
-template <typename Impl>
-inline core::object_t* make_instance(const actor_ref& context, const int options) {
-    return core::main_module_t::instance()->make_instance< Impl >(context, options);
-}
-
-} // namespace detail
 
 ///////////////////////////////////////////////////////////////////////////////
 //                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
@@ -32,26 +24,6 @@ using core::message_class_t;
 class actor_ref {
     friend void join(actor_ref& obj);
     friend void destroy(actor_ref& object);
-
-private:
-    core::object_t* volatile  m_object;
-
-    /// Присваивает новое значение текущему объекту
-    void assign(const actor_ref& rhs);
-    ///
-    bool same(const actor_ref& rhs) const;
-    ///
-    template <typename T>
-    void send_message(T* const msg) const {
-        if (m_object) {
-            assert(msg != NULL);
-
-            if (msg->meta == NULL)
-                msg->meta = core::get_metaclass< T >();
-            // Отправить сообщение
-            core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
-        }
-    }
 
 public:
     actor_ref();
@@ -82,33 +54,37 @@ public:
     }
 
     // Послать сообщение объекту
-    template <typename MsgT>
-    inline void send() const {
-        this->send_message< MsgT >(new MsgT());
+    template <typename MsgT, typename ... P>
+    inline void send(P&& ... p) const {
+        this->send_message< MsgT >(new MsgT(std::forward<P>(p) ... ));
     }
 
-    template <typename MsgT, typename P1>
-    inline void send(P1 p1) const {
-        this->send_message< MsgT >(new MsgT(p1));
-    }
-
-    template <typename MsgT, typename P1, typename P2>
-    inline void send(P1 p1, P2 p2) const {
-        this->send_message< MsgT >(new MsgT(p1, p2));
-    }
-
-    template <typename MsgT, typename P1, typename P2, typename P3>
-    inline void send(P1 p1, P2 p2, P3 p3) const {
-        this->send_message< MsgT >(new MsgT(p1, p2, p3));
-    }
-
-/* Операторы */
 public:
     actor_ref& operator = (const actor_ref& rhs);
-    // -
+
     bool operator == (const actor_ref& rhs) const;
-    // -
+
     bool operator != (const actor_ref& rhs) const;
+
+private:
+    core::object_t* volatile  m_object;
+
+    /// Присваивает новое значение текущему объекту
+    void assign(const actor_ref& rhs);
+    ///
+    bool same(const actor_ref& rhs) const;
+    ///
+    template <typename T>
+    void send_message(T* const msg) const {
+        if (m_object) {
+            assert(msg != NULL);
+
+            if (msg->meta == NULL)
+                msg->meta = core::get_metaclass< T >();
+            // Отправить сообщение
+            core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
+        }
+    }
 };
 
 
@@ -126,10 +102,10 @@ protected:
 };
 
 
-// Desc:
+/** */
 struct msg_destroy : public msg_t { };
 
-// Desc:
+/** */
 struct msg_time : public msg_t { };
 
 
@@ -160,6 +136,15 @@ ACTO_API void shutdown();
 /* Инициализировать библиотеку */
 ACTO_API void startup();
 
+
+namespace detail {
+
+template <typename Impl>
+inline core::object_t* make_instance(const actor_ref& context, const int options) {
+    return core::main_module_t::instance()->make_instance< Impl >(context, options);
+}
+
+} // namespace detail
 
 template <typename T>
 inline actor_ref spawn() {
