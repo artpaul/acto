@@ -7,8 +7,9 @@
 #include <util/generic/stack.h>
 #include <util/system/event.h>
 
-#include <vector>
+#include <mutex>
 #include <set>
+#include <vector>
 
 namespace acto {
 
@@ -70,7 +71,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     typedef generics::stack_t<package_t>      intusive_stack_t;
 
     // Критическая секция для доступа к полям
-    mutex_t             cs;
+    std::mutex          cs;
 
     // Реализация объекта
     actor_body_t*       impl;

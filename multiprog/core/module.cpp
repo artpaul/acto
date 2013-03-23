@@ -305,7 +305,7 @@ void main_module_t::send_message(package_t* const p) {
 
 	{
 		// Эксклюзивный доступ
-		MutexLocker lock(target->cs);
+        std::lock_guard<std::mutex> g(target->cs);
 
 		// Если объект отмечен для удалдения,
 		// то ему более нельзя посылать сообщения

@@ -4,12 +4,12 @@
 
 #include <util/system/platform.h>
 #include <util/system/atomic.h>
-#include <util/system/mutex.h>
 
-#include <map>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <typeinfo>
-#include <vector>
+#include <unordered_map>
 
 namespace acto {
 
@@ -23,10 +23,10 @@ typedef atomic_t    TYPEID;
 struct msg_metaclass_t {
     typedef msg_t* (*instance_constructor)();
 
-    TYPEID                      tid;
-    std::auto_ptr<serializer_t> serializer;
-
-    instance_constructor        make_instance;
+    TYPEID                  tid;
+    instance_constructor    make_instance;
+    std::unique_ptr<serializer_t>
+                            serializer;
 };
 
 
@@ -46,39 +46,24 @@ public:
 
 
 namespace core {
-namespace detail {
-
-/** */
-class dumy_serializer_t : public serializer_t {
-public:
-    virtual void read(msg_t* const msg, stream_t* const s) {
-        // -
-    }
-
-    virtual void write(const msg_t* const msg, stream_t* const s) {
-        // -
-    }
-};
-
-} // namespace detail
-
 
 /**
  * Таблица классов сообщений
  */
 class message_map_t {
-    // Тип множества зарегистрированных типов сообщений
-    typedef std::map< std::string, msg_metaclass_t* > Types;
+public:
+    /** */
+    class dumy_serializer_t : public serializer_t {
+    public:
+        virtual void read(msg_t* const msg, stream_t* const s) {
+            // -
+        }
 
-    typedef std::vector<msg_metaclass_t*>   Tids;
-
-    struct tid_compare_t {
-        inline bool operator () (const msg_metaclass_t* a, const TYPEID b) const throw () {
-            return a->tid < b;
+        virtual void write(const msg_t* const msg, stream_t* const s) {
+            // -
         }
     };
 
-public:
     message_map_t();
     ~message_map_t();
 
@@ -90,58 +75,55 @@ public:
     const msg_metaclass_t* find_metaclass(const TYPEID tid) const;
 
     /// Получить уникальный идентификатор типа для сообщения по его имени
-    inline TYPEID  get_typeid(const char* const type_name) {
-        return this->get_metaclass< detail::dumy_serializer_t >(type_name)->tid;
+    inline TYPEID  get_typeid(const size_t code) {
+        return this->get_metaclass< dumy_serializer_t >(code)->tid;
     }
 
     /// -
-    inline msg_metaclass_t* get_metaclass(const char* const type_name) {
-        return this->get_metaclass< detail::dumy_serializer_t >(type_name);
+    inline msg_metaclass_t* get_metaclass(const size_t code) {
+        return this->get_metaclass< dumy_serializer_t >(code);
     }
 
     /// -
     template <typename Serializer>
-    msg_metaclass_t* get_metaclass(const char* const type_name) {
-        std::string name(type_name);
-        MutexLocker lock(m_cs);
-
-        // Найти этот тип
-        Types::const_iterator i = m_types.find(name);
+    msg_metaclass_t* get_metaclass(const size_t code) {
+        std::lock_guard<std::mutex> g(m_cs);
+        const Types::const_iterator i = m_types.find(code);
 
         if (i != m_types.end()) {
-            return (*i).second;
-        } else {
-            msg_metaclass_t* const meta = new msg_metaclass_t();
-
-            meta->tid = atomic_increment(&m_counter);
-            meta->serializer.reset(new Serializer());
-
-            m_types[name] = meta;
-            m_tids.push_back(meta);
-
-            return meta;
+            return i->second;
         }
+
+        msg_metaclass_t* const meta = new msg_metaclass_t();
+
+        meta->tid = atomic_increment(&m_counter);
+        meta->serializer.reset(new Serializer());
+
+        m_types.insert(std::make_pair(code, meta));
+
+        return meta;
     }
 
 private:
-    /// Критическая секция для доступа к полям
-    mutable mutex_t m_cs;
+    // Тип множества зарегистрированных типов сообщений
+    typedef std::unordered_map< size_t, msg_metaclass_t* > Types;
+
+    mutable std::mutex  m_cs;
     /// Генератор идентификаторов
-    TYPEID          m_counter;
+    TYPEID              m_counter;
     /// Типы сообщений
-    Types           m_types;
-    Tids            m_tids;
+    Types               m_types;
 };
 
 ///
 template <typename MsgT>
 inline TYPEID get_message_type() {
-    return message_map_t::instance()->get_typeid(typeid(MsgT).name());
+    return message_map_t::instance()->get_typeid(typeid(MsgT).hash_code());
 }
 ///
 template <typename MsgT>
 inline msg_metaclass_t* get_metaclass() {
-    return message_map_t::instance()->get_metaclass(typeid(MsgT).name());
+    return message_map_t::instance()->get_metaclass(typeid(MsgT).hash_code());
 }
 
 /** */
@@ -162,12 +144,12 @@ public:
 /** */
 template <
     typename MsgT,
-    typename Serializer = detail::dumy_serializer_t
+    typename Serializer = message_map_t::dumy_serializer_t
 >
 class message_class_t {
 public:
     message_class_t()
-        : m_meta(message_map_t::instance()->get_metaclass< Serializer >(typeid(MsgT).name()))
+        : m_meta(message_map_t::instance()->get_metaclass< Serializer >(typeid(MsgT).hash_code()))
     {
         if (m_meta->make_instance == NULL)
             m_meta->make_instance = &message_class_t::instance_constructor;
@@ -185,7 +167,7 @@ public:
 private:
     static msg_t* instance_constructor() {
         msg_t* const result = new MsgT();
-        result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).name());
+        result->meta = message_map_t::instance()->get_metaclass(typeid(MsgT).hash_code());
         return result;
     }
 

@@ -1,36 +1,18 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acto_queue_h_5BC02FC754954131B69D316CACBCFE1A
-#define acto_queue_h_5BC02FC754954131B69D316CACBCFE1A
+#pragma once
 
 #include "sequence.h"
-#include <util/system/mutex.h>
 
 #include <assert.h>
+#include <mutex>
 
 namespace acto {
-
 namespace generics {
 
 /**
  */
 template <typename T>
 class queue_t {
-    typedef core::mutex_t   Guard;
-
-    T*              m_tail;
-    mutable Guard   m_cs;
+    typedef std::lock_guard<std::mutex> guard;
 
 public:
     queue_t()
@@ -40,7 +22,7 @@ public:
     }
 
     sequence_t<T> extract() {
-        core::MutexLocker lock(m_cs);
+        guard g(m_cs);
 
         if (m_tail) {
            T* const head = m_tail->next;
@@ -53,13 +35,13 @@ public:
     }
 
     T* front() const {
-        core::MutexLocker lock(m_cs);
+        guard g(m_cs);
 
         return m_tail ? m_tail->next : NULL;
     }
 
     void push(T* const node) {
-        core::MutexLocker lock(m_cs);
+        guard g(m_cs);
 
         if (m_tail) {
             node->next   = m_tail->next;
@@ -71,7 +53,7 @@ public:
     }
 
     T* pop() {
-        core::MutexLocker lock(m_cs);
+        guard g(m_cs);
 
         if (m_tail) {
             T* const result = m_tail->next;
@@ -88,13 +70,14 @@ public:
     }
 
     bool empty() const {
-        core::MutexLocker lock(m_cs);
+        guard g(m_cs);
         return (m_tail == NULL);
     }
+
+private:
+    T*                  m_tail;
+    mutable std::mutex  m_cs;
 };
 
 } // namepsace generics
-
 } // namespace acto
-
-#endif // acto_queue_h_5BC02FC754954131B69D316CACBCFE1A

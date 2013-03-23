@@ -35,7 +35,7 @@ class runtime_t::impl {
 
 private:
     /// Критическая секция для доступа к полям
-    mutex_t             m_cs;
+    std::mutex          m_cs;
     ///
     event_t             m_clean;
     /// Текущее множество актеров
@@ -106,7 +106,7 @@ public:
             threadCtx->actors.insert(result);
         }
         else {
-            MutexLocker  lock(m_cs);
+            std::lock_guard<std::mutex> g(m_cs);
 
             result->exclusive = options & acto::aoExclusive;
 
@@ -123,7 +123,7 @@ public:
 
         bool deleting = false;
         {
-            MutexLocker lock(obj->cs);
+            std::lock_guard<std::mutex> g(obj->cs);
             // 1. Если объект уже находится в состоянии "осовобождаемы",
             //    то он будет неминуемо удален и более ничего делать не нежно
             if (obj->freeing)
@@ -149,7 +149,7 @@ public:
         if (deleting) {
             // Удалить регистрацию объекта
             if (!obj->binded) {
-                MutexLocker   lock(m_cs);
+                std::lock_guard<std::mutex> g(m_cs);
 
                 m_actors.erase(obj);
 
@@ -174,7 +174,7 @@ public:
         event_t event;
 
         if (active_actor != obj) {
-            MutexLocker lock(obj->cs);
+            std::lock_guard<std::mutex> g(obj->cs);
 
             if (obj->impl) {
                 node.reset(new object_t::waiter_t());
@@ -213,7 +213,7 @@ public:
     void reset() {
         // 1. Инициировать процедуру удаления для всех оставшихся объектов
         {
-            MutexLocker lock(m_cs);
+            std::lock_guard<std::mutex> g(m_cs);
 
             Actors  temporary(m_actors);
 

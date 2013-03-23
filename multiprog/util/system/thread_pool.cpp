@@ -94,7 +94,7 @@ bool thread_pool_t::delete_idle_worker(thread_data_t* const ctx) {
     thread_data_t* idle = NULL;
 
     {
-        core::MutexLocker lock(m_cs);
+        std::lock_guard<std::mutex> g(m_cs);
 
         if (!ctx->deleting && m_idles.front() != ctx) {
             idle = m_idles.pop();

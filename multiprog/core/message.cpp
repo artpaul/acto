@@ -12,7 +12,7 @@ message_map_t::message_map_t()
 }
 
 message_map_t::~message_map_t() {
-    MutexLocker lock(m_cs);
+    std::lock_guard<std::mutex> g(m_cs);
 
     for (Types::iterator i = m_types.begin(); i != m_types.end(); ++i) {
         delete (*i).second;
@@ -26,14 +26,15 @@ message_map_t* message_map_t::instance() {
 }
 
 const msg_metaclass_t* message_map_t::find_metaclass(const TYPEID tid) const {
-    MutexLocker          lock(m_cs);
-    Tids::const_iterator i = std::lower_bound(m_tids.begin(), m_tids.end(), tid, tid_compare_t());
+    std::lock_guard<std::mutex> g(m_cs);
 
-    if (i != m_tids.end()) {
-        return *i;
+    for (Types::const_iterator ti = m_types.begin(); ti != m_types.end(); ++ti) {
+        if (ti->second->tid == tid) {
+            return ti->second;
+        }
     }
 
-    return 0;
+    return nullptr;
 }
 
 } // namespace core

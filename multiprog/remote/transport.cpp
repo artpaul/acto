@@ -1,10 +1,10 @@
 #include "transport.h"
 
-#include <util/system/mutex.h>
 #include <remote/libsocket/libsocket.h>
 
 #include <assert.h>
 #include <memory.h>
+#include <mutex>
 #include <stdio.h>
 
 namespace acto {
@@ -51,7 +51,7 @@ public:
 
 /** */
 class transport_t::impl {
-    core::mutex_t   m_cs;
+    std::mutex      m_cs;
     host_map_t      m_hosts;
     handler_data_t  m_client_handler;
     handler_data_t  m_server_handler;

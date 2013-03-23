@@ -2,7 +2,6 @@
 #include "runtime.h"
 
 #include <util/generic/intrqueue.h>
-#include <util/system/mutex.h>
 #include <util/system/thread.h>
 
 #include <set>
@@ -10,6 +9,7 @@
 #include <errno.h>
 #include <malloc.h>
 #include <memory.h>
+#include <mutex>
 #include <stdio.h>
 #include <time.h>
 #include <sys/epoll.h>
@@ -46,7 +46,7 @@ class cluster_t {
     file_descriptors_t      m_fds;        //
 
 public:
-    acto::core::mutex_t     m_mutex;
+    std::mutex              m_mutex;
     Queue                   m_queue;    // Mutex protected queue
     volatile long           m_active;
 
@@ -181,9 +181,9 @@ public:
         while (m_active) {
             SOCOMMAND* cmd = 0;
             // Get commands
-            m_mutex.acquire();
+            m_mutex.lock();
             cmd = m_queue.detatch();
-            m_mutex.release();
+            m_mutex.unlock();
 
             while (cmd != 0) {
                 // Сохранить указатель на следующую команду заранее, так как
@@ -336,9 +336,9 @@ public:
     }
     /// Поместить команду в очередь обработки
     int enqueue(SOCOMMAND* const cmd) {
-        m_cluster.m_mutex.acquire();
+        m_cluster.m_mutex.lock();
         m_cluster.m_queue.push(cmd);
-        m_cluster.m_mutex.release();
+        m_cluster.m_mutex.unlock();
 
         return 0;
     }

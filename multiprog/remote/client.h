@@ -1,18 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2013                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-//---------------------------------------------------------------------------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
-#define acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
+#pragma once
 
 #include "protocol.h"
 #include "transport.h"
@@ -21,10 +7,10 @@
 #include <core/types.h>
 #include <acto.h>
 
-#include <util/system/mutex.h>
 #include <util/system/event.h>
 
 #include <map>
+#include <mutex>
 
 namespace acto {
 
@@ -56,12 +42,6 @@ class remote_module_t : public core::module_t {
         core::event_t   event;
         ui64            oid;
     };
-
-    typedef std::map< ui64, actor_ref >             actors_t;
-
-    typedef std::map< std::string, actor_info_t >   global_t;
-
-    typedef std::map< ui64, ask_data_t* >           ask_map_t;
 
 public:
     remote_module_t();
@@ -95,7 +75,13 @@ private:
     void do_send_message(command_event_t* const ev, bool is_client);
 
 private:
-    core::mutex_t   m_cs;
+    typedef std::map< ui64, actor_ref >             actors_t;
+
+    typedef std::map< std::string, actor_info_t >   global_t;
+
+    typedef std::map< ui64, ask_data_t* >           ask_map_t;
+
+    std::mutex      m_cs;
     actors_t        m_actors;
     ask_map_t       m_asks;
     global_t        m_registered;
@@ -109,7 +95,4 @@ private:
 };
 
 } // namespace remote
-
 } // namespace acto
-
-#endif // acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8

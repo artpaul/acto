@@ -26,7 +26,7 @@ struct i_handler {
 
 public:
     i_handler(const TYPEID type_);
-    virtual ~i_handler() { }
+    virtual ~i_handler();
 
 public:
     virtual void invoke(core::object_t* const sender, msg_t* const msg) const = 0;

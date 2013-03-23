@@ -9,6 +9,9 @@ i_handler::i_handler(const TYPEID type_)
 {
 }
 
+i_handler::~i_handler()
+{ }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 base_t::base_t()

@@ -8,7 +8,6 @@
 #define CLIENTPORT    25121
 
 namespace acto {
-
 namespace remote {
 
 //-----------------------------------------------------------------------------
@@ -141,8 +140,9 @@ void remote_module_t::enable_server() {
 //-----------------------------------------------------------------------------
 void remote_module_t::register_actor(const actor_ref& actor, const char* path) {
     if (actor.assigned()) {
-        core::MutexLocker lock(m_cs);
-        actor_info_t      info;
+        std::lock_guard<std::mutex>
+                        g(m_cs);
+        actor_info_t    info;
 
         info.actor = actor;
         info.id    = ++m_counter;
@@ -220,7 +220,7 @@ void remote_module_t::do_client_commands(command_event_t* const ev) {
                 ev->stream->read(&oid, sizeof(oid));
 
                 if (/*oid > 0 && */aid > 0) {
-                    core::MutexLocker   lock(pthis->m_cs);
+                    std::lock_guard<std::mutex> g(pthis->m_cs);
                     ask_map_t::iterator i = pthis->m_asks.find(aid);
 
                     if (i != pthis->m_asks.end()) {
@@ -283,7 +283,5 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
     }
 }
 
-
 } // namespace remote
-
 } // namespace acto

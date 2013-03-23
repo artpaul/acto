@@ -68,7 +68,7 @@ void worker_t::execute(void* param) {
 //-----------------------------------------------------------------------------
 bool worker_t::check_deleting(object_t* const obj) {
     // TN: В контексте рабочего потока
-    MutexLocker lock(obj->cs);
+    std::lock_guard<std::mutex> g(obj->cs);
 
     if (!obj->has_messages()) {
         if (!obj->exclusive || obj->deleting) {
@@ -99,8 +99,8 @@ bool worker_t::process() {
 
             // Проверить истечение лимита времени обработки для данного объекта
             if (!obj->exclusive && ((clock() - m_start) > m_time)) {
-                MutexLocker lock(obj->cs);
-                // -
+                std::lock_guard<std::mutex> g(obj->cs);
+
                 if (!obj->deleting) {
                     assert(obj->impl != 0);
                     // -

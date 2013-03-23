@@ -1,25 +1,12 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acot_thread_pool_h_425878588d2e4b6cade43cf0383690b4
-#define acot_thread_pool_h_425878588d2e4b6cade43cf0383690b4
+#pragma once
 
 #include "atomic.h"
-#include "mutex.h"
 #include "event.h"
 
 #include <util/generic/intrlist.h>
 #include <util/generic/queue.h>
+
+#include <mutex>
 
 namespace acto {
 
@@ -67,7 +54,7 @@ private:
     static void execute_loop(void* param);
 
 private:
-    core::mutex_t   m_cs;
+    std::mutex      m_cs;
     ///
     core::event_t   m_clean;
     /// Очередь незадействованных потоков
@@ -79,5 +66,3 @@ private:
 };
 
 } // namespace acto
-
-#endif // acot_thread_pool_h_425878588d2e4b6cade43cf0383690b4
