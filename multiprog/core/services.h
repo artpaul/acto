@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include <act_user.h>
 #include <util/system/platform.h>
 
@@ -62,3 +63,5 @@ extern timer_t  timer;
 
 }; // namespace services
 }; // namespace acto
+
+#endif
