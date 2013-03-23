@@ -1,6 +1,5 @@
 
 ADD_LIBRARY (acto-system STATIC
-    thread.cpp
     event.cpp
     thread_pool.cpp
 )

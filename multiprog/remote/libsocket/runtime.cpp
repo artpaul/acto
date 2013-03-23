@@ -2,14 +2,15 @@
 #include "runtime.h"
 
 #include <util/generic/intrqueue.h>
-#include <util/system/thread.h>
 
-#include <set>
 
 #include <errno.h>
 #include <malloc.h>
 #include <memory.h>
 #include <mutex>
+#include <set>
+#include <thread>
+
 #include <stdio.h>
 #include <time.h>
 #include <sys/epoll.h>
@@ -298,10 +299,8 @@ public:
  * Ядро библиотеки сокетов
  */
 class so_runtime_t {
-    typedef acto::core::thread_t    ThreadType;
-
-    std::auto_ptr<ThreadType>   m_thread;
-    cluster_t                   m_cluster;
+    std::thread     m_thread;
+    cluster_t       m_cluster;
 
 private:
     //-------------------------------------------------------------------------
@@ -313,8 +312,13 @@ private:
     }
 
 public:
-    so_runtime_t() {
-        m_thread.reset(new ThreadType(&so_runtime_t::execute, this));
+    so_runtime_t()
+        : m_thread(&so_runtime_t::execute, this)
+    {
+    }
+
+    ~so_runtime_t() {
+        m_thread.join();
     }
 
     static so_runtime_t* instance() {

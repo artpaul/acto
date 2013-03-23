@@ -3,6 +3,7 @@
 
 #include <core/runtime.h>
 #include <util/generic/ptr.h>
+#include <thread>
 
 namespace acto {
 namespace core {
@@ -44,7 +45,8 @@ private:
     /// Очередь объектов, которым пришли сообщения
     HeaderQueue         m_queue;
     /// Экземпляр системного потока
-    holder_t<thread_t>  m_scheduler;
+    holder_t<std::thread>
+                        m_scheduler;
     /// -
     workers_t           m_workers;
     /// -
@@ -52,9 +54,7 @@ private:
     atomic_t            m_terminating;
 
 private:
-    static void execute(void* param) {
-        impl* const pthis = static_cast< impl* >(param);
-
+    static void execute(impl* const pthis) {
         int newWorkerTimeout = 2;
         int lastCleanupTime  = clock();
 
@@ -154,7 +154,7 @@ public:
         // 2.
         m_evnoworkers.signaled();
         // 3.
-        m_scheduler.reset(new thread_t(&impl::execute, this));
+        m_scheduler.reset(new std::thread(&impl::execute, this));
     }
 
     ~impl() {
@@ -168,6 +168,9 @@ public:
 
         m_event.signaled();
 
+        if (m_scheduler->joinable()) {
+            m_scheduler->join();
+        }
         m_scheduler.destroy();
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);

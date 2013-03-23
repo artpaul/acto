@@ -1,10 +1,10 @@
 #include <util/system/atomic.h>
 #include <util/system/event.h>
-#include <util/system/thread.h>
 #include <util/system/thread_pool.h>
 
 #include <cstdlib>
 #include <stdio.h>
+#include <thread>
 
 acto::core::event_t ev(true);
 

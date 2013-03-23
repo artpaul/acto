@@ -1,5 +1,4 @@
 #include "thread_pool.h"
-#include "thread.h"
 #include "event.h"
 
 #include <util/generic/intrlist.h>
@@ -7,6 +6,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <thread>
 
 namespace acto {
 
@@ -16,7 +16,7 @@ struct thread_pool_t::thread_data_t : public core::intrusive_t< thread_data_t > 
     atomic_t                        active;
     thread_pool_t* const            owner;
     task_t                          task;
-    std::auto_ptr< core::thread_t > thread;
+    std::auto_ptr< std::thread >    thread;
     core::event_t                   event;
     bool                            deleting;
 
@@ -30,7 +30,15 @@ public:
     {
         next = NULL;
         // Создать поток
-        thread.reset(new core::thread_t(&thread_pool_t::execute_loop, this));
+        thread.reset(new std::thread(&thread_pool_t::execute_loop, this));
+    }
+
+    ~thread_data_t() {
+        active = 0;
+
+        if (thread.get() && thread->joinable()) {
+            thread->join();
+        }
     }
 };
 
@@ -74,7 +82,7 @@ void thread_pool_t::queue_task(callback_t cb, void* param) {
             // -
             atomic_increment(&m_count);
         }
-        catch (core::thread_exception&) {
+        catch (std::exception&) {
             // Не возможно создать поток
             m_tasks.push(new task_t(cb, param));
         }
@@ -129,8 +137,7 @@ void thread_pool_t::delete_worker(thread_data_t* const item) {
 }
 
 //-----------------------------------------------------------------------------
-void thread_pool_t::execute_loop(void* param) {
-    thread_data_t* const pthis  = static_cast< thread_data_t* >(param);
+void thread_pool_t::execute_loop(thread_data_t* pthis) {
     thread_pool_t* const powner = pthis->owner;
 
     while (pthis->active) {

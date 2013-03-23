@@ -2,7 +2,6 @@
 #include "runtime.h"
 #include "module.h"
 #include <util/system/platform.h>
-#include <util/system/thread.h>
 
 namespace acto {
 namespace core {

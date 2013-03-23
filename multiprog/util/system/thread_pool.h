@@ -51,7 +51,7 @@ private:
     void delete_worker(thread_data_t* const item);
 
     /// -
-    static void execute_loop(void* param);
+    static void execute_loop(thread_data_t* pthis);
 
 private:
     std::mutex      m_cs;

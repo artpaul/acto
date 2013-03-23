@@ -3,7 +3,6 @@
 #include "actor.h"
 
 #include <util/system/event.h>
-#include <util/system/thread.h>
 #include <util/generic/queue.h>
 
 namespace acto {
