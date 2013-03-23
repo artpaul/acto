@@ -71,7 +71,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     typedef generics::stack_t<package_t>      intusive_stack_t;
 
     // Критическая секция для доступа к полям
-    std::mutex          cs;
+    std::recursive_mutex cs;
 
     // Реализация объекта
     actor_body_t*       impl;

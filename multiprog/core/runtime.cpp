@@ -123,7 +123,7 @@ public:
 
         bool deleting = false;
         {
-            std::lock_guard<std::mutex> g(obj->cs);
+            std::lock_guard<std::recursive_mutex> g(obj->cs);
             // 1. Если объект уже находится в состоянии "осовобождаемы",
             //    то он будет неминуемо удален и более ничего делать не нежно
             if (obj->freeing)
@@ -174,7 +174,7 @@ public:
         event_t event;
 
         if (active_actor != obj) {
-            std::lock_guard<std::mutex> g(obj->cs);
+            std::lock_guard<std::recursive_mutex> g(obj->cs);
 
             if (obj->impl) {
                 node.reset(new object_t::waiter_t());
