@@ -6,5 +6,181 @@
 // Дополнительные сервисы (пользовательский уровень)
 #include "core/services.h"
 
-// Интерфейс библиотеки (пользовательский уровень)
-#include "act_user.h"
+#include <core/runtime.h>
+#include <core/module.h>
+
+namespace acto {
+namespace detail {
+
+template <typename Impl>
+inline core::object_t* make_instance(const actor_ref& context, const int options) {
+    return core::main_module_t::instance()->make_instance< Impl >(context, options);
+}
+
+} // namespace detail
+
+///////////////////////////////////////////////////////////////////////////////
+//                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
+///////////////////////////////////////////////////////////////////////////////
+
+using core::message_class_t;
+
+
+/**
+ * Пользовательский объект (актер)
+ */
+class actor_ref {
+    friend void join(actor_ref& obj);
+    friend void destroy(actor_ref& object);
+
+private:
+    core::object_t* volatile  m_object;
+
+    /// Присваивает новое значение текущему объекту
+    void assign(const actor_ref& rhs);
+    ///
+    bool same(const actor_ref& rhs) const;
+    ///
+    template <typename T>
+    void send_message(T* const msg) const {
+        if (m_object) {
+            assert(msg != NULL);
+
+            if (msg->meta == NULL)
+                msg->meta = core::get_metaclass< T >();
+            // Отправить сообщение
+            core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
+        }
+    }
+
+public:
+    actor_ref();
+
+    explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
+
+    actor_ref(const actor_ref& rhs);
+
+    ~actor_ref();
+
+public:
+    /// Инициализирован ли текущий объект
+    bool assigned() const;
+
+    core::object_t* data() const {
+        return m_object;
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send(const MsgT& msg) const {
+        this->send_message< MsgT >(new MsgT(msg));
+    }
+
+    template <typename MsgT>
+    inline void send(const core::msg_box_t< MsgT >& box) const {
+        this->send_message< MsgT >(*box);
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send() const {
+        this->send_message< MsgT >(new MsgT());
+    }
+
+    template <typename MsgT, typename P1>
+    inline void send(P1 p1) const {
+        this->send_message< MsgT >(new MsgT(p1));
+    }
+
+    template <typename MsgT, typename P1, typename P2>
+    inline void send(P1 p1, P2 p2) const {
+        this->send_message< MsgT >(new MsgT(p1, p2));
+    }
+
+    template <typename MsgT, typename P1, typename P2, typename P3>
+    inline void send(P1 p1, P2 p2, P3 p3) const {
+        this->send_message< MsgT >(new MsgT(p1, p2, p3));
+    }
+
+/* Операторы */
+public:
+    actor_ref& operator = (const actor_ref& rhs);
+    // -
+    bool operator == (const actor_ref& rhs) const;
+    // -
+    bool operator != (const actor_ref& rhs) const;
+};
+
+
+/**
+ * Базовый класс для реализации пользовательских объектов (актеров)
+ */
+class actor : public core::base_t {
+    friend class core::main_module_t;
+
+protected:
+    // Ссылка на контекстный объект для данного
+    actor_ref   context;
+    // Ссылка на самого себя
+    actor_ref   self;
+};
+
+
+// Desc:
+struct msg_destroy : public msg_t { };
+
+// Desc:
+struct msg_time : public msg_t { };
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+/* Уничтожить указанный объект */
+ACTO_API void destroy(actor_ref& object);
+
+//
+ACTO_API void finalize_thread();
+
+// Включить в текущем потоке возможность взаимодействия
+// с ядром библиотеки acto
+ACTO_API void initialize_thread();
+
+/* Дождаться завершения работы указанног актера */
+ACTO_API void join(actor_ref& obj);
+
+// Обработать все сообщения для объектов,
+// привязанных к текущему системному потоку (опция aoBindToThread)
+ACTO_API void process_messages();
+
+/* Завершить использование библиотеки */
+ACTO_API void shutdown();
+
+/* Инициализировать библиотеку */
+ACTO_API void startup();
+
+
+template <typename T>
+inline actor_ref spawn() {
+    actor_ref a;
+    return actor_ref(detail::make_instance<T>(a, 0), false);
+}
+
+template <typename T>
+inline actor_ref spawn(actor_ref& context) {
+    return actor_ref(detail::make_instance<T>(context, 0), false);
+}
+
+template <typename T>
+inline actor_ref spawn(const int options) {
+    actor_ref a;
+    return actor_ref(detail::make_instance<T>(a, options), false);
+}
+
+template <typename T>
+inline actor_ref spawn(actor_ref& context, const int options) {
+    return actor_ref(detail::make_instance<T>(context, options), false);
+}
+
+} // namespace acto

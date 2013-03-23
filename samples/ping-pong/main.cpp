@@ -89,7 +89,6 @@ public:
     Console() {
         // Метод Handler связывает конкретную процедуру с библиотекой
         // для обработки сообщения указанного типа.
-        //Handler< msg_out >( &Console::do_out );
         Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
             { std::cout << msg.text << std::endl; }
         );
