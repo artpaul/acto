@@ -2,18 +2,18 @@
 #ifndef acto_remote_transport_h_20d942d7a779464eb373d0bad8f10cd0
 #define acto_remote_transport_h_20d942d7a779464eb373d0bad8f10cd0
 
-#include <map>
-#include <set>
-#include <string>
-#include <memory>
-
-#include <generic/memory.h>
-
-#include <system/platform.h>
 #include <core/serialization.h>
 
 // !!!
 #include <remote/libsocket/libsocket.h>
+
+#include <util/generic/memory.h>
+#include <util/system/platform.h>
+
+#include <map>
+#include <set>
+#include <string>
+#include <memory>
 
 
 namespace acto {

@@ -1,12 +1,11 @@
+#include "transport.h"
+
+#include <util/system/mutex.h>
+#include <remote/libsocket/libsocket.h>
 
 #include <assert.h>
 #include <memory.h>
 #include <stdio.h>
-
-#include <system/mutex.h>
-#include <remote/libsocket/libsocket.h>
-
-#include "transport.h"
 
 namespace acto {
 

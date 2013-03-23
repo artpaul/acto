@@ -16,6 +16,8 @@
 
 namespace acto {
 
+class actor_ref;
+
 namespace remote {
 
 /** */

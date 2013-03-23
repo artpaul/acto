@@ -20,9 +20,10 @@ PROJECT (ACTO-SOLUTION)
         multiprog
         multiprog/util/system
         multiprog/core
-
+        multiprog/remote
+        multiprog/remote/libsocket
         samples/cycles
         samples/ping-pong
-
+        samples/sotest
         tests/thread
     )

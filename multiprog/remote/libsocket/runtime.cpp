@@ -1,3 +1,11 @@
+#include "libsocket.h"
+#include "runtime.h"
+
+#include <util/generic/intrqueue.h>
+#include <util/system/mutex.h>
+#include <util/system/thread.h>
+
+#include <set>
 
 #include <errno.h>
 #include <malloc.h>
@@ -8,15 +16,6 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <poll.h>
-
-#include <set>
-
-#include <generic/intrqueue.h>
-#include <system/mutex.h>
-#include <system/thread.h>
-
-#include "libsocket.h"
-#include "runtime.h"
 
 struct timeitem {
     SOCOMMAND*          cmd;

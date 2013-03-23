@@ -1,7 +1,6 @@
-
-
 #include <acto.h>
-#include <generic/memory.h>
+#include <remote/remote.h>
+#include <util/generic/memory.h>
 
 #ifdef ACTO_WIN
 #   include <conio.h>
@@ -68,8 +67,8 @@ acto::message_class_t< msg_answer, msg_answer::metainfo_t > msg_answer_class;
 
 /**
  */
-class Server : public acto::implementation_t {
-    void do_get(acto::actor_t& sender, const msg_get& msg) {
+class Server : public acto::actor {
+    void do_get(acto::actor_ref& sender, const msg_get& msg) {
         printf("MSG GET: %s\n", msg.content.c_str());
 
         sender.send< msg_answer >();
@@ -83,14 +82,14 @@ public:
 
 /**
  */
-class Client : public acto::implementation_t {
-    void do_answer(acto::actor_t& sender, const msg_answer& msg) {
+class Client : public acto::actor {
+    void do_answer(acto::actor_ref& sender, const msg_answer& msg) {
         printf("MSG ANSWER:\n");
-        terminate();
+        die();
     }
 
-    void do_start(acto::actor_t& sender, const msg_start& msg) {
-        acto::actor_t serv = acto::remote::connect("acto://127.0.0.1/server", CLIENTPORT);
+    void do_start(acto::actor_ref& sender, const msg_start& msg) {
+        acto::actor_ref serv = acto::remote::connect("acto://127.0.0.1/server", CLIENTPORT);
 
         if (serv.assigned()) {
             serv.send< msg_get >("test message data via message");
@@ -120,14 +119,14 @@ int main(int argc, char* argv[]) {
 
         acto::remote::enable();
         // Локальный объект
-        acto::actor_t serv = acto::instance< Server >();
+        acto::actor_ref serv = acto::spawn< Server >();
         // Зарегистрировать в словаре
         acto::remote::register_actor(serv, "server1");
         acto::remote::register_hook(&h);
         // acto::remote::register_handler( on_message | on_send | on_error );
 
         // Эмуляция клиента
-        acto::actor_t cl = acto::instance< Client >();
+        acto::actor_ref cl = acto::spawn< Client >();
 
         cl.send< msg_start >();
 

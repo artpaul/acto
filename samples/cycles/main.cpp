@@ -68,7 +68,6 @@ public:
     }
 
 public:
-    //-------------------------------------------------------------------------
     void doLoop(acto::actor_ref& sender, const msg_loop& msg) {
         if (m_active) {
             m_counter++;
@@ -76,13 +75,13 @@ public:
             self.send(msg_loop_class.create());
         }
     }
-    //-------------------------------------------------------------------------
+
     void doStart(acto::actor_ref& sender, const msg_start& msg) {
         m_active  = true;
         // Начать цикл
         self.send(msg_loop_class.create());
     }
-    //-------------------------------------------------------------------------
+
     void doStop(acto::actor_ref& sender, const msg_stop& msg) {
         m_active = false;
         // -
@@ -91,7 +90,7 @@ public:
         // Послать владельцу свою статистику выполнения
         context.send(rval);
         // -
-        this->terminate();
+        this->die();
     }
 
 private:
@@ -137,7 +136,7 @@ private:
             // Ждать завершения работы агента
             acto::join(m_listeners[i]);
         }
-        this->terminate();
+        this->die();
     }
 
 private:

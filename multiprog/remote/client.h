@@ -14,16 +14,17 @@
 #ifndef acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
 #define acto_remote_client_h_495808c30ca7465eb25ec855541ff6e8
 
-#include <map>
-
-#include <system/mutex.h>
-#include <system/event.h>
-
-#include <core/types.h>
-
 #include "protocol.h"
 #include "transport.h"
 #include "remote.h"
+
+#include <core/types.h>
+#include <acto.h>
+
+#include <util/system/mutex.h>
+#include <util/system/event.h>
+
+#include <map>
 
 namespace acto {
 

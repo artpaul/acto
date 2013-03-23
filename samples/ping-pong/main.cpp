@@ -161,7 +161,6 @@ public:
     }
 
 private:
-    //-------------------------------------------------------------------------
     void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
         if (!m_finished) {
             // Увеличить счетчик отскоков от стены
@@ -170,7 +169,7 @@ private:
             m_players[ (rand() % PLAYERS) ].send( msg_ball_class.create() );
         }
     }
-    //-------------------------------------------------------------------------
+
     void do_finish(acto::actor_ref& sender, const msg_finish& msg) {
         m_finished = true;
         // -
@@ -180,9 +179,9 @@ private:
         // Отправить сообщение на консоль
         m_console.send< msg_out >(std::string(buffer));
         // Завершить выполнение текущего актера
-        this->terminate();
+        this->die();
     }
-    //-------------------------------------------------------------------------
+
     void do_start(acto::actor_ref& sender, const msg_start& msg) {
         m_console = msg.console;
 

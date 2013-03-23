@@ -5,7 +5,6 @@
 #include <util/generic/ptr.h>
 
 namespace acto {
-
 namespace core {
 
 /// Объект, от имени которого посылается сообщение
@@ -45,7 +44,7 @@ private:
     /// Очередь объектов, которым пришли сообщения
     HeaderQueue         m_queue;
     /// Экземпляр системного потока
-	holder_t<thread_t>	m_scheduler;
+    holder_t<thread_t>  m_scheduler;
     /// -
     workers_t           m_workers;
     /// -
@@ -53,7 +52,6 @@ private:
     atomic_t            m_terminating;
 
 private:
-    //-------------------------------------------------------------------------
     static void execute(void* param) {
         impl* const pthis = static_cast< impl* >(param);
 
@@ -85,14 +83,13 @@ private:
         }
     }
 
-    //-------------------------------------------------------------------------
     void delete_worker(worker_t* const item) {
         delete item;
         // Уведомить, что удалены все вычислительные потоки
         if (atomic_decrement(&m_workers.count) == 0)
             m_evnoworkers.signaled();
     }
-    //-------------------------------------------------------------------------
+
     worker_t* create_worker() {
         worker_t* const result = new core::worker_t(this, thread_pool_t::instance());
 
@@ -101,7 +98,7 @@ private:
 
         return result;
     }
-    //-------------------------------------------------------------------------
+
     void dispatch_to_worker(int& wait_timeout) {
         // Прежде чем извлекать объект из очереди, необходимо проверить,
         // что есть вычислительные ресурсы для его обработки
@@ -112,7 +109,7 @@ private:
             // то создать новый поток
             if (m_workers.count < (m_workers.reserved + (m_processors << 1))) {
                 worker = create_worker();
-			} else {
+            } else {
                 // Подождать некоторое время осовобождения какого-нибудь потока
                 const WaitResult result = m_evworker.wait(wait_timeout * 1000);
 
@@ -123,9 +120,9 @@ private:
 
                     if (m_workers.count < MAX_WORKERS) {
                         worker = create_worker();
-					} else {
+                    } else {
                         m_evworker.wait();
-					}
+                    }
                 } else {
                     if (wait_timeout > 2) {
                         wait_timeout -= 2;
@@ -133,7 +130,7 @@ private:
                 }
             }
         }
-        // -
+
         if (worker) {
             if (object_t* const obj = m_queue.pop())
                 worker->assign(obj, (CLOCKS_PER_SEC >> 2));
@@ -157,7 +154,7 @@ public:
         // 2.
         m_evnoworkers.signaled();
         // 3.
-		m_scheduler.reset(new thread_t(&impl::execute, this));
+        m_scheduler.reset(new thread_t(&impl::execute, this));
     }
 
     ~impl() {
@@ -171,13 +168,12 @@ public:
 
         m_event.signaled();
 
-		m_scheduler.destroy();
+        m_scheduler.destroy();
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
 
 public:
-    //-------------------------------------------------------------------------
     object_t* create_actor(base_t* const body, const int options) {
         assert(body != NULL);
 
@@ -198,7 +194,7 @@ public:
 
         return result;
     }
-    //-------------------------------------------------------------------------
+
     void destroy_object_body(actor_body_t* const body) {
         assert(body != NULL);
 
@@ -210,15 +206,15 @@ public:
             impl->m_thread->wakeup();
         }
     }
-    //-------------------------------------------------------------------------
+
     void handle_message(package_t* const package) {
         do_handle_message(package);
     }
-    //-------------------------------------------------------------------------
+
     void push_delete(object_t* const obj) {
         runtime_t::instance()->deconstruct_object(obj);
     }
-    //-------------------------------------------------------------------------
+
     void push_idle(worker_t* const worker) {
         assert(worker != 0);
 
@@ -226,11 +222,11 @@ public:
 
         m_evworker.signaled();
     }
-    //-------------------------------------------------------------------------
+
     object_t* pop_object() {
         return m_queue.pop();
     }
-    //-------------------------------------------------------------------------
+
     void push_object(object_t* const obj) {
         m_queue.push(obj);
 
@@ -243,18 +239,18 @@ public:
 void do_handle_message(package_t* const p) {
     assert(p != NULL && p->target != NULL);
 
-	holder_t<package_t>	package(p);
-    object_t* const		obj     = package->target;
-    base_t* const		impl    = static_cast< base_t* >(obj->impl);
-	i_handler*			handler = 0;
+    holder_t<package_t> package(p);
+    object_t* const     obj     = package->target;
+    base_t* const       impl    = static_cast< base_t* >(obj->impl);
+    i_handler*          handler = 0;
 
     assert(obj->module == 0);
     assert(obj->impl   != 0);
 
     // 1. Найти обработчик соответствующий данному сообщению
     for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
-		if (package->type == (*i)->type) {
-			handler = (*i)->handler.get();
+        if (package->type == (*i)->type) {
+            handler = (*i)->handler.get();
             break;
         }
     }
@@ -266,7 +262,7 @@ void do_handle_message(package_t* const p) {
             //     которая всегда выполняется в контексте этого потока.
             active_actor = obj;
 
-			handler->invoke(package->sender, package->data.get());
+            handler->invoke(package->sender, package->data.get());
 
             active_actor = NULL;
         } catch (...) {
@@ -275,75 +271,71 @@ void do_handle_message(package_t* const p) {
 
         if (impl->m_terminating) {
             runtime_t::instance()->deconstruct_object(obj);
-		}
+        }
     }
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
+
 i_handler::i_handler(const TYPEID type_)
     : m_type(type_)
 {
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
+
 base_t::base_t()
     : m_thread(NULL)
     , m_terminating(false)
 {
 }
-//-----------------------------------------------------------------------------
+
 base_t::~base_t() {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); i++) {
         delete (*i);
     }
 }
-//-----------------------------------------------------------------------------
-void base_t::terminate() {
+
+void base_t::die() {
     this->m_terminating = true;
 }
-//-----------------------------------------------------------------------------
+
 void base_t::set_handler(i_handler* const handler, const TYPEID type) {
     for (Handlers::iterator i = m_handlers.begin(); i != m_handlers.end(); ++i) {
         if ((*i)->type == type) {
-			(*i)->handler.reset(handler);
+            (*i)->handler.reset(handler);
             return;
         }
     }
 
     // Запись для данного типа сообщения еще не существует
-	m_handlers.push_back(new HandlerItem(type, handler));
+    m_handlers.push_back(new HandlerItem(type, handler));
 }
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
+
 main_module_t::main_module_t()
     : m_pimpl(NULL)
 {
 
 }
-//-----------------------------------------------------------------------------
-main_module_t::~main_module_t() {
-    // -
-}
-//-----------------------------------------------------------------------------
+
+main_module_t::~main_module_t()
+{ }
+
 object_t* main_module_t::determine_sender() {
     return active_actor;
 }
-//-----------------------------------------------------------------------------
+
 void main_module_t::destroy_object_body(actor_body_t* const body) {
     m_pimpl->destroy_object_body(body);
 }
-//-----------------------------------------------------------------------------
+
 void main_module_t::handle_message(package_t* const package) {
     m_pimpl->handle_message(package);
 }
-//-----------------------------------------------------------------------------
+
 void main_module_t::send_message(package_t* const p) {
 	holder_t<package_t> package(p);
 	object_t* const		target = package->target;
@@ -382,21 +374,19 @@ void main_module_t::send_message(package_t* const p) {
 		m_pimpl->push_object(target);
 	}
 }
-//-----------------------------------------------------------------------------
+
 void main_module_t::shutdown(event_t& event) {
     m_pimpl.reset(NULL);
     event.signaled();
 }
-//-----------------------------------------------------------------------------
+
 void main_module_t::startup() {
     m_pimpl.reset(new impl());
 }
 
-//-----------------------------------------------------------------------------
 object_t* main_module_t::create_actor(base_t* const body, const int options) {
     return m_pimpl->create_actor(body, options);
 }
 
 } // namespace core
-
 } // namespace acto

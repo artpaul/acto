@@ -1,8 +1,9 @@
-
-#include <generic/memory.h>
-#include <act_user.h>
-
 #include "client.h"
+
+#include <util/generic/memory.h>
+#include <acto.h>
+
+#include <string.h>
 
 #define CLIENTPORT    25121
 
@@ -38,7 +39,7 @@ void remote_module_t::send_message(core::package_t* const package) {
     core::object_t* const sender = package->sender;
     core::object_t* const target = package->target;
     remote_base_t*  const impl   = static_cast< remote_base_t* >(target->impl);
-    const msg_t*    const msg    = package->data;
+    const msg_t*    const msg    = package->data.get();
     // -
     assert(target->module == 1);
 
@@ -73,7 +74,7 @@ void remote_module_t::send_message(core::package_t* const package) {
     ch.write(&impl->m_id, sizeof(impl->m_id));
     ch.write(&tid, sizeof(tid));
     // - запись данных напрямую в поток
-    s->write(package->data, &ch);
+    s->write(package->data.get(), &ch);
     m_transport.send_message(impl->m_node, ch);
 
     delete package;
@@ -166,7 +167,8 @@ void remote_module_t::do_send_message(command_event_t* const ev, bool is_client)
     ev->stream->read(&tid, sizeof(tid));
 
     // 1. По коду сообщения получить класс сообщения
-    msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
+    const msg_metaclass_t* meta = core::message_map_t::instance()->find_metaclass(tid);
+
     if (meta != NULL && meta->make_instance != NULL) {
         msg_t* const msg = meta->make_instance();
         if (size > 0)

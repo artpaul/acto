@@ -4,7 +4,6 @@ ADD_EXECUTABLE (sotest
 
 TARGET_LINK_LIBRARIES (sotest
     acto-lib
-    acto-ext
     acto-remote
 )
 

@@ -12,7 +12,7 @@ namespace acto {
 
 class actor_ref;
 
-}
+} // namespace acto
 
 namespace acto {
 namespace core {
@@ -28,63 +28,6 @@ public:
 
 public:
     virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
-};
-
-
-/**
-  * Обертка для вызова обработчика сообщения конкретного типа
-  */
-template <typename MsgT, typename C>
-class mem_handler_t : public i_handler {
-public:
-    typedef std::function< void (C*, acto::actor_ref&, const MsgT&) > delegate_t;
-
-public:
-    mem_handler_t(const delegate_t& delegate_, C* c, const TYPEID type_)
-        : i_handler ( type_ )
-        , m_delegate( delegate_ )
-        , m_c       (c)
-    {
-    }
-
-    // Вызвать обработчик
-    virtual void invoke(object_t* const sender, msg_t* const msg) const {
-        acto::actor_ref actor(sender);
-
-        m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
-    }
-
-private:
-    /// Делегат, хранящий указатель на
-    /// метод конкретного объекта.
-    const delegate_t    m_delegate;
-
-    C* const            m_c;
-};
-
-template <typename MsgT>
-class handler_t : public i_handler {
-public:
-    typedef std::function< void (acto::actor_ref&, const MsgT&) > delegate_t;
-
-public:
-    handler_t(const delegate_t& delegate_, const TYPEID type_)
-        : i_handler ( type_ )
-        , m_delegate( delegate_ )
-    {
-    }
-
-    // Вызвать обработчик
-    virtual void invoke(object_t* const sender, msg_t* const msg) const {
-        acto::actor_ref actor(sender);
-
-        m_delegate(actor, *static_cast< const MsgT* const >(msg));
-    }
-
-private:
-    /// Делегат, хранящий указатель на
-    /// метод конкретного объекта.
-    const delegate_t    m_delegate;
 };
 
 
@@ -113,13 +56,64 @@ class base_t : public actor_body_t {
     /// Карта обработчиков сообщений
     typedef std::vector< HandlerItem* >         Handlers;
 
-private:
-    // Карта обработчиков сообщений для данного объекта
-    Handlers        m_handlers;
-    // Поток, в котором должен выполнятся объект
-    class worker_t* m_thread;
-    // -
-    bool            m_terminating;
+    /**
+      * Обертка для вызова обработчика сообщения конкретного типа
+      */
+    template <
+        typename MsgT,
+        typename C
+    >
+    class mem_handler_t : public i_handler {
+    public:
+        typedef std::function< void (C*, acto::actor_ref&, const MsgT&) > delegate_t;
+
+    public:
+        mem_handler_t(const delegate_t& delegate_, C* c, const TYPEID type_)
+            : i_handler ( type_ )
+            , m_delegate( delegate_ )
+            , m_c       (c)
+        {
+        }
+
+        // Вызвать обработчик
+        virtual void invoke(object_t* const sender, msg_t* const msg) const {
+            acto::actor_ref actor(sender);
+
+            m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
+        }
+
+    private:
+        /// Делегат, хранящий указатель на
+        /// метод конкретного объекта.
+        const delegate_t    m_delegate;
+
+        C* const            m_c;
+    };
+
+    template <typename MsgT>
+    class handler_t : public i_handler {
+    public:
+        typedef std::function< void (acto::actor_ref&, const MsgT&) > delegate_t;
+
+    public:
+        handler_t(const delegate_t& delegate_, const TYPEID type_)
+            : i_handler ( type_ )
+            , m_delegate( delegate_ )
+        {
+        }
+
+        // Вызвать обработчик
+        virtual void invoke(object_t* const sender, msg_t* const msg) const {
+            acto::actor_ref actor(sender);
+
+            m_delegate(actor, *static_cast< const MsgT* const >(msg));
+        }
+
+    private:
+        /// Делегат, хранящий указатель на
+        /// метод конкретного объекта.
+        const delegate_t    m_delegate;
+    };
 
 public:
     struct msg_destroy : public msg_t {
@@ -133,7 +127,7 @@ public:
 
 protected:
     /// Завершить собственную работу
-    void terminate();
+    void die();
 
     /// Установка обработчика для сообщения данного типа
     template < typename MsgT, typename ClassName >
@@ -172,6 +166,14 @@ protected:
 
 private:
     void set_handler(i_handler* const handler, const TYPEID type);
+
+private:
+    // Карта обработчиков сообщений для данного объекта
+    Handlers        m_handlers;
+    // Поток, в котором должен выполнятся объект
+    class worker_t* m_thread;
+    // -
+    bool            m_terminating;
 };
 
 

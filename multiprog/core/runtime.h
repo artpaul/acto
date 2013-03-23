@@ -2,6 +2,8 @@
 
 #include "types.h"
 
+#include <set>
+
 namespace acto {
 namespace core {
 
