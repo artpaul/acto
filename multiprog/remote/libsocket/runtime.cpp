@@ -1,8 +1,7 @@
 #include "libsocket.h"
 #include "runtime.h"
 
-#include <util/generic/intrqueue.h>
-
+#include <util/intrqueue.h>
 
 #include <errno.h>
 #include <malloc.h>

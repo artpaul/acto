@@ -168,7 +168,7 @@ public:
     }
     //-----------------------------------------------------------------------------
     void join(object_t* const obj) {
-        std::auto_ptr< object_t::waiter_t > node;
+        std::unique_ptr< object_t::waiter_t > node;
         event_t event;
 
         if (active_actor != obj) {

@@ -58,7 +58,7 @@ public:
 private:
     class impl;
 
-    std::auto_ptr< impl >   m_pimpl;
+    std::unique_ptr< impl > m_pimpl;
 };
 
 } // namespace core

@@ -14,7 +14,7 @@ struct thread_pool_t::thread_data_t : public core::intrusive_t< thread_data_t > 
     atomic_t                        active;
     thread_pool_t* const            owner;
     task_t                          task;
-    std::auto_ptr< std::thread >    thread;
+    std::unique_ptr< std::thread >  thread;
     core::event_t                   event;
     bool                            deleting;
 

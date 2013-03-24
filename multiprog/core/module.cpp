@@ -281,7 +281,7 @@ void do_handle_message(package_t* const p) {
 ///////////////////////////////////////////////////////////////////////////////
 
 main_module_t::main_module_t()
-    : m_pimpl(NULL)
+    : m_pimpl(nullptr)
 {
 
 }
