@@ -20,7 +20,7 @@ struct network_node_t {
 
 /** */
 class mem_stream_t : public stream_t {
-    generics::array_ptr< char >     m_data;
+    std::unique_ptr< char [] >      m_data;
     size_t                          m_size;
     size_t                          m_pos;
 
@@ -326,7 +326,7 @@ void message_base_t::do_read_message(int s, SOEVENT* const ev) {
             const int rval = recv(s, &hdr, sizeof(hdr), MSG_PEEK);
 
             if (rval == sizeof(hdr)) {
-                generics::array_ptr<char>   buf(new char[hdr.size]);
+                std::unique_ptr<char []>   buf(new char[hdr.size]);
 
                 if (so_readsync(s, buf.get(), hdr.size, 30) == hdr.size) {
                     if (ch->m_handler) {

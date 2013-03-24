@@ -1,6 +1,5 @@
 #include "client.h"
 
-#include <util/memory.h>
 #include <acto.h>
 
 #include <string.h>
@@ -250,7 +249,7 @@ void remote_module_t::do_server_commands(command_event_t* const ev) {
                 ev->stream->read(&aid, sizeof(aid));
                 ev->stream->read(&len, sizeof(len));
                 {
-                    generics::array_ptr< char > buf(new char[len + 1]);
+                    std::unique_ptr< char [] > buf(new char[len + 1]);
 
                     ev->stream->read(buf.get(), len);
                     buf[len] = '\0';

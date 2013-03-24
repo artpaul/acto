@@ -1,6 +1,5 @@
 #include <acto.h>
 #include <remote/remote.h>
-#include <util/memory.h>
 
 #ifdef ACTO_WIN
 #   include <conio.h>
@@ -25,7 +24,7 @@ public:
 
             s->read(&len, sizeof(len));
             {
-                acto::generics::array_ptr< char > buf(new char[len + 1]);
+                std::unique_ptr< char [] > buf(new char[len + 1]);
 
                 s->read(buf.get(), len);
                 buf[len] = '\0';

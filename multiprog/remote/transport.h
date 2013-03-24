@@ -5,7 +5,6 @@
 // !!!
 #include <remote/libsocket/libsocket.h>
 
-#include <util/memory.h>
 #include <util/platform.h>
 
 #include <map>
@@ -22,7 +21,7 @@ struct network_node_t;
 /**
  */
 class transport_msg_t : public stream_t {
-    generics::array_ptr< char > m_data;
+    std::unique_ptr< char [] >  m_data;
     size_t                      m_size;
 
 public:
