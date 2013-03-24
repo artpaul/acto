@@ -1,6 +1,4 @@
-
-#ifndef actosystem_platform_h
-#define actosystem_platform_h
+#pragma once
 
 #if !defined (_WIN64) && !defined (_WIN32)
 #   define ACTO_UNIX
@@ -158,5 +156,3 @@ namespace core {
 #   define FORCE_INLINE
 #   define TLS_VARIABLE
 #endif
-
-#endif // actosystem_platform_h

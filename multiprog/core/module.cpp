@@ -111,7 +111,7 @@ private:
                 worker = create_worker();
             } else {
                 // Подождать некоторое время осовобождения какого-нибудь потока
-                const WaitResult result = m_evworker.wait(wait_timeout * 1000);
+                const wait_result result = m_evworker.wait(wait_timeout * 1000);
 
                 worker = m_workers.idle.pop();
 

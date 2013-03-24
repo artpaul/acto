@@ -169,7 +169,7 @@ void thread_pool_t::execute_loop(thread_data_t* pthis) {
             bool timed = true;
             // Случайный разброс в перидах ожидания для того, чтобы уменьшить
             // вероятность одновременного удаления нескольких потоков
-            const core::WaitResult rval = timed ? pthis->event.wait((60 + rand() % 30) * 1000) : pthis->event.wait();
+            const core::wait_result rval = timed ? pthis->event.wait((60 + rand() % 30) * 1000) : pthis->event.wait();
             if (rval != core::WR_TIMEOUT) {
                 break;
             } else {

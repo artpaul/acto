@@ -1,27 +1,13 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
-
-#ifndef acto_event_h_F3FC653C947A45ab8159F41C677233FD
-#define acto_event_h_F3FC653C947A45ab8159F41C677233FD
+#pragma once
 
 #include <memory>
+#include <condition_variable>
 
 namespace acto {
-
 namespace core {
 
 /** */
-enum WaitResult {
+enum wait_result {
     // -
     WR_ERROR,
     // -
@@ -34,7 +20,7 @@ enum WaitResult {
 /** Событие */
 class event_t {
 public:
-    event_t(const bool auto_reset = false);
+     event_t(const bool auto_reset = false);
     ~event_t();
 
 public:
@@ -43,17 +29,16 @@ public:
     ///
     void signaled();
     ///
-    WaitResult wait();
-    WaitResult wait(const unsigned int msec);
+    wait_result wait();
+    wait_result wait(const unsigned int msec);
 
 private:
-    class impl;
+    const bool              m_auto;
+    bool                    m_triggered;
 
-    std::auto_ptr<impl>   m_pimpl;
+    std::mutex              m_mutex;
+    std::condition_variable m_cond;
 };
 
 } // namespace core
-
 } // namespace acto
-
-#endif // acto_event_h_F3FC653C947A45ab8159F41C677233FD
