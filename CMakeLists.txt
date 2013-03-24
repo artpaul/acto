@@ -18,7 +18,7 @@ PROJECT (ACTO-SOLUTION)
 
     SUBDIRS (
         multiprog
-        multiprog/util/system
+        multiprog/util
         multiprog/core
         multiprog/remote
         multiprog/remote/libsocket

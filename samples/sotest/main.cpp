@@ -1,6 +1,6 @@
 #include <acto.h>
 #include <remote/remote.h>
-#include <util/generic/memory.h>
+#include <util/memory.h>
 
 #ifdef ACTO_WIN
 #   include <conio.h>

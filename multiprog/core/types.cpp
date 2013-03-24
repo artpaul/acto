@@ -1,7 +1,6 @@
 #include "types.h"
 #include "runtime.h"
 #include "module.h"
-#include <util/system/platform.h>
 
 namespace acto {
 namespace core {

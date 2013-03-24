@@ -1,8 +1,8 @@
 #pragma once
 
-#include <util/generic/intrlist.h>
-#include <util/system/atomic.h>
-#include <util/system/thread_pool.h>
+#include <util/intrlist.h>
+#include <util/atomic.h>
+#include <util/thread_pool.h>
 
 #include <ctime>
 

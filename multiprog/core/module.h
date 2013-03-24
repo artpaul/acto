@@ -2,8 +2,8 @@
 
 #include "actor.h"
 
-#include <util/system/event.h>
-#include <util/generic/queue.h>
+#include <util/event.h>
+#include <util/queue.h>
 
 namespace acto {
 namespace core {

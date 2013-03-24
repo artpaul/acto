@@ -1,6 +1,6 @@
 #include "client.h"
 
-#include <util/generic/memory.h>
+#include <util/memory.h>
 #include <acto.h>
 
 #include <string.h>

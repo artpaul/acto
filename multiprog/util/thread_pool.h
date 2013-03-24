@@ -2,9 +2,8 @@
 
 #include "atomic.h"
 #include "event.h"
-
-#include <util/generic/intrlist.h>
-#include <util/generic/queue.h>
+#include "intrlist.h"
+#include "queue.h"
 
 #include <mutex>
 

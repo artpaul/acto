@@ -2,8 +2,8 @@
 
 #include "serialization.h"
 
-#include <util/system/platform.h>
-#include <util/system/atomic.h>
+#include <util/atomic.h>
+#include <util/platform.h>
 
 #include <memory>
 #include <mutex>

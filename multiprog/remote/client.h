@@ -7,7 +7,7 @@
 #include <core/types.h>
 #include <acto.h>
 
-#include <util/system/event.h>
+#include <util/event.h>
 
 #include <map>
 #include <mutex>

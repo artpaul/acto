@@ -1,26 +1,11 @@
-///////////////////////////////////////////////////////////////////////////////
-//                           The act-o Library                               //
-//---------------------------------------------------------------------------//
-// Copyright © 2007 - 2009                                                   //
-//     Pavel A. Artemkin (acto.stan@gmail.com)                               //
-// ------------------------------------------------------------------ -------//
-// License:                                                                  //
-//     Code covered by the MIT License.                                      //
-//     The authors make no representations about the suitability of this     //
-//     software for any purpose. It is provided "as is" without express or   //
-//     implied warranty.                                                     //
-///////////////////////////////////////////////////////////////////////////////
+#pragma once
 
-#ifndef acto_stack_h_F8AF8212D6484ce1BEE630FF7D614D9D
-#define acto_stack_h_F8AF8212D6484ce1BEE630FF7D614D9D
-
+#include "atomic.h"
 #include "sequence.h"
-#include <util/system/atomic.h>
 
 #include <assert.h>
 
 namespace acto {
-
 namespace generics {
 
 /**
@@ -139,7 +124,4 @@ public:
 };
 
 } // namespace generics
-
 } // namespace acto
-
-#endif // acto_stack_h_F8AF8212D6484ce1BEE630FF7D614D9D

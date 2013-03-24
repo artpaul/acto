@@ -2,7 +2,7 @@
 #include "worker.h"
 
 #include <core/runtime.h>
-#include <util/generic/ptr.h>
+#include <util/ptr.h>
 #include <thread>
 
 namespace acto {

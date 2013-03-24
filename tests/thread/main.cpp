@@ -1,6 +1,6 @@
-#include <util/system/atomic.h>
-#include <util/system/event.h>
-#include <util/system/thread_pool.h>
+#include <util/atomic.h>
+#include <util/event.h>
+#include <util/thread_pool.h>
 
 #include <cstdlib>
 #include <stdio.h>

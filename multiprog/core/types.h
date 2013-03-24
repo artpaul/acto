@@ -2,10 +2,10 @@
 
 #include "message.h"
 
-#include <util/generic/intrlist.h>
-#include <util/generic/ptr.h>
-#include <util/generic/stack.h>
-#include <util/system/event.h>
+#include <util/intrlist.h>
+#include <util/ptr.h>
+#include <util/stack.h>
+#include <util/event.h>
 
 #include <mutex>
 #include <set>

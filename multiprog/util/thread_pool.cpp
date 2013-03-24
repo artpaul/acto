@@ -1,8 +1,6 @@
 #include "thread_pool.h"
 #include "event.h"
-
-#include <util/generic/intrlist.h>
-#include <util/generic/stack.h>
+#include "stack.h"
 
 #include <cstdlib>
 #include <memory>

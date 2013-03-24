@@ -1,10 +1,9 @@
 #include "runtime.h"
 
-#include <util/generic/stack.h>
-#include <util/generic/queue.h>
+#include <util/stack.h>
+#include <util/queue.h>
 
 namespace acto {
-
 namespace core {
 
 /** Контекс потока */
@@ -375,5 +374,4 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
 }
 
 } // namespace core
-
 } // namespace acto

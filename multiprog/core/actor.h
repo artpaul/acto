@@ -3,7 +3,7 @@
 #include "message.h"
 #include "types.h"
 
-#include <util/generic/ptr.h>
+#include <util/ptr.h>
 
 #include <functional>
 #include <vector>
