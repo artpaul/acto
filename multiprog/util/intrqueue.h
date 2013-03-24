@@ -1,10 +1,8 @@
-#ifndef intrqueue_h_b5eb85f3946b4e6ba71640998eed17b2
-#define intrqueue_h_b5eb85f3946b4e6ba71640998eed17b2
+#pragma one
 
 #include <assert.h>
 
 namespace acto {
-
 namespace generics {
 
 template <typename T>
@@ -104,7 +102,4 @@ public:
 };
 
 } // namespace generics
-
 } // namespace acto
-
-#endif // intrqueue_h_b5eb85f3946b4e6ba71640998eed17b2

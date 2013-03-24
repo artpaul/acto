@@ -3,8 +3,6 @@
 #include "message.h"
 #include "types.h"
 
-#include <util/ptr.h>
-
 #include <functional>
 #include <vector>
 
@@ -43,9 +41,10 @@ class base_t : public core::actor_body_t {
     ///
     struct HandlerItem {
         // Тип обработчика
-        const TYPEID        type;
+        const TYPEID    type;
         // Обработчик
-        holder_t<i_handler> handler;
+        std::unique_ptr<i_handler>
+                        handler;
 
     public:
         HandlerItem(const TYPEID t, i_handler* h)

@@ -3,7 +3,6 @@
 #include "message.h"
 
 #include <util/intrlist.h>
-#include <util/ptr.h>
 #include <util/stack.h>
 #include <util/event.h>
 
@@ -109,7 +108,8 @@ public:
 /** Транспортный пакет для сообщения */
 struct ACTO_API package_t : public intrusive_t< package_t > {
     // Данные сообщения
-    holder_t<msg_t>     data;
+    const std::unique_ptr<msg_t>
+                        data;
     // Отправитель сообщения
     object_t*           sender;
     // Получатель сообщения

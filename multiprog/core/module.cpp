@@ -2,7 +2,6 @@
 #include "worker.h"
 
 #include <core/runtime.h>
-#include <util/ptr.h>
 #include <thread>
 
 namespace acto {
@@ -45,7 +44,7 @@ private:
     /// Очередь объектов, которым пришли сообщения
     HeaderQueue         m_queue;
     /// Экземпляр системного потока
-    holder_t<std::thread>
+    std::unique_ptr<std::thread>
                         m_scheduler;
     /// -
     workers_t           m_workers;
@@ -144,7 +143,6 @@ public:
         : m_event(true)
         , m_evworker(true)
         , m_processors ( NumberOfProcessors() )
-        , m_scheduler  (NULL)
         , m_active     (true)
         , m_terminating(false)
     {
@@ -171,7 +169,6 @@ public:
         if (m_scheduler->joinable()) {
             m_scheduler->join();
         }
-        m_scheduler.destroy();
 
         assert(m_workers.count == 0 && m_workers.reserved == 0);
     }
@@ -242,7 +239,8 @@ public:
 void do_handle_message(package_t* const p) {
     assert(p != NULL && p->target != NULL);
 
-    holder_t<package_t> package(p);
+    const std::unique_ptr<package_t>
+                        package(p);
     object_t* const     obj     = package->target;
     base_t* const       impl    = static_cast< base_t* >(obj->impl);
     i_handler*          handler = 0;
@@ -302,42 +300,43 @@ void main_module_t::handle_message(package_t* const package) {
 }
 
 void main_module_t::send_message(package_t* const p) {
-	holder_t<package_t> package(p);
-	object_t* const		target = package->target;
-	bool				should_push = false;
+    std::unique_ptr<package_t>
+                    package(p);
+    object_t* const target = package->target;
+    bool            should_push = false;
 
-	{
-		// Эксклюзивный доступ
+    {
+        // Эксклюзивный доступ
         std::lock_guard<std::recursive_mutex> g(target->cs);
 
-		// Если объект отмечен для удалдения,
-		// то ему более нельзя посылать сообщения
-		if (!target->deleting) {
-			assert(target->impl && target->module == 0);
-			// 1. Поставить сообщение в очередь объекта
-			target->enqueue(package.release());
-			// 2. Подобрать для него необходимый поток
-			if (!target->binded) {
-				// Если с объектом связан эксклюзивный поток
-				worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
+        // Если объект отмечен для удалдения,
+        // то ему более нельзя посылать сообщения
+        if (!target->deleting) {
+            assert(target->impl && target->module == 0);
+            // 1. Поставить сообщение в очередь объекта
+            target->enqueue(package.release());
+            // 2. Подобрать для него необходимый поток
+            if (!target->binded) {
+                // Если с объектом связан эксклюзивный поток
+                worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
 
-				if (thread != NULL) {
-					thread->wakeup();
-				} else {
-					if (!target->scheduled) {
-						target->scheduled = true;
-						// Добавить объект в очередь
-						should_push = true;
-					}
-				}
-			}
-		}
-	}
+                if (thread != NULL) {
+                    thread->wakeup();
+                } else {
+                    if (!target->scheduled) {
+                        target->scheduled = true;
+                        // Добавить объект в очередь
+                        should_push = true;
+                    }
+                }
+            }
+        }
+    }
 
-	// Добавить объект в очередь
-	if (should_push) {
-		m_pimpl->push_object(target);
-	}
+    // Добавить объект в очередь
+    if (should_push) {
+        m_pimpl->push_object(target);
+    }
 }
 
 void main_module_t::shutdown(event_t& event) {
