@@ -11,7 +11,7 @@ namespace acto {
 /**
  */
 struct thread_pool_t::thread_data_t : public core::intrusive_t< thread_data_t > {
-    atomic_t                        active;
+    std::atomic<bool>               active;
     thread_pool_t* const            owner;
     task_t                          task;
     std::unique_ptr< std::thread >  thread;
@@ -78,7 +78,7 @@ void thread_pool_t::queue_task(callback_t cb, void* param) {
         try {
             new thread_data_t(this, task_t(cb, param));
             // -
-            atomic_increment(&m_count);
+            ++m_count;
         }
         catch (std::exception&) {
             // Не возможно создать поток
@@ -131,7 +131,7 @@ void thread_pool_t::delete_worker(thread_data_t* const item) {
 
     delete item;
 
-    atomic_decrement(&m_count);
+    --m_count;
 }
 
 //-----------------------------------------------------------------------------

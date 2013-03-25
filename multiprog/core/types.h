@@ -80,7 +80,7 @@ struct ACTO_API object_t : public intrusive_t< object_t > {
     atomic_stack_t      input_stack;
     intusive_stack_t    local_stack;
     // Count of references to object
-    atomic_t            references;
+    std::atomic<long>   references;
     /// Модуль в рамках которого создан объект
     const ui32          module    : 4;
     // Флаги состояния текущего объекта

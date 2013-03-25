@@ -2,6 +2,7 @@
 #include "worker.h"
 
 #include <core/runtime.h>
+#include <atomic>
 #include <thread>
 
 namespace acto {
@@ -24,11 +25,11 @@ class main_module_t::impl : public worker_t::worker_callback_i {
     //
     struct workers_t {
         // Текущее кол-во потоков
-        atomic_t        count;
+        std::atomic<long>   count;
         // Текущее кол-во эксклюзивных потоков
-        atomic_t        reserved;
+        std::atomic<long>   reserved;
         // Свободные потоки
-        WorkerStack     idle;
+        WorkerStack         idle;
     };
 
     // Максимальное кол-во рабочих потоков в системе
@@ -49,8 +50,8 @@ private:
     /// -
     workers_t           m_workers;
     /// -
-    atomic_t            m_active;
-    atomic_t            m_terminating;
+    std::atomic<bool>   m_active;
+    std::atomic<bool>   m_terminating;
 
 private:
     static void execute(impl* const pthis) {
@@ -85,15 +86,17 @@ private:
     void delete_worker(worker_t* const item) {
         delete item;
         // Уведомить, что удалены все вычислительные потоки
-        if (atomic_decrement(&m_workers.count) == 0)
+        if (--m_workers.count == 0) {
             m_evnoworkers.signaled();
+        }
     }
 
     worker_t* create_worker() {
         worker_t* const result = new core::worker_t(this, thread_pool_t::instance());
 
-        if (atomic_increment(&m_workers.count) == 1)
+        if (++m_workers.count == 1) {
             m_evnoworkers.reset();
+        }
 
         return result;
     }
@@ -187,7 +190,7 @@ public:
 
             body->m_thread     = worker;
 
-            atomic_increment(&m_workers.reserved);
+            ++m_workers.reserved;
 
             worker->assign(result, 0);
         }
@@ -201,7 +204,7 @@ public:
         base_t* const impl = static_cast<base_t*>(body);
 
         if (impl->m_thread != NULL) {
-            atomic_decrement(&m_workers.reserved);
+            --m_workers.reserved;
 
             impl->m_thread->wakeup();
         }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "atomic.h"
 #include "sequence.h"
 
 #include <assert.h>
+#include <atomic>
 
 namespace acto {
 namespace generics {
@@ -14,8 +14,6 @@ namespace generics {
  */
 template <typename T>
 class mpsc_stack_t {
-    T* volatile    m_head;
-
 public:
     mpsc_stack_t()
         : m_head(NULL)
@@ -23,27 +21,31 @@ public:
     }
 
     bool empty() const {
-        return (m_head == NULL);
+        return (m_head.load() == NULL);
     }
 
     sequence_t<T> extract() {
         while (true) {
-            T* const top = m_head;
+            T* top = m_head.load();
 
             if (top == NULL)
                 return NULL;
-            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, 0))
+
+            if (m_head.compare_exchange_weak(top, nullptr)) {
                 return top;
+            }
         }
     }
 
     void push(T* const node) {
         while (true) {
-            T* const top = m_head;
+            T* top = m_head.load();
 
             node->next = top;
-            if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)node))
+
+            if (m_head.compare_exchange_weak(top, node)) {
                 return;
+            }
         }
     }
 
@@ -54,20 +56,23 @@ public:
 
     T* pop() {
         while (true) {
-            T* const top = m_head;
+            T* top = m_head.load();
 
-            if (top == NULL)
+            if (top == NULL) {
                 return NULL;
-            else {
-                T* const next = top->next;
+            } else {
+                T* next = top->next;
 
-                if (atomic_compare_and_swap((atomic_t*)&m_head, (long)top, (long)next)) {
+                if (m_head.compare_exchange_weak(top, next)) {
                     top->next = NULL;
                     return top;
                 }
             }
         }
     }
+
+private:
+    std::atomic<T*> m_head;
 };
 
 
@@ -76,7 +81,6 @@ public:
  */
 template <typename T>
 class stack_t {
-    T*     m_head;
 public:
     stack_t()
         : m_head(NULL)
@@ -121,6 +125,9 @@ public:
         }
         return result;
     }
+
+private:
+    T* m_head;
 };
 
 } // namespace generics

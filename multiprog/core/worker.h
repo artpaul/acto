@@ -1,9 +1,9 @@
 #pragma once
 
 #include <util/intrlist.h>
-#include <util/atomic.h>
 #include <util/thread_pool.h>
 
+#include <atomic>
 #include <ctime>
 
 namespace acto {
@@ -47,14 +47,14 @@ namespace core {
 
 	private:
 		// Флаг активности потока
-		atomic_t        m_active;
-		object_t*       m_object;
+		std::atomic<bool>   m_active;
+		object_t*           m_object;
 		// -
-		clock_t         m_start;
-		clock_t         m_time;
+		clock_t             m_start;
+		clock_t             m_time;
 		// -
-		event_t         m_event;
-		event_t         m_complete;
+		event_t             m_event;
+		event_t             m_complete;
 		// -
 		worker_callback_i* const    m_slots;
 	};

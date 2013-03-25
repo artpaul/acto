@@ -1,22 +1,23 @@
-#include <util/atomic.h>
 #include <util/event.h>
 #include <util/thread_pool.h>
 
+#include <atomic>
 #include <cstdlib>
 #include <stdio.h>
 #include <thread>
 
 acto::core::event_t ev(true);
 
-acto::atomic_t  count = 0;
+std::atomic<long> count(0);
 
 static void execute(void* param) {
-    acto::atomic_increment(&count);
+    ++count;
     {
         printf("execute: %i\n", *((int*)param));
     }
-    if (acto::atomic_decrement(&count) == 0)
+    if (--count == 0) {
         ev.signaled();
+    }
 
     delete (int*)param;
 }

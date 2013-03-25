@@ -12,7 +12,7 @@ struct binding_context_t {
     // только с текущим потоком
     std::set< object_t* >   actors;
     // Счетчик инициализаций
-    atomic_t                counter;
+    std::atomic<long>       counter;
 };
 
 
@@ -86,7 +86,7 @@ public:
     long acquire(object_t* const obj) {
         assert(obj != NULL && obj->references > 0);
         // -
-        return atomic_increment(&obj->references);
+        return ++obj->references;
     }
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
@@ -192,7 +192,7 @@ public:
         assert(obj != 0);
         assert(obj->references > 0);
 
-        const long result = atomic_decrement(&obj->references);
+        const long result = --obj->references;
 
         if (result == 0)
             deconstruct_object(obj);
@@ -298,9 +298,9 @@ void runtime_t::create_thread_binding() {
     if (!threadCtx) {
         threadCtx = new binding_context_t();
         threadCtx->counter = 1;
+    } else {
+        ++threadCtx->counter;
     }
-    else
-        atomic_increment(&threadCtx->counter);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::deconstruct_object(object_t* const obj) {
@@ -309,7 +309,7 @@ void runtime_t::deconstruct_object(object_t* const obj) {
 //-----------------------------------------------------------------------------
 void runtime_t::destroy_thread_binding() {
     if (threadCtx) {
-        if (atomic_decrement(&threadCtx->counter) == 0) {
+        if (--threadCtx->counter == 0) {
             this->process_binded_actors(threadCtx->actors, true);
 
             delete threadCtx, threadCtx = 0;

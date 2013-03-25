@@ -1,10 +1,10 @@
 #pragma once
 
-#include "atomic.h"
 #include "event.h"
 #include "intrlist.h"
 #include "queue.h"
 
+#include <atomic>
 #include <mutex>
 
 namespace acto {
@@ -53,15 +53,15 @@ private:
     static void execute_loop(thread_data_t* pthis);
 
 private:
-    std::mutex      m_cs;
+    std::mutex          m_cs;
     ///
-    core::event_t   m_clean;
+    core::event_t       m_clean;
     /// Очередь незадействованных потоков
-    idle_queue_t    m_idles;
+    idle_queue_t        m_idles;
     /// Очередь заданий, которые еще не обработаны
-    task_queue_t    m_tasks;
+    task_queue_t        m_tasks;
     /// Текущее количество потоков
-    atomic_t        m_count;
+    std::atomic<long>   m_count;
 };
 
 } // namespace acto

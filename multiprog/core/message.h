@@ -2,9 +2,9 @@
 
 #include "serialization.h"
 
-#include <util/atomic.h>
 #include <util/platform.h>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -14,7 +14,7 @@
 namespace acto {
 
 /// Идентификатор типов
-typedef atomic_t    TYPEID;
+typedef unsigned long   TYPEID;
 
 
 /**
@@ -96,7 +96,7 @@ public:
 
         msg_metaclass_t* const meta = new msg_metaclass_t();
 
-        meta->tid = atomic_increment(&m_counter);
+        meta->tid = ++m_counter;
         meta->serializer.reset(new Serializer());
 
         m_types.insert(std::make_pair(code, meta));
@@ -110,7 +110,8 @@ private:
 
     mutable std::mutex  m_cs;
     /// Генератор идентификаторов
-    TYPEID              m_counter;
+    std::atomic<unsigned long>
+                        m_counter;
     /// Типы сообщений
     Types               m_types;
 };
