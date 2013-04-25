@@ -1,4 +1,4 @@
-#include "types.h"
+#include "base.h"
 #include "runtime.h"
 #include "module.h"
 
@@ -56,6 +56,45 @@ package_t::~package_t() {
     }
     runtime_t::instance()->release(target);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+base_t::base_t()
+    : m_thread(nullptr)
+    , m_terminating(false)
+{
+}
+
+base_t::~base_t()
+{ }
+
+void base_t::die() {
+    this->m_terminating = true;
+}
+
+void base_t::consume_package(const std::unique_ptr<package_t>& p) {
+    for (Handlers::const_iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
+        if (hi->type == p->type) {
+            hi->handler->invoke(p->sender, p->data.get());
+            return;
+        }
+    }
+
+}
+
+void base_t::set_handler(handler_t* const handler, const TYPEID type) {
+    for (Handlers::iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
+        if (hi->type == type) {
+            hi->handler.reset(handler);
+            return;
+        }
+    }
+
+    // Запись для данного типа сообщения еще не существует
+    m_handlers.push_back(HandlerItem(type, handler));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 } // namespace core
 } // namespace acto

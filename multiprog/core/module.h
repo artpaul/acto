@@ -1,6 +1,6 @@
 #pragma once
 
-#include "actor.h"
+#include "base.h"
 
 #include <util/event.h>
 #include <util/queue.h>

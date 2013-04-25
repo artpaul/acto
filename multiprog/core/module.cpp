@@ -207,11 +207,10 @@ public:
         }
     }
 
-    void handle_message(const std::unique_ptr<package_t> package) {
+    void handle_message(const std::unique_ptr<package_t>& package) {
         assert(package->target != NULL);
 
-        object_t* const obj  = package->target;
-        base_t* const   impl = static_cast< base_t* >(obj->impl);
+        object_t* const obj = package->target;
 
         assert(obj->module == 0);
         assert(obj->impl   != 0);
@@ -222,14 +221,14 @@ public:
             //     которая всегда выполняется в контексте этого потока.
             active_actor = obj;
 
-            impl->handle_message(package);
+            obj->impl->consume_package(package);
 
             active_actor = NULL;
         } catch (...) {
             active_actor = NULL;
         }
 
-        if (impl->m_terminating) {
+        if (static_cast< base_t* >(obj->impl)->m_terminating) {
             runtime_t::instance()->deconstruct_object(obj);
         }
     }

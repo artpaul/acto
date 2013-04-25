@@ -1,6 +1,5 @@
 ADD_LIBRARY (acto-core STATIC
-    actor.cpp
-    types.cpp
+    base.cpp
     message.cpp
     runtime.cpp
     worker.cpp

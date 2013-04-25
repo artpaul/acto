@@ -91,7 +91,7 @@ private:
 /**
  * Базовый класс для реализации пользовательских объектов (актеров)
  */
-class actor : public base_t {
+class actor : public core::base_t {
     friend class core::main_module_t;
 
 protected:

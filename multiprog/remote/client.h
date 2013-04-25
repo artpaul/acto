@@ -4,9 +4,8 @@
 #include "transport.h"
 #include "remote.h"
 
-#include <core/types.h>
 #include <acto.h>
-
+#include <core/base.h>
 #include <util/event.h>
 
 #include <map>
@@ -25,6 +24,9 @@ public:
     ui64            m_id;
     /// Сокет взаимодействия с удаленным хостом
     network_node_t* m_node;
+
+    virtual void consume_package(const std::unique_ptr<core::package_t>&)
+    { }
 };
 
 
