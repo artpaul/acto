@@ -16,7 +16,7 @@ void do_handle_message(package_t* const package);
 
 /**
  */
-class main_module_t::impl : public worker_t::worker_callback_i {
+class main_module_t::impl : public worker_callback_i {
     // -
     typedef generics::queue_t< object_t >       HeaderQueue;
     // -
