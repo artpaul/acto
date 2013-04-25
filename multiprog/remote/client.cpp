@@ -82,7 +82,7 @@ void remote_module_t::shutdown(core::event_t& event) {
     event.signaled();
 }
 //-----------------------------------------------------------------------------
-void remote_module_t::startup() {
+void remote_module_t::startup(core::runtime_t*) {
     // -
 }
 //-----------------------------------------------------------------------------

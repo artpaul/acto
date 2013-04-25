@@ -204,8 +204,6 @@ public:
         assert(inst != NULL && m_modules[id] == NULL);
 
         m_modules[id] = inst;
-
-        inst->startup();
     }
     //-----------------------------------------------------------------------------
     void reset() {
@@ -268,11 +266,9 @@ public:
 runtime_t::runtime_t()
     : m_pimpl(new impl())
 {
-    // -
 }
 //-----------------------------------------------------------------------------
 runtime_t::~runtime_t() {
-    // must be defined for delete m_pimpl
 }
 //-----------------------------------------------------------------------------
 runtime_t* runtime_t::instance() {
@@ -337,6 +333,7 @@ long runtime_t::release(object_t* const obj) {
 //-----------------------------------------------------------------------------
 void runtime_t::register_module(module_t* const inst, const ui8 id) {
     m_pimpl->register_module(inst, id);
+    inst->startup(this);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::send(object_t* const sender, object_t* const target, msg_t* const msg) {

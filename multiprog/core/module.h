@@ -8,6 +8,8 @@
 namespace acto {
 namespace core {
 
+class runtime_t;
+
 /**
  * Модуль, обеспечивающий обработку локальных актёров
  */
@@ -16,7 +18,7 @@ class main_module_t : public module_t {
     core::object_t* create_actor(base_t* const body, const int options);
 
 public:
-    main_module_t();
+     main_module_t();
     ~main_module_t();
 
     static main_module_t* instance() {
@@ -38,7 +40,7 @@ public:
     /// -
     virtual void shutdown(event_t& event);
     /// -
-    virtual void startup();
+    virtual void startup(runtime_t*);
 
     /// Создать экземпляр актёра
     template <typename Impl>

@@ -1,7 +1,7 @@
 #include "module.h"
+#include "runtime.h"
 #include "worker.h"
 
-#include <core/runtime.h>
 #include <atomic>
 #include <thread>
 
@@ -32,47 +32,148 @@ class main_module_t::impl : public worker_callback_i {
     // Максимальное кол-во рабочих потоков в системе
     static const size_t MAX_WORKERS = 512;
 
-private:
-    ///
-    event_t             m_event;
-    event_t             m_evworker;
-    event_t             m_evnoworkers;
-    /// Количество физических процессоров (ядер) в системе
-    long                m_processors;
-    /// Очередь объектов, которым пришли сообщения
-    HeaderQueue         m_queue;
-    /// Экземпляр системного потока
-    std::unique_ptr<std::thread>
-                        m_scheduler;
-    /// -
-    workers_t           m_workers;
-    /// -
-    std::atomic<bool>   m_active;
-    std::atomic<bool>   m_terminating;
+public:
+    impl(runtime_t* rt)
+        : m_rt(rt)
+        , m_event(true)
+        , m_evworker(true)
+        , m_processors ( NumberOfProcessors() )
+        , m_active     (true)
+        , m_terminating(false)
+    {
+        m_workers.count    = 0;
+        m_workers.reserved = 0;
+
+        m_evnoworkers.signaled();
+
+        m_scheduler.reset(new std::thread(&impl::execute, this));
+    }
+
+    ~impl() {
+        // Дождаться, когда все потоки будут удалены
+        m_terminating = true;
+
+        m_event.signaled();
+        m_evnoworkers.wait();
+
+        m_active = false;
+
+        m_event.signaled();
+
+        if (m_scheduler->joinable()) {
+            m_scheduler->join();
+        }
+
+        assert(m_workers.count == 0 && m_workers.reserved == 0);
+    }
+
+public:
+    object_t* create_actor(base_t* const body, const int options) {
+        assert(body != NULL);
+
+        object_t* const result = m_rt->create_actor(body, options, 0);
+
+        // Создать для актера индивидуальный поток
+        if (options & acto::aoExclusive) {
+            worker_t* const worker = this->create_worker();
+
+            result->scheduled  = true;
+
+            body->m_thread     = worker;
+
+            ++m_workers.reserved;
+
+            worker->assign(result, 0);
+        }
+
+        return result;
+    }
+
+    void destroy_object_body(actor_body_t* const body) {
+        assert(body != NULL);
+
+        base_t* const impl = static_cast<base_t*>(body);
+
+        if (impl->m_thread != NULL) {
+            --m_workers.reserved;
+
+            impl->m_thread->wakeup();
+        }
+    }
+
+    void handle_message(const std::unique_ptr<package_t>& package) {
+        assert(package->target != NULL);
+
+        object_t* const obj = package->target;
+
+        assert(obj->module == 0);
+        assert(obj->impl   != 0);
+
+        try {
+            assert(active_actor == NULL);
+            // TN: Данный параметр читает только функция determine_sender,
+            //     которая всегда выполняется в контексте этого потока.
+            active_actor = obj;
+
+            obj->impl->consume_package(package);
+
+            active_actor = NULL;
+        } catch (...) {
+            active_actor = NULL;
+        }
+
+        if (static_cast< base_t* >(obj->impl)->m_terminating) {
+            m_rt->deconstruct_object(obj);
+        }
+    }
+
+    void push_delete(object_t* const obj) {
+        m_rt->deconstruct_object(obj);
+    }
+
+    void push_idle(worker_t* const worker) {
+        assert(worker != 0);
+
+        m_workers.idle.push(worker);
+
+        m_evworker.signaled();
+    }
+
+    object_t* pop_object() {
+        return m_queue.pop();
+    }
+
+    void push_object(object_t* const obj) {
+        m_queue.push(obj);
+
+        m_event.signaled();
+    }
 
 private:
-    static void execute(impl* const pthis) {
+    void execute() {
         int newWorkerTimeout = 2;
         int lastCleanupTime  = clock();
 
-        while (pthis->m_active) {
-            while(!pthis->m_queue.empty()) {
-                pthis->dispatch_to_worker(newWorkerTimeout);
+        while (m_active) {
+            while(!m_queue.empty()) {
+                dispatch_to_worker(newWorkerTimeout);
                 yield();
             }
 
-            if (pthis->m_terminating || (pthis->m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-                generics::stack_t< worker_t >   queue(pthis->m_workers.idle.extract());
+            if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
+                generics::stack_t< worker_t > queue(m_workers.idle.extract());
+
                 // Удалить все потоки
-                while (worker_t* const item = queue.pop())
-                    pthis->delete_worker(item);
+                while (worker_t* const item = queue.pop()) {
+                    delete_worker(item);
+                }
 
                 yield();
-            }
-            else {
+            } else {
                 if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
-                    if (worker_t* const item = pthis->m_workers.idle.pop())
-                        pthis->delete_worker(item);
+                    if (worker_t* const item = m_workers.idle.pop()) {
+                        delete_worker(item);
+                    }
 
                     lastCleanupTime = clock();
                 }
@@ -138,122 +239,24 @@ private:
         }
     }
 
-public:
-    impl()
-        : m_event(true)
-        , m_evworker(true)
-        , m_processors ( NumberOfProcessors() )
-        , m_active     (true)
-        , m_terminating(false)
-    {
-        // 1.
-        m_workers.count    = 0;
-        m_workers.reserved = 0;
-        // 2.
-        m_evnoworkers.signaled();
-        // 3.
-        m_scheduler.reset(new std::thread(&impl::execute, this));
-    }
-
-    ~impl() {
-        // Дождаться, когда все потоки будут удалены
-        m_terminating = true;
-
-        m_event.signaled();
-        m_evnoworkers.wait();
-
-        m_active = false;
-
-        m_event.signaled();
-
-        if (m_scheduler->joinable()) {
-            m_scheduler->join();
-        }
-
-        assert(m_workers.count == 0 && m_workers.reserved == 0);
-    }
-
-public:
-    object_t* create_actor(base_t* const body, const int options) {
-        assert(body != NULL);
-
-        object_t* const result = runtime_t::instance()->create_actor(body, options, 0);
-
-        // Создать для актера индивидуальный поток
-        if (options & acto::aoExclusive) {
-            worker_t* const worker = this->create_worker();
-
-            result->scheduled  = true;
-
-            body->m_thread     = worker;
-
-            ++m_workers.reserved;
-
-            worker->assign(result, 0);
-        }
-
-        return result;
-    }
-
-    void destroy_object_body(actor_body_t* const body) {
-        assert(body != NULL);
-
-        base_t* const impl = static_cast<base_t*>(body);
-
-        if (impl->m_thread != NULL) {
-            --m_workers.reserved;
-
-            impl->m_thread->wakeup();
-        }
-    }
-
-    void handle_message(const std::unique_ptr<package_t>& package) {
-        assert(package->target != NULL);
-
-        object_t* const obj = package->target;
-
-        assert(obj->module == 0);
-        assert(obj->impl   != 0);
-
-        try {
-            assert(active_actor == NULL);
-            // TN: Данный параметр читает только функция determine_sender,
-            //     которая всегда выполняется в контексте этого потока.
-            active_actor = obj;
-
-            obj->impl->consume_package(package);
-
-            active_actor = NULL;
-        } catch (...) {
-            active_actor = NULL;
-        }
-
-        if (static_cast< base_t* >(obj->impl)->m_terminating) {
-            runtime_t::instance()->deconstruct_object(obj);
-        }
-    }
-
-    void push_delete(object_t* const obj) {
-        runtime_t::instance()->deconstruct_object(obj);
-    }
-
-    void push_idle(worker_t* const worker) {
-        assert(worker != 0);
-
-        m_workers.idle.push(worker);
-
-        m_evworker.signaled();
-    }
-
-    object_t* pop_object() {
-        return m_queue.pop();
-    }
-
-    void push_object(object_t* const obj) {
-        m_queue.push(obj);
-
-        m_event.signaled();
-    }
+private:
+    runtime_t* const    m_rt;
+    ///
+    event_t             m_event;
+    event_t             m_evworker;
+    event_t             m_evnoworkers;
+    /// Количество физических процессоров (ядер) в системе
+    long                m_processors;
+    /// Очередь объектов, которым пришли сообщения
+    HeaderQueue         m_queue;
+    /// Экземпляр системного потока
+    std::unique_ptr<std::thread>
+                        m_scheduler;
+    /// -
+    workers_t           m_workers;
+    /// -
+    std::atomic<bool>   m_active;
+    std::atomic<bool>   m_terminating;
 };
 
 
@@ -323,8 +326,8 @@ void main_module_t::shutdown(event_t& event) {
     event.signaled();
 }
 
-void main_module_t::startup() {
-    m_pimpl.reset(new impl());
+void main_module_t::startup(runtime_t* rt) {
+    m_pimpl.reset(new impl(rt));
 }
 
 object_t* main_module_t::create_actor(base_t* const body, const int options) {

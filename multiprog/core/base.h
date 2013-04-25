@@ -27,6 +27,7 @@ const int aoBindToThread = 0x02;
 namespace core {
 
 class  main_module_t;
+class  runtime_t;
 class  worker_t;
 struct package_t;
 
@@ -62,7 +63,7 @@ public:
     virtual void shutdown(event_t& event) = 0;
 
     /// -
-    virtual void startup() = 0;
+    virtual void startup(runtime_t*) = 0;
 };
 
 

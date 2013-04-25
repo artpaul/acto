@@ -60,7 +60,7 @@ public:
 
     virtual void shutdown(core::event_t& event);
 
-    virtual void startup();
+    virtual void startup(core::runtime_t*);
 
     actor_ref    connect(const char* path, unsigned int port);
     /// -
