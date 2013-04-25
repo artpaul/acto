@@ -1,10 +1,11 @@
 #pragma once
 
 #include <util/intrlist.h>
-#include <util/thread_pool.h>
+#include <util/event.h>
 
 #include <atomic>
 #include <ctime>
+#include <thread>
 
 namespace acto {
 namespace core {
@@ -32,7 +33,7 @@ public:
  */
 class worker_t : public intrusive_t< worker_t > {
 public:
-     worker_t(worker_callback_i* const slots, thread_pool_t* const pool);
+     worker_t(worker_callback_i* const slots);
     ~worker_t();
 
     // Поместить сообщение в очередь
@@ -41,7 +42,7 @@ public:
     void wakeup();
 
 private:
-    static void execute(void* param);
+    void execute();
 
     ///
     bool check_deleting(object_t* const obj);
@@ -61,6 +62,7 @@ private:
 
     event_t             m_event;
     event_t             m_complete;
+    std::thread         m_thread;
 
     worker_callback_i* const    m_slots;
 };

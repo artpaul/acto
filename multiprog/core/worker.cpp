@@ -6,23 +6,23 @@ namespace core {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-worker_t::worker_t(worker_callback_i* const slots, thread_pool_t* const pool)
+worker_t::worker_t(worker_callback_i* const slots)
     : m_active(true)
     , m_object(NULL)
     , m_start (0)
     , m_time  (0)
     , m_event(true)
+    , m_thread(&worker_t::execute, this)
     , m_slots (slots)
 {
     m_complete.reset();
-
-    pool->queue_task(&worker_t::execute, this);
 }
 
 worker_t::~worker_t() {
     m_active = false;
     m_event.signaled();
     m_complete.wait();
+    m_thread.join();
 }
 
 void worker_t::assign(object_t* const obj, const clock_t slice) {
@@ -43,23 +43,23 @@ void worker_t::wakeup() {
     m_event.signaled();
 }
 
-void worker_t::execute(void* param) {
-    worker_t* const pthis = static_cast< worker_t* >(param);
-
-    while (pthis->m_active) {
+void worker_t::execute() {
+    while (m_active) {
         //
         // Если данному потоку назначен объект, то необходимо
         // обрабатывать сообщения, ему поступившие
         //
-        if (!pthis->process())
-            pthis->m_slots->push_idle(pthis);
+        if (!process()) {
+            m_slots->push_idle(this);
+        }
+
         //
         // Ждать, пока не появится новое задание для данного потока
         //
-        pthis->m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
+        m_event.wait();  // Cond: (m_object != 0) || (m_active == false)
     }
 
-    pthis->m_complete.signaled();
+    m_complete.signaled();
 }
 
 bool worker_t::check_deleting(object_t* const obj) {

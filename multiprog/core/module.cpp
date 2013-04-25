@@ -92,7 +92,7 @@ private:
     }
 
     worker_t* create_worker() {
-        worker_t* const result = new core::worker_t(this, thread_pool_t::instance());
+        worker_t* const result = new core::worker_t(this);
 
         if (++m_workers.count == 1) {
             m_evnoworkers.reset();
