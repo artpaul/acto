@@ -11,8 +11,6 @@ namespace acto {
 namespace core {
     class main_module_t;
     class worker_t;
-
-    void do_handle_message(core::package_t* const p);
 } // core
 
 class actor_ref;
@@ -36,7 +34,6 @@ public:
  */
 class base_t : public core::actor_body_t {
     friend class core::main_module_t;
-    friend void core::do_handle_message(core::package_t* const package);
 
     ///
     struct HandlerItem {
