@@ -93,7 +93,7 @@ bool worker_t::process() {
             assert(obj->impl);
 
             // Обработать сообщение
-            m_slots->handle_message(package);
+            m_slots->handle_message(std::unique_ptr<package_t>(package));
 
             // Проверить истечение лимита времени обработки для данного объекта
             if (!obj->exclusive && ((clock() - m_start) > m_time)) {

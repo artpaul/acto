@@ -207,43 +207,30 @@ public:
         }
     }
 
-    void handle_message(package_t* const p) {
-        assert(p != NULL && p->target != NULL);
+    void handle_message(const std::unique_ptr<package_t> package) {
+        assert(package->target != NULL);
 
-        const std::unique_ptr<package_t>
-                            package(p);
-        object_t* const     obj     = package->target;
-        base_t* const       impl    = static_cast< base_t* >(obj->impl);
-        i_handler*          handler = 0;
+        object_t* const obj  = package->target;
+        base_t* const   impl = static_cast< base_t* >(obj->impl);
 
         assert(obj->module == 0);
         assert(obj->impl   != 0);
 
-        // 1. Найти обработчик соответствующий данному сообщению
-        for (base_t::Handlers::iterator i = impl->m_handlers.begin(); i != impl->m_handlers.end(); ++i) {
-            if (package->type == (*i)->type) {
-                handler = (*i)->handler.get();
-                break;
-            }
+        try {
+            assert(active_actor == NULL);
+            // TN: Данный параметр читает только функция determine_sender,
+            //     которая всегда выполняется в контексте этого потока.
+            active_actor = obj;
+
+            impl->handle_message(package);
+
+            active_actor = NULL;
+        } catch (...) {
+            active_actor = NULL;
         }
-        // 2. Если соответствующий обработчик найден, то вызвать его
-        if (handler) {
-            try {
-                assert(active_actor == NULL);
-                // TN: Данный параметр читает только функция determine_sender,
-                //     которая всегда выполняется в контексте этого потока.
-                active_actor = obj;
 
-                handler->invoke(package->sender, package->data.get());
-
-                active_actor = NULL;
-            } catch (...) {
-                active_actor = NULL;
-            }
-
-            if (impl->m_terminating) {
-                runtime_t::instance()->deconstruct_object(obj);
-            }
+        if (impl->m_terminating) {
+            runtime_t::instance()->deconstruct_object(obj);
         }
     }
 
@@ -271,16 +258,11 @@ public:
 };
 
 
-//-----------------------------------------------------------------------------
-
-
 ///////////////////////////////////////////////////////////////////////////////
 
 main_module_t::main_module_t()
     : m_pimpl(nullptr)
-{
-
-}
+{ }
 
 main_module_t::~main_module_t()
 { }
@@ -294,7 +276,7 @@ void main_module_t::destroy_object_body(actor_body_t* const body) {
 }
 
 void main_module_t::handle_message(package_t* const package) {
-    m_pimpl->handle_message(package);
+    m_pimpl->handle_message(std::unique_ptr<package_t>(package));
 }
 
 void main_module_t::send_message(package_t* const p) {
