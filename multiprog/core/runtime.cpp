@@ -168,10 +168,14 @@ public:
     }
     //-----------------------------------------------------------------------------
     void join(object_t* const obj) {
+        if (active_actor == obj) {
+            return;
+        }
+
         std::unique_ptr< object_t::waiter_t > node;
         event_t event;
 
-        if (active_actor != obj) {
+        {
             std::lock_guard<std::recursive_mutex> g(obj->cs);
 
             if (obj->impl) {
@@ -183,9 +187,10 @@ public:
                 event.reset();
             }
         }
-        // -
-        if (node.get() != NULL)
+
+        if (node.get() != NULL) {
             event.wait();
+        }
     }
     //-----------------------------------------------------------------------------
     long release(object_t* const obj) {
@@ -235,7 +240,7 @@ public:
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
     void send(object_t* const sender, object_t* const target, msg_t* const msg) {
-        assert(msg    != NULL && msg->meta != NULL);
+        assert(msg    != NULL);
         assert(target != NULL && m_modules[target->module] != NULL);
 
         //
@@ -243,7 +248,7 @@ public:
         //
 
         // 1. Создать экземпляр пакета
-        package_t* const package = new package_t(msg, msg->meta->tid);
+        package_t* const package = new package_t(msg, msg->tid);
         // 2.
         package->sender = sender;
         package->target = target;

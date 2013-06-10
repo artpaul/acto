@@ -15,7 +15,7 @@ namespace acto {
 //                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
 ///////////////////////////////////////////////////////////////////////////////
 
-using core::message_class_t;
+using core::msg_t;
 
 
 /**
@@ -48,11 +48,6 @@ public:
         this->send_message< MsgT >(new MsgT(msg));
     }
 
-    template <typename MsgT>
-    inline void send(const core::msg_box_t< MsgT >& box) const {
-        this->send_message< MsgT >(*box);
-    }
-
     // Послать сообщение объекту
     template <typename MsgT, typename ... P>
     inline void send(P&& ... p) const {
@@ -79,8 +74,8 @@ private:
         if (m_object) {
             assert(msg != NULL);
 
-            if (msg->meta == NULL)
-                msg->meta = core::get_metaclass< T >();
+            msg->tid = std::type_index(typeid(T));
+
             // Отправить сообщение
             core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
         }

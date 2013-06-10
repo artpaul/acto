@@ -1,8 +1,6 @@
-#ifndef sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
-#define sequence_h_B7DF74B10AB24b058D94FBF47080CEFE
+#pragma once
 
 namespace acto {
-
 namespace generics {
 
 /** */
@@ -18,7 +16,7 @@ public:
 
     T* extract() {
         T* const result = m_head;
-        m_head = NULL;
+        m_head = nullptr;
         return result;
     }
 
@@ -27,7 +25,7 @@ public:
         // -
         if (result) {
             m_head       = result->next;
-            result->next = NULL;
+            result->next = nullptr;
         }
         // -
         return result;
@@ -35,7 +33,4 @@ public:
 };
 
 } // namespace generics
-
 } // namespace acto
-
-#endif // sequence_h_B7DF74B10AB24b058D94FBF47080CEFE

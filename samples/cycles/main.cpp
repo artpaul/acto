@@ -45,10 +45,6 @@ struct msg_start : public acto::msg_t { };
 // -
 struct msg_stop  : public acto::msg_t { };
 
-
-acto::message_class_t< msg_loop >   msg_loop_class;
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //                       ОПИСАНИЕ ТИПОВ АКТЕРОВ                              //
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,14 +68,14 @@ public:
         if (m_active) {
             m_counter++;
             // Продолжить цикл
-            self.send(msg_loop_class.create());
+            self.send(msg_loop());
         }
     }
 
     void doStart(acto::actor_ref& sender, const msg_start& msg) {
         m_active  = true;
         // Начать цикл
-        self.send(msg_loop_class.create());
+        self.send(msg_loop());
     }
 
     void doStop(acto::actor_ref& sender, const msg_stop& msg) {

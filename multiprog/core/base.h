@@ -1,14 +1,15 @@
 #pragma once
 
-#include "message.h"
-
 #include <util/intrlist.h>
 #include <util/stack.h>
 #include <util/event.h>
+#include <util/platform.h>
 
 #include <functional>
 #include <mutex>
 #include <set>
+#include <typeinfo>
+#include <typeindex>
 #include <vector>
 
 namespace acto {
@@ -70,7 +71,7 @@ public:
 /**
  * Объект
  */
-struct ACTO_API object_t : public intrusive_t< object_t > {
+struct object_t : public intrusive_t< object_t > {
     struct waiter_t : public intrusive_t< waiter_t > {
         event_t*    event;
     };
@@ -115,21 +116,37 @@ public:
 
 
 /**
- * Транспортный пакет для сообщения
+ * Базовый тип для сообщений
  */
-struct ACTO_API package_t : public intrusive_t< package_t > {
-    // Данные сообщения
-    const std::unique_ptr<msg_t>
-                        data;
-    // Отправитель сообщения
-    object_t*           sender;
-    // Получатель сообщения
-    object_t*           target;
-    // Код типа сообщения
-    const TYPEID        type;
+struct msg_t {
+    std::type_index tid;
 
 public:
-    package_t(msg_t* const data_, const TYPEID type_);
+    msg_t()
+        : tid(typeid(msg_t))
+    { }
+
+    virtual ~msg_t()
+    { }
+};
+
+
+/**
+ * Транспортный пакет для сообщения
+ */
+struct package_t : public intrusive_t< package_t > {
+    // Данные сообщения
+    const std::unique_ptr<msg_t>
+                            data;
+    // Отправитель сообщения
+    object_t*               sender;
+    // Получатель сообщения
+    object_t*               target;
+    // Код типа сообщения
+    const std::type_index   type;
+
+public:
+    package_t(msg_t* const data_, const std::type_index& type_);
     ~package_t();
 };
 
@@ -151,13 +168,12 @@ class base_t : public actor_body_t {
     ///
     struct HandlerItem {
         // Тип обработчика
-        const TYPEID    type;
+        const std::type_index       type;
         // Обработчик
-        std::unique_ptr<handler_t>
-                        handler;
+        std::unique_ptr<handler_t>  handler;
 
     public:
-        inline HandlerItem(const TYPEID t, handler_t* h)
+        inline HandlerItem(const std::type_index& t, handler_t* h)
             : type   (t)
             , handler(h)
         {
@@ -237,7 +253,7 @@ protected:
                 // Обрабочик
                 new mem_handler_t< MsgT, ClassName >(func, static_cast<ClassName*>(this)),
                 // Тип сообщения
-                core::get_message_type< MsgT >());
+                std::type_index(typeid(MsgT)));
         }
 
     /// Установка обработчика для сообщения данного типа
@@ -248,20 +264,20 @@ protected:
                 // Обрабочик
                 new fun_handler_t< MsgT >(func),
                 // Тип сообщения
-                core::get_message_type< MsgT >());
+                std::type_index(typeid(MsgT)));
         }
 
     /// Сброс обработчика для сообщения данного типа
     template < typename MsgT >
         inline void Handler() {
             // Сбросить обработчик указанного типа
-            set_handler(nullptr, core::get_message_type< MsgT >());
+            set_handler(nullptr, std::type_index(typeid(MsgT)));
         }
 
 private:
     virtual void consume_package(const std::unique_ptr<package_t>& p);
 
-    void set_handler(handler_t* const handler, const TYPEID type);
+    void set_handler(handler_t* const handler, const std::type_index& type);
 
 private:
     /// Карта обработчиков сообщений

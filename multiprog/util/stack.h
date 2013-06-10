@@ -16,20 +16,20 @@ template <typename T>
 class mpsc_stack_t {
 public:
     mpsc_stack_t()
-        : m_head(NULL)
+        : m_head(nullptr)
     {
     }
 
     bool empty() const {
-        return (m_head.load() == NULL);
+        return (m_head.load() == nullptr);
     }
 
     sequence_t<T> extract() {
         while (true) {
             T* top = m_head.load();
 
-            if (top == NULL)
-                return NULL;
+            if (top == nullptr)
+                return nullptr;
 
             if (m_head.compare_exchange_weak(top, nullptr)) {
                 return top;
@@ -58,13 +58,13 @@ public:
         while (true) {
             T* top = m_head.load();
 
-            if (top == NULL) {
-                return NULL;
+            if (top == nullptr) {
+                return nullptr;
             } else {
                 T* next = top->next;
 
                 if (m_head.compare_exchange_weak(top, next)) {
-                    top->next = NULL;
+                    top->next = nullptr;
                     return top;
                 }
             }
@@ -83,7 +83,7 @@ template <typename T>
 class stack_t {
 public:
     stack_t()
-        : m_head(NULL)
+        : m_head(nullptr)
     {
     }
 
@@ -93,16 +93,16 @@ public:
     }
 
     ~stack_t() {
-        assert(m_head == NULL);
+        assert(m_head == nullptr);
     }
 
     bool empty() const {
-        return (m_head == NULL);
+        return (m_head == nullptr);
     }
 
     sequence_t<T> extract() {
         sequence_t<T> top = sequence_t<T>(m_head);
-        m_head = NULL;
+        m_head = nullptr;
         return top;
     }
 
@@ -121,7 +121,7 @@ public:
         // -
         if (result) {
             m_head = result->next;
-            result->next = NULL;
+            result->next = nullptr;
         }
         return result;
     }

@@ -42,7 +42,7 @@ package_t* object_t::select_message() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-package_t::package_t(msg_t* const data_, const TYPEID type_)
+package_t::package_t(msg_t* const data_, const std::type_index& type_)
     : data  (data_)
     , sender(NULL)
     , type  (type_)
@@ -79,10 +79,9 @@ void base_t::consume_package(const std::unique_ptr<package_t>& p) {
             return;
         }
     }
-
 }
 
-void base_t::set_handler(handler_t* const handler, const TYPEID type) {
+void base_t::set_handler(handler_t* const handler, const std::type_index& type) {
     for (Handlers::iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
         if (hi->type == type) {
             hi->handler.reset(handler);

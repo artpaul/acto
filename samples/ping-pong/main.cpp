@@ -68,12 +68,8 @@ struct msg_out  : public acto::msg_t {
     std::string     text;
 
 public:
-    msg_out(const std::string text_) : text( text_ ) { }
+    msg_out(const std::string& text_) : text( text_ ) { }
 };
-
-
-acto::message_class_t< msg_ball >   msg_ball_class;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //                       ОПИСАНИЕ ТИПОВ АКТЕРОВ                              //
@@ -119,7 +115,7 @@ class Player : public acto::actor {
 private:
     void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
         // Отправить мяч обратно
-        sender.send( msg_ball_class.create() );
+        sender.send(msg_ball());
     }
 
 public:
@@ -166,7 +162,7 @@ private:
             // Увеличить счетчик отскоков от стены
             m_counter++;
             // Послать случайно выбранному игроку
-            m_players[ (rand() % PLAYERS) ].send( msg_ball_class.create() );
+            m_players[ (rand() % PLAYERS) ].send(msg_ball());
         }
     }
 
