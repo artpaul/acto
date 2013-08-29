@@ -122,21 +122,36 @@ struct msg_t {
     std::type_index tid;
 
 public:
-    msg_t()
-        : tid(typeid(msg_t))
+    msg_t(const std::type_index& idx)
+        : tid(idx)
     { }
 
     virtual ~msg_t()
     { }
 };
 
+template <typename T>
+struct msg_wrap_t : public msg_t {
+    T   data;
+
+public:
+    msg_wrap_t(const T& d)
+        : msg_t(typeid(T))
+        , data(d)
+    { }
+
+    msg_wrap_t(T&& d)
+        : msg_t(typeid(T))
+        , data(std::move(d))
+    { }
+};
 
 /**
  * Транспортный пакет для сообщения
  */
 struct package_t : public intrusive_t< package_t > {
     // Данные сообщения
-    const std::unique_ptr<msg_t>
+    const std::unique_ptr<const msg_t>
                             data;
     // Отправитель сообщения
     object_t*               sender;
@@ -146,7 +161,7 @@ struct package_t : public intrusive_t< package_t > {
     const std::type_index   type;
 
 public:
-    package_t(msg_t* const data_, const std::type_index& type_);
+    package_t(const msg_t* const data_, const std::type_index& type_);
     ~package_t();
 };
 
@@ -162,7 +177,7 @@ class base_t : public actor_body_t {
         virtual ~handler_t()
         { }
 
-        virtual void invoke(object_t* const sender, msg_t* const msg) const = 0;
+        virtual void invoke(object_t* const sender, const msg_t* const msg) const = 0;
     };
 
     ///
@@ -199,10 +214,10 @@ class base_t : public actor_body_t {
         }
 
         // Вызвать обработчик
-        virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(m_c, actor, *static_cast< const MsgT* const >(msg));
+            m_delegate(m_c, actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data);
         }
 
     private:
@@ -225,10 +240,10 @@ class base_t : public actor_body_t {
         }
 
         // Вызвать обработчик
-        virtual void invoke(object_t* const sender, msg_t* const msg) const {
+        virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(actor, *static_cast< const MsgT* const >(msg));
+            m_delegate(actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data);
         }
 
     private:

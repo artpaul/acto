@@ -42,7 +42,7 @@ public:
     /// Зарегистрировать новый модуль
     void        register_module(module_t* const inst, const ui8 id);
     /// Послать сообщение указанному объекту
-    void        send(object_t* const sender, object_t* const target, msg_t* const msg);
+    void        send(object_t* const sender, object_t* const target, const msg_t* const msg);
     /// Завершить выполнение
     void        shutdown();
     /// Начать выполнение

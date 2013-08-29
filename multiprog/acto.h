@@ -45,13 +45,19 @@ public:
     // Послать сообщение объекту
     template <typename MsgT>
     inline void send(const MsgT& msg) const {
-        this->send_message< MsgT >(new MsgT(msg));
+        this->send_message< MsgT >(new core::msg_wrap_t<MsgT>(msg));
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send(MsgT&& msg) const {
+        this->send_message< MsgT >(new core::msg_wrap_t<typename std::remove_reference<MsgT>::type>(std::forward<MsgT>(msg)));
     }
 
     // Послать сообщение объекту
     template <typename MsgT, typename ... P>
     inline void send(P&& ... p) const {
-        this->send_message< MsgT >(new MsgT(std::forward<P>(p) ... ));
+        this->send_message< MsgT >(new core::msg_wrap_t<MsgT>(MsgT(std::forward<P>(p) ... )));
     }
 
 public:
@@ -70,11 +76,9 @@ private:
     bool same(const actor_ref& rhs) const;
     ///
     template <typename T>
-    void send_message(T* const msg) const {
+    void send_message(const core::msg_t* const msg) const {
         if (m_object) {
             assert(msg != NULL);
-
-            msg->tid = std::type_index(typeid(T));
 
             // Отправить сообщение
             core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);

@@ -42,7 +42,7 @@ package_t* object_t::select_message() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-package_t::package_t(msg_t* const data_, const std::type_index& type_)
+package_t::package_t(const msg_t* const data_, const std::type_index& type_)
     : data  (data_)
     , sender(NULL)
     , type  (type_)

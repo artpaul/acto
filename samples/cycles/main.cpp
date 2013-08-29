@@ -32,18 +32,21 @@ static const size_t LISTENERS  = 30;
 ///////////////////////////////////////////////////////////////////////////////
 
 // -
-struct msg_complete : public acto::msg_t {
+struct msg_complete {
     size_t  cycles;
 };
 
 // -
-struct msg_loop  : public acto::msg_t { };
+struct msg_loop
+{ };
 
 // -
-struct msg_start : public acto::msg_t { };
+struct msg_start
+{ };
 
 // -
-struct msg_stop  : public acto::msg_t { };
+struct msg_stop
+{ };
 
 ///////////////////////////////////////////////////////////////////////////////
 //                       ОПИСАНИЕ ТИПОВ АКТЕРОВ                              //

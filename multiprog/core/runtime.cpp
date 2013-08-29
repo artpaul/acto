@@ -239,7 +239,7 @@ public:
     }
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
-    void send(object_t* const sender, object_t* const target, msg_t* const msg) {
+    void send(object_t* const sender, object_t* const target, const msg_t* const msg) {
         assert(msg    != NULL);
         assert(target != NULL && m_modules[target->module] != NULL);
 
@@ -341,7 +341,7 @@ void runtime_t::register_module(module_t* const inst, const ui8 id) {
     inst->startup(this);
 }
 //-----------------------------------------------------------------------------
-void runtime_t::send(object_t* const sender, object_t* const target, msg_t* const msg) {
+void runtime_t::send(object_t* const sender, object_t* const target, const msg_t* const msg) {
     m_pimpl->send(sender, target, msg);
 }
 //-----------------------------------------------------------------------------
