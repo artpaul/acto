@@ -122,7 +122,7 @@ struct msg_t {
     std::type_index tid;
 
 public:
-    msg_t(const std::type_index& idx)
+    inline msg_t(const std::type_index& idx)
         : tid(idx)
     { }
 
@@ -135,12 +135,12 @@ struct msg_wrap_t : public msg_t {
     T   data;
 
 public:
-    msg_wrap_t(const T& d)
+    inline msg_wrap_t(const T& d)
         : msg_t(typeid(T))
         , data(d)
     { }
 
-    msg_wrap_t(T&& d)
+    inline msg_wrap_t(T&& d)
         : msg_t(typeid(T))
         , data(std::move(d))
     { }
