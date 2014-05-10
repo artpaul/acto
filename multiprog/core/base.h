@@ -131,19 +131,20 @@ public:
 };
 
 template <typename T>
-struct msg_wrap_t : public msg_t {
-    T   data;
-
-public:
+struct msg_wrap_t : public msg_t, private T {
     inline msg_wrap_t(const T& d)
         : msg_t(typeid(T))
-        , data(d)
+        , T(d)
     { }
 
     inline msg_wrap_t(T&& d)
         : msg_t(typeid(T))
-        , data(std::move(d))
+        , T(std::move(d))
     { }
+
+    inline const T& data() const {
+        return *static_cast<const T*>(this);
+    }
 };
 
 /**
@@ -217,7 +218,7 @@ class base_t : public actor_body_t {
         virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(m_c, actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data);
+            m_delegate(m_c, actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data());
         }
 
     private:
@@ -243,7 +244,7 @@ class base_t : public actor_body_t {
         virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data);
+            m_delegate(actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data());
         }
 
     private:
