@@ -13,7 +13,7 @@ PROJECT (ACTO-SOLUTION)
     SET(CMAKE_CXX_FLAGS "-std=c++11 -pthread -Wl,--no-as-needed")
 
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        SET( CMAKE_CXX_COMPILER "g++-4.8" )
+        SET( CMAKE_CXX_COMPILER "g++-4.9" )
     ENDIF ()
 
     SUBDIRS (
