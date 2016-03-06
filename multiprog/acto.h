@@ -2,7 +2,6 @@
 
 #include <core/module.h>
 #include <core/services.h>
-
 #include <util/platform.h>
 
 namespace acto {
@@ -10,9 +9,6 @@ namespace acto {
 ///////////////////////////////////////////////////////////////////////////////
 //                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
 ///////////////////////////////////////////////////////////////////////////////
-
-using core::msg_t;
-
 
 /**
  * Пользовательский объект (актер)
@@ -77,8 +73,6 @@ public:
     }
 
 private:
-    /// Присваивает новое значение текущему объекту
-    void assign(const actor_ref& rhs);
     ///
     bool same(const actor_ref& rhs) const;
     ///
@@ -101,14 +95,6 @@ protected:
     // Ссылка на самого себя
     actor_ref   self;
 };
-
-
-/** */
-struct msg_destroy : public msg_t { };
-
-/** */
-struct msg_time : public msg_t { };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //

@@ -17,8 +17,9 @@ void destroy(actor_ref& object) {
     if (core::object_t* const obj = object.m_object) {
         object.m_object = nullptr;
         // Освободить ссылку на объект и удалить его
-        if (core::runtime_t::instance()->release(obj) > 0)
+        if (core::runtime_t::instance()->release(obj) > 0) {
             core::runtime_t::instance()->deconstruct_object(obj);
+        }
     }
 }
 
@@ -44,7 +45,6 @@ void shutdown() {
     if (startup_counter > 0) {
         // Заврешить работу ядра
         if (--startup_counter == 0) {
-            // -
             core::runtime_t::instance()->shutdown();
         }
     }
@@ -70,15 +70,17 @@ actor_ref::actor_ref()
 actor_ref::actor_ref(core::object_t* const an_object, const bool acquire)
     : m_object(an_object)
 {
-    if (m_object && acquire)
+    if (m_object && acquire) {
         core::runtime_t::instance()->acquire(m_object);
+    }
 }
 
 actor_ref::actor_ref(const actor_ref& rhs)
     : m_object(rhs.m_object)
 {
-    if (m_object)
+    if (m_object) {
         core::runtime_t::instance()->acquire(m_object);
+    }
 }
 
 actor_ref::actor_ref(actor_ref&& rhs)
@@ -88,14 +90,21 @@ actor_ref::actor_ref(actor_ref&& rhs)
 }
 
 actor_ref::~actor_ref() {
-    if (m_object)
+    if (m_object) {
         core::runtime_t::instance()->release(m_object);
+    }
 }
 
 actor_ref& actor_ref::operator = (const actor_ref& rhs) {
-    if (this != &rhs)
-        this->assign(rhs);
-
+    if (this != &rhs) {
+        if (rhs.m_object) {
+            core::runtime_t::instance()->acquire(rhs.m_object);
+        }
+        if (m_object) {
+            core::runtime_t::instance()->release(m_object);
+        }
+        m_object = rhs.m_object;
+    }
     return *this;
 }
 
@@ -118,17 +127,6 @@ bool actor_ref::operator != (const actor_ref& rhs) const {
 
 bool actor_ref::assigned() const {
     return (m_object != nullptr);
-}
-
-void actor_ref::assign(const actor_ref& rhs) {
-    // 1.
-    if (rhs.m_object)
-        core::runtime_t::instance()->acquire(rhs.m_object);
-    // 2.
-    if (m_object)
-        core::runtime_t::instance()->release(m_object);
-    // -
-    m_object = rhs.m_object;
 }
 
 bool actor_ref::same(const actor_ref& rhs) const {
