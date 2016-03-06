@@ -30,7 +30,7 @@ public:
     ///
     void        destroy_thread_binding();
     ///
-    void        handle_message(package_t* const package);
+    void        handle_message(std::unique_ptr<msg_t> msg);
     /// Ждать уничтожения тела объекта
     void        join(object_t* const obj);
     /// -
@@ -40,7 +40,7 @@ public:
     /// Зарегистрировать новый модуль
     void        register_module(main_module_t* const inst);
     /// Послать сообщение указанному объекту
-    void        send(object_t* const sender, object_t* const target, const msg_t* const msg);
+    void        send(object_t* const sender, object_t* const target, msg_t* const msg);
     /// Завершить выполнение
     void        shutdown();
     /// Начать выполнение

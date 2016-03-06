@@ -133,7 +133,7 @@ bool actor_ref::same(const actor_ref& rhs) const {
     return (m_object == rhs.m_object);
 }
 
-void actor_ref::send_message(const core::msg_t* const msg) const {
+void actor_ref::send_message(core::msg_t* const msg) const {
     core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
 }
 

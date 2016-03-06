@@ -34,9 +34,9 @@ public:
     /// -
     void destroy_object_body(base_t* const body);
     /// -
-    void handle_message(package_t* const package);
+    void handle_message(std::unique_ptr<msg_t> msg);
     /// Отправить сообщение соответствующему объекту
-    void send_message(package_t* const package);
+    void send_message(msg_t* const msg);
     /// -
     void shutdown(event_t& event);
     /// -

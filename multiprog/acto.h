@@ -76,7 +76,7 @@ private:
     ///
     bool same(const actor_ref& rhs) const;
     ///
-    void send_message(const core::msg_t* const msg) const;
+    void send_message(core::msg_t* const msg) const;
 
 private:
     core::object_t* m_object;

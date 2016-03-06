@@ -101,7 +101,7 @@ public:
         }
     }
 
-    void handle_message(const std::unique_ptr<package_t>& package) {
+    void handle_message(const std::unique_ptr<msg_t>& package) {
         assert(package->target != nullptr);
 
         object_t* const obj = package->target;
@@ -276,12 +276,12 @@ void main_module_t::destroy_object_body(base_t* const body) {
     m_pimpl->destroy_object_body(body);
 }
 
-void main_module_t::handle_message(package_t* const package) {
-    m_pimpl->handle_message(std::unique_ptr<package_t>(package));
+void main_module_t::handle_message(std::unique_ptr<msg_t> msg) {
+    m_pimpl->handle_message(std::move(msg));
 }
 
-void main_module_t::send_message(package_t* const p) {
-    std::unique_ptr<package_t>
+void main_module_t::send_message(msg_t* const p) {
+    std::unique_ptr<msg_t>
                     package(p);
     object_t* const target = package->target;
     bool            should_push = false;

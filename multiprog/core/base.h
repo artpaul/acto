@@ -27,11 +27,11 @@ const int aoBindToThread = 0x02;
 
 namespace core {
 
-class  base_t;
-class  main_module_t;
-class  runtime_t;
-class  worker_t;
-struct package_t;
+class base_t;
+class main_module_t;
+class runtime_t;
+class worker_t;
+struct msg_t;
 
 
 /**
@@ -42,8 +42,8 @@ struct object_t : public intrusive_t< object_t > {
         event_t*    event;
     };
 
-    typedef generics::mpsc_stack_t<package_t> atomic_stack_t;
-    typedef generics::stack_t<package_t>      intusive_stack_t;
+    typedef generics::mpsc_stack_t<msg_t> atomic_stack_t;
+    typedef generics::stack_t<msg_t>      intusive_stack_t;
 
     // Критическая секция для доступа к полям
     std::recursive_mutex cs;
@@ -69,33 +69,38 @@ public:
     object_t(base_t* const impl_);
 
     /// Поставить сообщение в очередь
-    void enqueue(package_t* const msg);
+    void enqueue(msg_t* const msg);
 
     /// Есть ли сообщения
     bool has_messages() const;
 
     /// Выбрать сообщение из очереди
-    package_t* select_message();
+    msg_t* select_message();
 };
 
 
 /**
  * Базовый тип для сообщений
  */
-struct msg_t {
-    std::type_index tid;
+struct msg_t : intrusive_t< msg_t > {
+    // Код типа сообщения
+    const std::type_index   type;
+    // Отправитель сообщения
+    object_t*               sender;
+    // Получатель сообщения
+    object_t*               target;
 
 public:
-    inline msg_t(const std::type_index& idx)
-        : tid(idx)
-    { }
+    msg_t(const std::type_index& idx);
 
-    virtual ~msg_t()
-    { }
+    virtual ~msg_t();
 };
 
 template <typename T>
-struct msg_wrap_t : public msg_t, private T {
+struct msg_wrap_t
+    : public msg_t
+    , private T
+{
     inline msg_wrap_t(const T& d)
         : msg_t(typeid(T))
         , T(d)
@@ -109,25 +114,6 @@ struct msg_wrap_t : public msg_t, private T {
     inline const T& data() const {
         return *static_cast<const T*>(this);
     }
-};
-
-/**
- * Транспортный пакет для сообщения
- */
-struct package_t : public intrusive_t< package_t > {
-    // Данные сообщения
-    const std::unique_ptr<const msg_t>
-                            data;
-    // Отправитель сообщения
-    object_t*               sender;
-    // Получатель сообщения
-    object_t*               target;
-    // Код типа сообщения
-    const std::type_index   type;
-
-public:
-    package_t(const msg_t* const data_, const std::type_index& type_);
-    ~package_t();
 };
 
 
@@ -255,7 +241,7 @@ protected:
         }
 
 private:
-    void consume_package(const std::unique_ptr<package_t>& p);
+    void consume_package(const std::unique_ptr<msg_t>& p);
 
     void set_handler(handler_t* const handler, const std::type_index& type);
 

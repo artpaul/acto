@@ -89,11 +89,11 @@ bool worker_t::process() {
         //
         // -
         //
-        while (package_t* const package = obj->select_message()) {
+        while (msg_t* const package = obj->select_message()) {
             assert(obj->impl);
 
             // Обработать сообщение
-            m_slots->handle_message(std::unique_ptr<package_t>(package));
+            m_slots->handle_message(std::unique_ptr<msg_t>(package));
 
             // Проверить истечение лимита времени обработки для данного объекта
             if (!obj->exclusive && ((clock() - m_start) > m_time)) {

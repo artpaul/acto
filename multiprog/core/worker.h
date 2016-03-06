@@ -12,7 +12,7 @@ namespace core {
 
 class  worker_t;
 struct object_t;
-struct package_t;
+struct msg_t;
 
 /**
  */
@@ -21,7 +21,7 @@ public:
     virtual ~worker_callback_i()
     { }
 
-    virtual void        handle_message(const std::unique_ptr<package_t>&) = 0;
+    virtual void        handle_message(const std::unique_ptr<msg_t>&) = 0;
     virtual void        push_delete(object_t* const) = 0;
     virtual void        push_idle  (worker_t* const) = 0;
     virtual void        push_object(object_t* const) = 0;

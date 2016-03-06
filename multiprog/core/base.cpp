@@ -21,7 +21,7 @@ object_t::object_t(base_t* const impl_)
     next = nullptr;
 }
 
-void object_t::enqueue(package_t* const msg) {
+void object_t::enqueue(msg_t* const msg) {
     input_stack.push(msg);
 }
 
@@ -29,8 +29,8 @@ bool object_t::has_messages() const {
     return !local_stack.empty() || !input_stack.empty();
 }
 
-package_t* object_t::select_message() {
-    if (package_t* const p = local_stack.pop()) {
+msg_t* object_t::select_message() {
+    if (msg_t* const p = local_stack.pop()) {
         return p;
     } else {
         local_stack.push(input_stack.extract());
@@ -41,14 +41,14 @@ package_t* object_t::select_message() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-package_t::package_t(const msg_t* const data_, const std::type_index& type_)
-    : data  (data_)
+msg_t::msg_t(const std::type_index& idx)
+    : type(idx)
     , sender(nullptr)
-    , type  (type_)
+    , target(nullptr)
 {
 }
 
-package_t::~package_t() {
+msg_t::~msg_t() {
     // Освободить ссылки на объекты
     if (sender) {
         runtime_t::instance()->release(sender);
@@ -71,10 +71,10 @@ void base_t::die() {
     this->m_terminating = true;
 }
 
-void base_t::consume_package(const std::unique_ptr<package_t>& p) {
+void base_t::consume_package(const std::unique_ptr<msg_t>& p) {
     for (Handlers::const_iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
         if (hi->type == p->type) {
-            hi->handler->invoke(p->sender, p->data.get());
+            hi->handler->invoke(p->sender, p.get());
             return;
         }
     }

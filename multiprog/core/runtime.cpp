@@ -154,10 +154,10 @@ public:
         }
     }
     //-------------------------------------------------------------------------
-    void handle_message(package_t* const package) {
-        assert(package->target != nullptr);
+    void handle_message(std::unique_ptr<msg_t> msg) {
+        assert(msg->target != nullptr);
 
-        m_module->handle_message(package);
+        m_module->handle_message(std::move(msg));
     }
     //-----------------------------------------------------------------------------
     void join(object_t* const obj) {
@@ -226,20 +226,13 @@ public:
     }
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
-    void send(object_t* const sender, object_t* const target, const msg_t* const msg) {
+    void send(object_t* const sender, object_t* const target, msg_t* const msg) {
         assert(msg    != nullptr);
         assert(target != nullptr);
 
-        //
-        // Создать пакет
-        //
+        msg->sender = sender;
+        msg->target = target;
 
-        // 1. Создать экземпляр пакета
-        package_t* const package = new package_t(msg, msg->tid);
-        // 2.
-        package->sender = sender;
-        package->target = target;
-        // 3.
         acquire(target);
 
         if (sender)
@@ -248,7 +241,7 @@ public:
         //
         // Отправить пакет на обработку
         //
-        m_module->send_message(package);
+        m_module->send_message(msg);
     }
 };
 
@@ -305,8 +298,8 @@ void runtime_t::destroy_thread_binding() {
     }
 }
 //-----------------------------------------------------------------------------
-void runtime_t::handle_message(package_t* const package) {
-    m_pimpl->handle_message(package);
+void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
+    m_pimpl->handle_message(std::move(msg));
 }
 //-----------------------------------------------------------------------------
 void runtime_t::join(object_t* const obj) {
@@ -328,7 +321,7 @@ void runtime_t::register_module(main_module_t* const inst) {
     inst->startup(this);
 }
 //-----------------------------------------------------------------------------
-void runtime_t::send(object_t* const sender, object_t* const target, const msg_t* const msg) {
+void runtime_t::send(object_t* const sender, object_t* const target, msg_t* const msg) {
     m_pimpl->send(sender, target, msg);
 }
 //-----------------------------------------------------------------------------
@@ -347,8 +340,8 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
     for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
         object_t* const actor = *i;
 
-        while (package_t* const package = actor->select_message())
-            this->handle_message(package);
+        while (msg_t* const package = actor->select_message())
+            this->handle_message(std::unique_ptr<msg_t>(package));
 
         if (need_delete)
             this->deconstruct_object(actor);
