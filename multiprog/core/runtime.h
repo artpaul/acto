@@ -22,7 +22,7 @@ public:
     /// Захватить ссылку на объект
     long        acquire(object_t* const obj);
     /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
-    object_t*   create_actor(actor_body_t* const body, const int options, const ui8 module);
+    object_t*   create_actor(base_t* const body, const int options);
     /// Создать контекст связи с текущим системным потоком
     void        create_thread_binding();
     /// Уничтожить объект
@@ -38,7 +38,7 @@ public:
     /// -
     long        release(object_t* const obj);
     /// Зарегистрировать новый модуль
-    void        register_module(module_t* const inst, const ui8 id);
+    void        register_module(main_module_t* const inst);
     /// Послать сообщение указанному объекту
     void        send(object_t* const sender, object_t* const target, const msg_t* const msg);
     /// Завершить выполнение

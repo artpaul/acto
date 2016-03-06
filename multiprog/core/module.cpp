@@ -71,7 +71,7 @@ public:
     object_t* create_actor(base_t* const body, const int options) {
         assert(body != NULL);
 
-        object_t* const result = m_rt->create_actor(body, options, 0);
+        object_t* const result = m_rt->create_actor(body, options);
 
         // Создать для актера индивидуальный поток
         if (options & acto::aoExclusive) {
@@ -89,7 +89,7 @@ public:
         return result;
     }
 
-    void destroy_object_body(actor_body_t* const body) {
+    void destroy_object_body(base_t* const body) {
         assert(body != NULL);
 
         base_t* const impl = static_cast<base_t*>(body);
@@ -106,8 +106,7 @@ public:
 
         object_t* const obj = package->target;
 
-        assert(obj->module == 0);
-        assert(obj->impl   != 0);
+        assert(obj->impl != 0);
 
         try {
             assert(active_actor == NULL);
@@ -273,7 +272,7 @@ object_t* main_module_t::determine_sender() {
     return active_actor;
 }
 
-void main_module_t::destroy_object_body(actor_body_t* const body) {
+void main_module_t::destroy_object_body(base_t* const body) {
     m_pimpl->destroy_object_body(body);
 }
 
@@ -294,7 +293,7 @@ void main_module_t::send_message(package_t* const p) {
         // Если объект отмечен для удалдения,
         // то ему более нельзя посылать сообщения
         if (!target->deleting) {
-            assert(target->impl && target->module == 0);
+            assert(target->impl);
             // 1. Поставить сообщение в очередь объекта
             target->enqueue(package.release());
             // 2. Подобрать для него необходимый поток

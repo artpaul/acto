@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "module.h"
 
 #include <util/queue.h>
 #include <util/stack.h>
@@ -28,9 +29,6 @@ class runtime_t::impl {
     /// Тип множества актеров
     typedef std::set< object_t* >   Actors;
 
-    /// Максимальное кол-во возможных модулей
-    static const size_t     MODULES_COUNT = 8;
-
 private:
     /// Критическая секция для доступа к полям
     std::mutex          m_cs;
@@ -38,8 +36,8 @@ private:
     event_t             m_clean;
     /// Текущее множество актеров
     Actors              m_actors;
-    /// Список зарегистрированных модулей
-    module_t*           m_modules[MODULES_COUNT];
+
+    main_module_t*      m_module;
 
 private:
     //-------------------------------------------------------------------------
@@ -50,7 +48,7 @@ private:
         //     полей объекта, если ссылкой на объект могут владеть
         //     два и более потока
 
-        m_modules[obj->module]->destroy_object_body(obj->impl);
+        m_module->destroy_object_body(obj->impl);
 
         obj->unimpl = true;
         delete obj->impl, obj->impl = NULL;
@@ -76,9 +74,6 @@ private:
 public:
     impl() {
         m_clean.signaled();
-        // -
-        for (size_t i = 0; i < MODULES_COUNT; ++i)
-            m_modules[i] = NULL;
     }
 
 public:
@@ -90,10 +85,10 @@ public:
     }
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
-    object_t* create_actor(actor_body_t* const body, const int options, const ui8 module) {
+    object_t* create_actor(base_t* const body, const int options) {
         assert(body != NULL);
 
-        object_t* const result = new core::object_t(body, module);
+        object_t* const result = new core::object_t(body);
 
         result->references = 1;
         // Зарегистрировать объект в системе
@@ -162,9 +157,7 @@ public:
     void handle_message(package_t* const package) {
         assert(package->target != NULL);
 
-        const ui8 id = package->target->module;
-
-        m_modules[id]->handle_message(package);
+        m_module->handle_message(package);
     }
     //-----------------------------------------------------------------------------
     void join(object_t* const obj) {
@@ -205,10 +198,8 @@ public:
         return result;
     }
     //-----------------------------------------------------------------------------
-    void register_module(module_t* const inst, const ui8 id) {
-        assert(inst != NULL && m_modules[id] == NULL);
-
-        m_modules[id] = inst;
+    void register_module(main_module_t* const inst) {
+        m_module = inst;
     }
     //-----------------------------------------------------------------------------
     void reset() {
@@ -225,14 +216,10 @@ public:
         m_clean.wait();
 
         // 2.
-        for (size_t i = 0; i < MODULES_COUNT; ++i) {
-            if (m_modules[i] != NULL) {
-                event_t ev;
-
-                ev.reset();
-                m_modules[i]->shutdown(ev);
-            }
-            m_modules[i] = NULL;
+        {
+            event_t ev;
+            ev.reset();
+            m_module->shutdown(ev);
         }
 
         assert(m_actors.size() == 0);
@@ -241,7 +228,7 @@ public:
     // Послать сообщение указанному объекту
     void send(object_t* const sender, object_t* const target, const msg_t* const msg) {
         assert(msg    != NULL);
-        assert(target != NULL && m_modules[target->module] != NULL);
+        assert(target != NULL);
 
         //
         // Создать пакет
@@ -261,7 +248,7 @@ public:
         //
         // Отправить пакет на обработку
         //
-        m_modules[target->module]->send_message(package);
+        m_module->send_message(package);
     }
 };
 
@@ -291,8 +278,8 @@ long runtime_t::acquire(object_t* const obj) {
     return m_pimpl->acquire(obj);
 }
 //-----------------------------------------------------------------------------
-object_t* runtime_t::create_actor(actor_body_t* const body, const int options, const ui8 module) {
-    return m_pimpl->create_actor(body, options, module);
+object_t* runtime_t::create_actor(base_t* const body, const int options) {
+    return m_pimpl->create_actor(body, options);
 }
 //-----------------------------------------------------------------------------
 void runtime_t::create_thread_binding() {
@@ -336,8 +323,8 @@ long runtime_t::release(object_t* const obj) {
     return m_pimpl->release(obj);
 }
 //-----------------------------------------------------------------------------
-void runtime_t::register_module(module_t* const inst, const ui8 id) {
-    m_pimpl->register_module(inst, id);
+void runtime_t::register_module(main_module_t* const inst) {
+    m_pimpl->register_module(inst);
     inst->startup(this);
 }
 //-----------------------------------------------------------------------------

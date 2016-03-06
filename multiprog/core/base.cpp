@@ -7,11 +7,10 @@ namespace core {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-object_t::object_t(actor_body_t* const impl_, const ui8 module_)
+object_t::object_t(base_t* const impl_)
     : impl      (impl_)
     , waiters   (NULL)
     , references(0)
-    , module    (module_)
     , binded    (false)
     , deleting  (false)
     , exclusive (false)

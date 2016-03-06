@@ -27,45 +27,11 @@ const int aoBindToThread = 0x02;
 
 namespace core {
 
+class  base_t;
 class  main_module_t;
 class  runtime_t;
 class  worker_t;
 struct package_t;
-
-
-/**
- */
-class actor_body_t {
-public:
-    virtual ~actor_body_t()
-    { }
-
-    virtual void consume_package(const std::unique_ptr<package_t>&) = 0;
-};
-
-
-/**
- * Базовый класс для модуля системы
- */
-class module_t {
-public:
-    virtual ~module_t() { }
-
-    /// -
-    virtual void destroy_object_body(actor_body_t* const /*body*/) {  }
-
-    ///
-    virtual void handle_message(package_t* const package) = 0;
-
-    /// Отправить сообщение соответствующему объекту
-    virtual void send_message(package_t* const package)   = 0;
-
-    ///
-    virtual void shutdown(event_t& event) = 0;
-
-    /// -
-    virtual void startup(runtime_t*) = 0;
-};
 
 
 /**
@@ -83,7 +49,7 @@ struct object_t : public intrusive_t< object_t > {
     std::recursive_mutex cs;
 
     // Реализация объекта
-    actor_body_t*       impl;
+    base_t*             impl;
     // Список сигналов для потоков, ожидающих уничтожения объекта
     waiter_t*           waiters;
     // Очередь сообщений, поступивших данному объекту
@@ -91,8 +57,6 @@ struct object_t : public intrusive_t< object_t > {
     intusive_stack_t    local_stack;
     // Count of references to object
     std::atomic<long>   references;
-    /// Модуль в рамках которого создан объект
-    const ui32          module    : 4;
     // Флаги состояния текущего объекта
     ui32                binded    : 1;
     ui32                deleting  : 1;
@@ -102,7 +66,7 @@ struct object_t : public intrusive_t< object_t > {
     ui32                unimpl    : 1;
 
 public:
-    object_t(actor_body_t* const impl_, const ui8 module_);
+    object_t(base_t* const impl_);
 
     /// Поставить сообщение в очередь
     void enqueue(package_t* const msg);
@@ -170,7 +134,7 @@ public:
 /**
  * Базовый класс для локальных актеров.
  */
-class base_t : public actor_body_t {
+class base_t {
     friend class main_module_t;
 
     class handler_t {
@@ -291,7 +255,7 @@ protected:
         }
 
 private:
-    virtual void consume_package(const std::unique_ptr<package_t>& p);
+    void consume_package(const std::unique_ptr<package_t>& p);
 
     void set_handler(handler_t* const handler, const std::type_index& type);
 
