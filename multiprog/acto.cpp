@@ -15,7 +15,7 @@ static std::atomic_long startup_counter(0);
 
 void destroy(actor_ref& object) {
     if (core::object_t* const obj = object.m_object) {
-        object.m_object = NULL;
+        object.m_object = nullptr;
         // Освободить ссылку на объект и удалить его
         if (core::runtime_t::instance()->release(obj) > 0)
             core::runtime_t::instance()->deconstruct_object(obj);
@@ -63,7 +63,7 @@ void startup() {
 ///////////////////////////////////////////////////////////////////////////////
 
 actor_ref::actor_ref()
-    : m_object(NULL)
+    : m_object(nullptr)
 {
 }
 
@@ -87,7 +87,7 @@ actor_ref::~actor_ref() {
 }
 
 bool actor_ref::assigned() const {
-    return (m_object != NULL);
+    return (m_object != nullptr);
 }
 
 void actor_ref::assign(const actor_ref& rhs) {

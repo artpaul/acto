@@ -80,7 +80,7 @@ private:
     ///
     inline void send_message(const core::msg_t* const msg) const {
         if (m_object) {
-            assert(msg != NULL);
+            assert(msg != nullptr);
 
             // Отправить сообщение
             core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);

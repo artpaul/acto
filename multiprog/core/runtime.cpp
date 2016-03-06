@@ -20,7 +20,7 @@ struct binding_context_t {
 /// -
 extern TLS_VARIABLE object_t*   active_actor;
 /// -
-static TLS_VARIABLE binding_context_t* threadCtx = NULL;
+static TLS_VARIABLE binding_context_t* threadCtx = nullptr;
 
 
 /**
@@ -51,11 +51,11 @@ private:
         m_module->destroy_object_body(obj->impl);
 
         obj->unimpl = true;
-        delete obj->impl, obj->impl = NULL;
+        delete obj->impl, obj->impl = nullptr;
         obj->unimpl = false;
 
         if (obj->waiters) {
-            object_t::waiter_t* next = NULL;
+            object_t::waiter_t* next = nullptr;
             object_t::waiter_t* it   = obj->waiters;
 
             while (it) {
@@ -67,7 +67,7 @@ private:
                 it   = next;
             }
 
-            obj->waiters = NULL;
+            obj->waiters = nullptr;
         }
     }
 
@@ -79,14 +79,14 @@ public:
 public:
     //-------------------------------------------------------------------------
     long acquire(object_t* const obj) {
-        assert(obj != NULL && obj->references > 0);
+        assert(obj != nullptr && obj->references > 0);
         // -
         return ++obj->references;
     }
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
     object_t* create_actor(base_t* const body, const int options) {
-        assert(body != NULL);
+        assert(body != nullptr);
 
         object_t* const result = new core::object_t(body);
 
@@ -155,7 +155,7 @@ public:
     }
     //-------------------------------------------------------------------------
     void handle_message(package_t* const package) {
-        assert(package->target != NULL);
+        assert(package->target != nullptr);
 
         m_module->handle_message(package);
     }
@@ -181,7 +181,7 @@ public:
             }
         }
 
-        if (node.get() != NULL) {
+        if (node.get() != nullptr) {
             event.wait();
         }
     }
@@ -227,8 +227,8 @@ public:
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
     void send(object_t* const sender, object_t* const target, const msg_t* const msg) {
-        assert(msg    != NULL);
-        assert(target != NULL);
+        assert(msg    != nullptr);
+        assert(target != nullptr);
 
         //
         // Создать пакет
@@ -314,7 +314,7 @@ void runtime_t::join(object_t* const obj) {
 }
 //-----------------------------------------------------------------------------
 void runtime_t::process_binded_actors() {
-    assert(threadCtx != NULL);
+    assert(threadCtx != nullptr);
 
     this->process_binded_actors(threadCtx->actors, false);
 }

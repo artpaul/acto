@@ -69,7 +69,7 @@ public:
 
 public:
     object_t* create_actor(base_t* const body, const int options) {
-        assert(body != NULL);
+        assert(body != nullptr);
 
         object_t* const result = m_rt->create_actor(body, options);
 
@@ -90,11 +90,11 @@ public:
     }
 
     void destroy_object_body(base_t* const body) {
-        assert(body != NULL);
+        assert(body != nullptr);
 
         base_t* const impl = static_cast<base_t*>(body);
 
-        if (impl->m_thread != NULL) {
+        if (impl->m_thread != nullptr) {
             --m_workers.reserved;
 
             impl->m_thread->wakeup();
@@ -102,23 +102,23 @@ public:
     }
 
     void handle_message(const std::unique_ptr<package_t>& package) {
-        assert(package->target != NULL);
+        assert(package->target != nullptr);
 
         object_t* const obj = package->target;
 
         assert(obj->impl != 0);
 
         try {
-            assert(active_actor == NULL);
+            assert(active_actor == nullptr);
             // TN: Данный параметр читает только функция determine_sender,
             //     которая всегда выполняется в контексте этого потока.
             active_actor = obj;
 
             obj->impl->consume_package(package);
 
-            active_actor = NULL;
+            active_actor = nullptr;
         } catch (...) {
-            active_actor = NULL;
+            active_actor = nullptr;
         }
 
         if (static_cast< base_t* >(obj->impl)->m_terminating) {
@@ -301,7 +301,7 @@ void main_module_t::send_message(package_t* const p) {
                 // Если с объектом связан эксклюзивный поток
                 worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
 
-                if (thread != NULL) {
+                if (thread != nullptr) {
                     thread->wakeup();
                 } else {
                     if (!target->scheduled) {
@@ -321,7 +321,7 @@ void main_module_t::send_message(package_t* const p) {
 }
 
 void main_module_t::shutdown(event_t& event) {
-    m_pimpl.reset(NULL);
+    m_pimpl.reset(nullptr);
     event.signaled();
 }
 

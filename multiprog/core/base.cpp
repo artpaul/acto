@@ -9,7 +9,7 @@ namespace core {
 
 object_t::object_t(base_t* const impl_)
     : impl      (impl_)
-    , waiters   (NULL)
+    , waiters   (nullptr)
     , references(0)
     , binded    (false)
     , deleting  (false)
@@ -18,7 +18,7 @@ object_t::object_t(base_t* const impl_)
     , scheduled (false)
     , unimpl    (false)
 {
-    next = NULL;
+    next = nullptr;
 }
 
 void object_t::enqueue(package_t* const msg) {
@@ -43,7 +43,7 @@ package_t* object_t::select_message() {
 
 package_t::package_t(const msg_t* const data_, const std::type_index& type_)
     : data  (data_)
-    , sender(NULL)
+    , sender(nullptr)
     , type  (type_)
 {
 }

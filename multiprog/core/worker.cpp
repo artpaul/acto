@@ -8,7 +8,7 @@ namespace core {
 
 worker_t::worker_t(worker_callback_i* const slots)
     : m_active(true)
-    , m_object(NULL)
+    , m_object(nullptr)
     , m_start (0)
     , m_time  (0)
     , m_event(true)
@@ -26,7 +26,7 @@ worker_t::~worker_t() {
 }
 
 void worker_t::assign(object_t* const obj, const clock_t slice) {
-    assert(m_object == NULL && obj != NULL);
+    assert(m_object == nullptr && obj != nullptr);
 
     m_object = obj;
     m_start  = clock();
@@ -69,7 +69,7 @@ bool worker_t::check_deleting(object_t* const obj) {
     if (!obj->has_messages()) {
         if (!obj->exclusive || obj->deleting) {
             obj->scheduled = false;
-            m_object       = NULL;
+            m_object       = nullptr;
         }
         // Если текущий объект необходимо удалить
         if (obj->deleting) {
@@ -82,7 +82,7 @@ bool worker_t::check_deleting(object_t* const obj) {
 
 bool worker_t::process() {
     while (object_t* const obj = m_object) {
-        assert(obj != NULL);
+        assert(obj != nullptr);
 
         bool released = false;
 
@@ -112,7 +112,7 @@ bool worker_t::process() {
                         obj->scheduled = false;
                     }
 
-                    m_object = NULL;
+                    m_object = nullptr;
                     break;
                 }
             }
@@ -127,7 +127,7 @@ bool worker_t::process() {
         //
         // Получить новый объект для обработки, если он есть в очереди
         //
-        if (m_object != NULL) {
+        if (m_object != nullptr) {
             if (m_object->exclusive)
                 return true;
         } else {
