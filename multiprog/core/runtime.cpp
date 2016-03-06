@@ -1,7 +1,7 @@
 #include "runtime.h"
 
-#include <util/stack.h>
 #include <util/queue.h>
+#include <util/stack.h>
 
 namespace acto {
 namespace core {

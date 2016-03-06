@@ -1,13 +1,10 @@
 #pragma once
 
-// Обертка над API операционных систем
-#include "util/platform.h"
-
-// Дополнительные сервисы (пользовательский уровень)
-#include "core/services.h"
-
-#include <core/runtime.h>
 #include <core/module.h>
+#include <core/runtime.h>
+#include <core/services.h>
+
+#include <util/platform.h>
 
 namespace acto {
 

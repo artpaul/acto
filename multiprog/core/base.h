@@ -1,15 +1,15 @@
 #pragma once
 
-#include <util/intrlist.h>
-#include <util/stack.h>
 #include <util/event.h>
+#include <util/intrlist.h>
 #include <util/platform.h>
+#include <util/stack.h>
 
 #include <functional>
 #include <mutex>
 #include <set>
-#include <typeinfo>
 #include <typeindex>
+#include <typeinfo>
 #include <vector>
 
 namespace acto {

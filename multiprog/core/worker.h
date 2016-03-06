@@ -1,7 +1,7 @@
 #pragma once
 
-#include <util/intrlist.h>
 #include <util/event.h>
+#include <util/intrlist.h>
 
 #include <atomic>
 #include <ctime>
