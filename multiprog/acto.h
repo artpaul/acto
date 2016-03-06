@@ -27,10 +27,18 @@ public:
     explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
 
     actor_ref(const actor_ref& rhs);
+    actor_ref(actor_ref&& rhs);
 
     ~actor_ref();
 
 public:
+    actor_ref& operator = (const actor_ref& rhs);
+    actor_ref& operator = (actor_ref&& rhs);
+
+    bool operator == (const actor_ref& rhs) const;
+
+    bool operator != (const actor_ref& rhs) const;
+
     /// Инициализирован ли текущий объект
     bool assigned() const;
 
@@ -68,13 +76,6 @@ public:
         }
     }
 
-public:
-    actor_ref& operator = (const actor_ref& rhs);
-
-    bool operator == (const actor_ref& rhs) const;
-
-    bool operator != (const actor_ref& rhs) const;
-
 private:
     /// Присваивает новое значение текущему объекту
     void assign(const actor_ref& rhs);
@@ -84,7 +85,7 @@ private:
     void send_message(const core::msg_t* const msg) const;
 
 private:
-    core::object_t* volatile  m_object;
+    core::object_t* m_object;
 };
 
 

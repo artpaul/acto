@@ -81,18 +81,29 @@ actor_ref::actor_ref(const actor_ref& rhs)
         core::runtime_t::instance()->acquire(m_object);
 }
 
+actor_ref::actor_ref(actor_ref&& rhs)
+    : m_object(rhs.m_object)
+{
+    rhs.m_object = nullptr;
+}
+
 actor_ref::~actor_ref() {
     if (m_object)
         core::runtime_t::instance()->release(m_object);
 }
 
-bool actor_ref::assigned() const {
-    return (m_object != nullptr);
-}
-
 actor_ref& actor_ref::operator = (const actor_ref& rhs) {
     if (this != &rhs)
         this->assign(rhs);
+
+    return *this;
+}
+
+actor_ref& actor_ref::operator = (actor_ref&& rhs) {
+    if (this != &rhs) {
+        m_object = rhs.m_object;
+        rhs.m_object = nullptr;
+    }
 
     return *this;
 }
@@ -103,6 +114,10 @@ bool actor_ref::operator == (const actor_ref& rhs) const {
 
 bool actor_ref::operator != (const actor_ref& rhs) const {
     return !this->same(rhs);
+}
+
+bool actor_ref::assigned() const {
+    return (m_object != nullptr);
 }
 
 void actor_ref::assign(const actor_ref& rhs) {
