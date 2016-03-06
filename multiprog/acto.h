@@ -1,7 +1,6 @@
 #pragma once
 
 #include <core/module.h>
-#include <core/runtime.h>
 #include <core/services.h>
 
 #include <util/platform.h>
@@ -42,25 +41,31 @@ public:
     // Послать сообщение объекту
     template <typename MsgT>
     inline void send(const MsgT& msg) const {
-        send_message(
-            new core::msg_wrap_t<MsgT>(msg)
-        );
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<MsgT>(msg)
+            );
+        }
     }
 
     // Послать сообщение объекту
     template <typename MsgT>
     inline void send(MsgT&& msg) const {
-        send_message(
-            new core::msg_wrap_t<typename std::remove_reference<MsgT>::type>(std::forward<MsgT>(msg))
-        );
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<typename std::remove_reference<MsgT>::type>(std::forward<MsgT>(msg))
+            );
+        }
     }
 
     // Послать сообщение объекту
     template <typename MsgT, typename ... P>
     inline void send(P&& ... p) const {
-        send_message(
-            new core::msg_wrap_t<MsgT>(MsgT(std::forward<P>(p) ... ))
-        );
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<MsgT>(MsgT(std::forward<P>(p) ... ))
+            );
+        }
     }
 
 public:
@@ -71,21 +76,15 @@ public:
     bool operator != (const actor_ref& rhs) const;
 
 private:
-    core::object_t* volatile  m_object;
-
     /// Присваивает новое значение текущему объекту
     void assign(const actor_ref& rhs);
     ///
     bool same(const actor_ref& rhs) const;
     ///
-    inline void send_message(const core::msg_t* const msg) const {
-        if (m_object) {
-            assert(msg != nullptr);
+    void send_message(const core::msg_t* const msg) const;
 
-            // Отправить сообщение
-            core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
-        }
-    }
+private:
+    core::object_t* volatile  m_object;
 };
 
 

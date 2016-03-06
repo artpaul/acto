@@ -90,6 +90,21 @@ bool actor_ref::assigned() const {
     return (m_object != nullptr);
 }
 
+actor_ref& actor_ref::operator = (const actor_ref& rhs) {
+    if (this != &rhs)
+        this->assign(rhs);
+
+    return *this;
+}
+
+bool actor_ref::operator == (const actor_ref& rhs) const {
+    return this->same(rhs);
+}
+
+bool actor_ref::operator != (const actor_ref& rhs) const {
+    return !this->same(rhs);
+}
+
 void actor_ref::assign(const actor_ref& rhs) {
     // 1.
     if (rhs.m_object)
@@ -105,19 +120,8 @@ bool actor_ref::same(const actor_ref& rhs) const {
     return (m_object == rhs.m_object);
 }
 
-actor_ref& actor_ref::operator = (const actor_ref& rhs) {
-    if (this != &rhs)
-        this->assign(rhs);
-
-    return *this;
-}
-
-bool actor_ref::operator == (const actor_ref& rhs) const {
-    return this->same(rhs);
-}
-
-bool actor_ref::operator != (const actor_ref& rhs) const {
-    return !this->same(rhs);
+void actor_ref::send_message(const core::msg_t* const msg) const {
+    core::runtime_t::instance()->send(core::main_module_t::determine_sender(), m_object, msg);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
