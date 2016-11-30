@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+        "name": "Visual Studio 15 x86",
+        "generator": "Visual Studio 15 2017",
+        "buildRoot":  "${env.LOCALAPPDATA}\\CMakeBuild\\${workspaceHash}\\build\\${name}",
+        "cmakeCommandArgs":  "",
+        "buildCommandArgs": "-m -v:minimal"
+        },
+        {
+        "name": "Visual Studio 15 x64",
+        "generator": "Visual Studio 15 2017 Win64",
+        "buildRoot":  "${env.LOCALAPPDATA}\\CMakeBuild\\${workspaceHash}\\build\\${name}",
+        "cmakeCommandArgs":  "",
+        "buildCommandArgs": "-m -v:minimal"
+        }
+    ]
+}
