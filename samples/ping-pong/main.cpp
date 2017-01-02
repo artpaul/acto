@@ -15,6 +15,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 // Исключить компоненты сетевого взаимодействия
 #define ACTO_EXCLUDE_REMOTE
