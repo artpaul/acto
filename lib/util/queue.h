@@ -16,9 +16,8 @@ class queue_t {
 
 public:
     queue_t()
-        : m_tail(NULL)
+        : m_tail(nullptr)
     {
-        // -
     }
 
     sequence_t<T> extract() {
@@ -27,17 +26,17 @@ public:
         if (m_tail) {
            T* const head = m_tail->next;
 
-           m_tail->next = NULL;
-           m_tail       = NULL;
+           m_tail->next = nullptr;
+           m_tail       = nullptr;
            return sequence_t<T>(head);
         }
-        return NULL;
+        return nullptr;
     }
 
     T* front() const {
         guard g(m_cs);
 
-        return m_tail ? m_tail->next : NULL;
+        return m_tail ? m_tail->next : nullptr;
     }
 
     void push(T* const node) {
@@ -59,19 +58,19 @@ public:
             T* const result = m_tail->next;
 
             if (result == m_tail)
-                m_tail = NULL;
+                m_tail = nullptr;
             else
                 m_tail->next = m_tail->next->next;
 
-            result->next = NULL;
+            result->next = nullptr;
             return result;
         }
-        return NULL;
+        return nullptr;
     }
 
     bool empty() const {
         guard g(m_cs);
-        return (m_tail == NULL);
+        return (m_tail == nullptr);
     }
 
 private:

@@ -13,8 +13,8 @@ class intrusive_queue_t {
 
 public:
     intrusive_queue_t()
-        : m_head(NULL)
-        , m_tail(NULL)
+        : m_head(nullptr)
+        , m_tail(nullptr)
         , m_size(0)
     {
     }
@@ -24,14 +24,14 @@ public:
     T* detatch() {
         T* const result = m_head;
 
-        m_head = m_tail = NULL;
+        m_head = m_tail = nullptr;
         m_size = 0;
 
         return result;
     }
     ///
     bool empty() const {
-        return m_head == NULL;
+        return m_head == nullptr;
     }
     /// Указатель на первый элемент
     T* front() const {
@@ -39,16 +39,16 @@ public:
     }
     ///
     T* pop() {
-        T* const result = this->remove(m_head, NULL);
+        T* const result = this->remove(m_head, nullptr);
         if (result)
-            result->next = NULL;
+            result->next = nullptr;
         return result;
     }
     ///
     void push(T* item) {
-        item->next = NULL;
+        item->next = nullptr;
 
-        if (m_head == NULL) {
+        if (m_head == nullptr) {
             m_head = m_tail = item;
         }
         else {
@@ -64,17 +64,17 @@ public:
     T* remove(T* const item, T* const prev) {
         assert(!prev || prev->next == item);
 
-        if (m_head != NULL) {
+        if (m_head != nullptr) {
             assert(m_size != 0);
 
             --m_size;
 
             if (item == m_head) {
-                assert(prev == NULL);
+                assert(prev == nullptr);
 
                 if (m_head == m_tail) {
-                    m_head = m_tail = NULL;
-                    return NULL;
+                    m_head = m_tail = nullptr;
+                    return nullptr;
                 }
                 else {
                     m_head = item->next;
@@ -85,15 +85,15 @@ public:
                 assert(m_head != m_tail);
 
                 m_tail = prev;
-                m_tail->next = NULL;
-                return NULL;
+                m_tail->next = nullptr;
+                return nullptr;
             }
             else {
                 prev->next = item->next;
                 return item->next;
             }
         }
-        return NULL;
+        return nullptr;
     }
 
     size_t size() const {
