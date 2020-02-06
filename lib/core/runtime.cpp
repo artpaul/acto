@@ -27,7 +27,7 @@ static TLS_VARIABLE binding_context_t* threadCtx = nullptr;
  */
 class runtime_t::impl {
     /// Тип множества актеров
-    typedef std::set< object_t* >   Actors;
+    using Actors = std::set< object_t* >;
 
 private:
     /// Критическая секция для доступа к полям

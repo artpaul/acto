@@ -12,7 +12,7 @@ namespace generics {
  */
 template <typename T>
 class queue_t {
-    typedef std::lock_guard<std::mutex> guard;
+    using guard = std::lock_guard<std::mutex>;
 
 public:
     queue_t()

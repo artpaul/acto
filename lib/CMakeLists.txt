@@ -4,7 +4,6 @@ ADD_LIBRARY (acto-lib STATIC
     core/base.cpp
     core/module.cpp
     core/runtime.cpp
-    core/services.cpp
     core/worker.cpp
     util/event.cpp
 )

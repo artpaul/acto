@@ -42,8 +42,8 @@ struct object_t : public intrusive_t< object_t > {
         event_t*    event;
     };
 
-    typedef generics::mpsc_stack_t<msg_t> atomic_stack_t;
-    typedef generics::stack_t<msg_t>      intusive_stack_t;
+    using atomic_stack_t = generics::mpsc_stack_t<msg_t> ;
+    using intusive_stack_t = generics::stack_t<msg_t>;
 
     // Критическая секция для доступа к полям
     std::recursive_mutex cs;
@@ -155,7 +155,7 @@ class base_t {
     >
     class mem_handler_t : public handler_t {
     public:
-        typedef std::function< void (C*, actor_ref&, const MsgT&) > delegate_t;
+        using delegate_t = std::function< void (C*, actor_ref&, const MsgT&) >;
 
     public:
         mem_handler_t(const delegate_t& delegate_, C* c)
@@ -182,7 +182,7 @@ class base_t {
     template <typename MsgT>
     class fun_handler_t : public handler_t {
     public:
-        typedef std::function< void (actor_ref&, const MsgT&) > delegate_t;
+        using delegate_t = std::function< void (actor_ref&, const MsgT&) >;
 
     public:
         fun_handler_t(const delegate_t& delegate_)
@@ -247,7 +247,7 @@ private:
 
 private:
     /// Карта обработчиков сообщений
-    typedef std::vector<HandlerItem> Handlers;
+    using Handlers = std::vector<HandlerItem>;
 
     // Карта обработчиков сообщений для данного объекта
     Handlers        m_handlers;

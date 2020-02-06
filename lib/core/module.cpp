@@ -15,9 +15,9 @@ TLS_VARIABLE object_t* active_actor;
  */
 class main_module_t::impl : public worker_callback_i {
     // -
-    typedef generics::queue_t< object_t >       HeaderQueue;
+    using HeaderQueue = generics::queue_t< object_t >;
     // -
-    typedef generics::mpsc_stack_t< worker_t >  WorkerStack;
+    using WorkerStack = generics::mpsc_stack_t< worker_t >;
 
     //
     struct workers_t {
