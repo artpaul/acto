@@ -14,7 +14,7 @@ PROJECT (ACTO-SOLUTION)
     INCLUDE_DIRECTORIES(multiprog)
 
 	IF (UNIX)
-		SET (CMAKE_CXX_FLAGS "-pthread -Wl,--no-as-needed")
+		SET (CMAKE_CXX_FLAGS "-pthread -Wall -Werror")
 		SET (CMAKE_EXE_LINKER_FLAGS, "-lrt -lpthread")
 	ELSEIF (WIN32)
 		#

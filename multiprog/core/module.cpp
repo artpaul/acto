@@ -30,7 +30,7 @@ class main_module_t::impl : public worker_callback_i {
     };
 
     // Максимальное кол-во рабочих потоков в системе
-    static const size_t MAX_WORKERS = 512;
+    static const ssize_t MAX_WORKERS = 512;
 
 public:
     impl(runtime_t* rt)
