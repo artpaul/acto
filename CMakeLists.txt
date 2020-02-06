@@ -11,7 +11,7 @@ PROJECT (ACTO-SOLUTION)
 	SET (CMAKE_CXX_STANDARD 14)
 	SET (CMAKE_CXX_STANDARD_REQUIRED ON)
 
-    INCLUDE_DIRECTORIES(multiprog)
+    INCLUDE_DIRECTORIES(lib)
 
 	IF (UNIX)
 		SET (CMAKE_CXX_FLAGS "-pthread -Wall -Werror")
@@ -21,9 +21,7 @@ PROJECT (ACTO-SOLUTION)
     ENDIF ()
 
     SUBDIRS (
-        multiprog
-        multiprog/util
-        multiprog/core
+        lib
         samples/cycles
         samples/ping-pong
     )
