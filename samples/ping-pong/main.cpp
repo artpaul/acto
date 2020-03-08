@@ -46,13 +46,13 @@ static const int PLAYERS  = 10 * 1000;
 // Начать игру
 struct msg_start {
     // Кол-во мячей в игре
-    int             balls;
+    int balls;
     acto::actor_ref console;
 
 public:
     msg_start(int balls_, acto::actor_ref& console_)
-        : balls( balls_ )
-        , console( console_ )
+        : balls(balls_)
+        , console(console_)
     { }
 };
 
@@ -69,11 +69,12 @@ struct msg_ball
 
 // Вывести текст на консоль
 struct msg_out {
-    std::string     text;
+    std::string text;
 
 public:
-    msg_out(const std::string& text_)
-        : text( text_ )
+    template <typename S>
+    msg_out(S&& text_)
+        : text(std::forward<S>(text_))
     { }
 };
 
@@ -91,7 +92,7 @@ public:
     Console() {
         // Метод Handler связывает конкретную процедуру с библиотекой
         // для обработки сообщения указанного типа.
-        Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
+        Handler< msg_out >([] (acto::actor_ref& sender, const msg_out& msg)
             { std::cout << msg.text << std::endl; }
         );
 
@@ -136,30 +137,29 @@ class Wall : public acto::actor {
     // Консоль
     acto::actor_ref m_console;
     // Множество игроков
-    acto::actor_ref m_players[ PLAYERS ];
+    acto::actor_ref m_players[PLAYERS];
     // Счетчик отскоков мячей от стены
-    long long       m_counter;
+    long long m_counter = 0;
     // Признак окончания игры
-    bool            m_finished;
+    bool m_finished = false;
 
 public:
-    Wall()
-        : m_counter ( 0 )
-        , m_finished( false )
-    {
+    Wall() {
         Handler< msg_ball   >( &Wall::do_ball   );
         Handler< msg_finish >( &Wall::do_finish );
         Handler< msg_start  >( &Wall::do_start  );
 
         // Инициализация игроков
-        for (int i = 0; i < PLAYERS; i++)
-            m_players[i] = acto::spawn< Player >();
+        for (int i = 0; i < PLAYERS; i++) {
+            m_players[i] = acto::spawn<Player>();
+        }
     }
 
     ~Wall() {
         // Необходимо явно вызвать функцию удаления для каждого созданного объекта
-        for (int i = 0; i < PLAYERS; i++)
+        for (int i = 0; i < PLAYERS; i++) {
             acto::destroy(m_players[i]);
+        }
     }
 
 private:
@@ -168,28 +168,26 @@ private:
             // Увеличить счетчик отскоков от стены
             m_counter++;
             // Послать случайно выбранному игроку
-            m_players[ (rand() % PLAYERS) ].send(msg_ball());
+            m_players[rand() % PLAYERS].send(msg_ball());
         }
     }
 
     void do_finish(acto::actor_ref& sender, const msg_finish& msg) {
-        m_finished = true;
-        // -
-        char    buffer[255];
-
+        char buffer[64];
         sprintf(buffer, "Counter : %d", (int)m_counter);
         // Отправить сообщение на консоль
-        m_console.send< msg_out >(std::string(buffer));
+        m_console.send<msg_out>(buffer);
         // Завершить выполнение текущего актера
+        m_finished = true;
         this->die();
     }
 
     void do_start(acto::actor_ref& sender, const msg_start& msg) {
         m_console = msg.console;
-
         // Послать мячи в игру
-        for (int i = 0; i < msg.balls; i++)
-            m_players[ (rand() % PLAYERS) ].send(msg_ball());
+        for (int i = 0; i < msg.balls; i++) {
+            m_players[rand() % PLAYERS].send(msg_ball());
+        }
     }
 };
 
@@ -212,19 +210,19 @@ int main() {
             // Создать консоль.
             // Все актеры должны создаваться с использованием шаблона act_o::spawn<>.
             // Использование оператора new недопустимо.
-            acto::actor_ref console = acto::spawn< Console >(acto::aoBindToThread);
+            acto::actor_ref console = acto::spawn<Console>(acto::aoBindToThread);
 
             for(unsigned int j = 0; j < 3; j++) {
                 // Создать стену.
                 // Опция "acto::aoExclusive" создает для объекта отдельный поток,
                 // в котором будут выполнятся все обработчики этого объекта
-                acto::actor_ref wall = acto::spawn< Wall >();
+                acto::actor_ref wall = acto::spawn<Wall>();
 
                 // -
-                console.send< msg_out >("send start");
+                console.send<msg_out>("send start");
 
                 // Начать игру: инициализировать объект, запустить мячи
-                wall.send< msg_start >(BALLS, console);
+                wall.send<msg_start>(BALLS, console);
 
                 // Игра продолжается некоторое время в независимых потоках
                 acto::core::sleep(DURATION);

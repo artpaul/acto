@@ -1,14 +1,9 @@
 #pragma once
 
 #include <core/module.h>
-#include <core/services.h>
 #include <util/platform.h>
 
 namespace acto {
-
-///////////////////////////////////////////////////////////////////////////////
-//                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
-///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Пользовательский объект (актер)
@@ -36,7 +31,7 @@ public:
     bool operator != (const actor_ref& rhs) const;
 
     /// Инициализирован ли текущий объект
-    bool assigned() const;
+    bool assigned() const noexcept;
 
     core::object_t* data() const {
         return m_object;
@@ -91,14 +86,10 @@ class actor : public core::base_t {
 
 protected:
     // Ссылка на контекстный объект для данного
-    actor_ref   context;
+    actor_ref context;
     // Ссылка на самого себя
-    actor_ref   self;
+    actor_ref self;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
 
 /* Уничтожить указанный объект */
 ACTO_API void destroy(actor_ref& object);
@@ -128,7 +119,7 @@ namespace detail {
 
 template <typename Impl>
 inline core::object_t* make_instance(const actor_ref& context, const int options) {
-    return core::main_module_t::instance()->make_instance< Impl >(context, options);
+    return core::main_module_t::instance()->make_instance<Impl>(context, options);
 }
 
 } // namespace detail

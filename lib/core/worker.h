@@ -18,20 +18,19 @@ struct msg_t;
  */
 class worker_callback_i {
 public:
-    virtual ~worker_callback_i()
-    { }
+    virtual ~worker_callback_i() = default;
 
-    virtual void        handle_message(const std::unique_ptr<msg_t>&) = 0;
-    virtual void        push_delete(object_t* const) = 0;
-    virtual void        push_idle  (worker_t* const) = 0;
-    virtual void        push_object(object_t* const) = 0;
-    virtual object_t*   pop_object() = 0;
+    virtual void handle_message(const std::unique_ptr<msg_t>&) = 0;
+    virtual void push_delete(object_t* const) = 0;
+    virtual void push_idle  (worker_t* const) = 0;
+    virtual void push_object(object_t* const) = 0;
+    virtual object_t*pop_object() = 0;
 };
 
 /**
  * Системный поток
  */
-class worker_t : public intrusive_t< worker_t > {
+class worker_t : public intrusive_t<worker_t> {
 public:
      worker_t(worker_callback_i* const slots);
     ~worker_t();
@@ -54,17 +53,17 @@ private:
 
 private:
     // Флаг активности потока
-    std::atomic<bool>   m_active;
-    object_t*           m_object;
+    std::atomic<bool> m_active;
+    object_t* m_object;
 
-    clock_t             m_start;
-    clock_t             m_time;
+    clock_t m_start;
+    clock_t m_time;
 
-    event_t             m_event;
-    event_t             m_complete;
-    std::thread         m_thread;
+    event_t m_event;
+    event_t m_complete;
+    std::thread m_thread;
 
-    worker_callback_i* const    m_slots;
+    worker_callback_i* const m_slots;
 };
 
 } // namespace core

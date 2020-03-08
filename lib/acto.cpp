@@ -125,7 +125,7 @@ bool actor_ref::operator != (const actor_ref& rhs) const {
     return !this->same(rhs);
 }
 
-bool actor_ref::assigned() const {
+bool actor_ref::assigned() const noexcept {
     return (m_object != nullptr);
 }
 

@@ -9,11 +9,11 @@ namespace core {
 worker_t::worker_t(worker_callback_i* const slots)
     : m_active(true)
     , m_object(nullptr)
-    , m_start (0)
-    , m_time  (0)
+    , m_start(0)
+    , m_time(0)
     , m_event(true)
     , m_thread(&worker_t::execute, this)
-    , m_slots (slots)
+    , m_slots(slots)
 {
     m_complete.reset();
 }
@@ -29,8 +29,8 @@ void worker_t::assign(object_t* const obj, const clock_t slice) {
     assert(m_object == nullptr && obj != nullptr);
 
     m_object = obj;
-    m_start  = clock();
-    m_time   = slice;
+    m_start = clock();
+    m_time = slice;
     // Так как поток оперирует объектом, то необходимо захватить
     // ссылку на объект, иначе объект может быть удален
     // во время обработки сообщений
@@ -69,7 +69,7 @@ bool worker_t::check_deleting(object_t* const obj) {
     if (!obj->has_messages()) {
         if (!obj->exclusive || obj->deleting) {
             obj->scheduled = false;
-            m_object       = nullptr;
+            m_object = nullptr;
         }
         // Если текущий объект необходимо удалить
         if (obj->deleting) {
@@ -82,7 +82,7 @@ bool worker_t::check_deleting(object_t* const obj) {
 
 bool worker_t::process() {
     while (object_t* const obj = m_object) {
-        assert(obj != nullptr);
+        assert(obj);
 
         bool released = false;
 
@@ -100,7 +100,7 @@ bool worker_t::process() {
                 std::lock_guard<std::recursive_mutex> g(obj->cs);
 
                 if (!obj->deleting) {
-                    assert(obj->impl != 0);
+                    assert(obj->impl);
 
                     if (obj->has_messages()) {
                         runtime_t::instance()->release(obj);
@@ -121,15 +121,17 @@ bool worker_t::process() {
         //
         // -
         //
-        if (!released && check_deleting(obj))
+        if (!released && check_deleting(obj)) {
             m_slots->push_delete(obj);
+        }
 
         //
         // Получить новый объект для обработки, если он есть в очереди
         //
-        if (m_object != nullptr) {
-            if (m_object->exclusive)
+        if (m_object) {
+            if (m_object->exclusive) {
                 return true;
+            }
         } else {
             // Освободить ссылку на предыдущий объект
             if (!released) {

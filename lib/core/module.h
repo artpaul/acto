@@ -51,7 +51,7 @@ public:
 
         if (result) {
             value->context = context;
-            value->self    = actor_ref(result);
+            value->self = actor_ref(result);
         }
 
         return result;
@@ -60,7 +60,7 @@ public:
 private:
     class impl;
 
-    std::unique_ptr< impl > m_pimpl;
+    std::unique_ptr<impl> m_pimpl;
 };
 
 } // namespace core

@@ -11,14 +11,14 @@ namespace core {
 struct binding_context_t {
     // Список актеров ассоциированных
     // только с текущим потоком
-    std::set< object_t* >   actors;
+    std::set<object_t*> actors;
     // Счетчик инициализаций
-    std::atomic<long>       counter;
+    std::atomic<long> counter;
 };
 
 
 /// -
-extern TLS_VARIABLE object_t*   active_actor;
+extern TLS_VARIABLE object_t* active_actor;
 /// -
 static TLS_VARIABLE binding_context_t* threadCtx = nullptr;
 
@@ -27,17 +27,17 @@ static TLS_VARIABLE binding_context_t* threadCtx = nullptr;
  */
 class runtime_t::impl {
     /// Тип множества актеров
-    using Actors = std::set< object_t* >;
+    using Actors = std::set<object_t*>;
 
 private:
     /// Критическая секция для доступа к полям
-    std::mutex          m_cs;
+    std::mutex m_cs;
     ///
-    event_t             m_clean;
+    event_t m_clean;
     /// Текущее множество актеров
-    Actors              m_actors;
+    Actors m_actors;
 
-    main_module_t*      m_module;
+    main_module_t* m_module;
 
 private:
     //-------------------------------------------------------------------------
@@ -56,7 +56,7 @@ private:
 
         if (obj->waiters) {
             object_t::waiter_t* next = nullptr;
-            object_t::waiter_t* it   = obj->waiters;
+            object_t::waiter_t* it = obj->waiters;
 
             while (it) {
                 // TN: Необходимо читать значение следующего указателя
@@ -64,7 +64,7 @@ private:
                 //     приведет к удалению текущего узла списка
                 next = it->next;
                 it->event->signaled();
-                it   = next;
+                it = next;
             }
 
             obj->waiters = nullptr;
@@ -86,7 +86,7 @@ public:
     //-------------------------------------------------------------------------
     // Создать экземпляр объекта, связав его с соответсвтующей реализацией
     object_t* create_actor(base_t* const body, const int options) {
-        assert(body != nullptr);
+        assert(body);
 
         object_t* const result = new core::object_t(body);
 
@@ -94,11 +94,10 @@ public:
         // Зарегистрировать объект в системе
         if (options & acto::aoBindToThread) {
             result->references += 1;
-            result->binded      = true;
+            result->binded = true;
 
             threadCtx->actors.insert(result);
-        }
-        else {
+        } else {
             std::lock_guard<std::mutex> g(m_cs);
 
             result->exclusive = options & acto::aoExclusive;
@@ -112,7 +111,7 @@ public:
     }
     //-------------------------------------------------------------------------
     void deconstruct_object(object_t* const obj) {
-        assert(obj != 0);
+        assert(obj);
 
         bool deleting = false;
         {
@@ -129,12 +128,13 @@ public:
             if (!obj->scheduled && !obj->unimpl) {
                 assert(!obj->has_messages());
 
-                if (obj->impl)
+                if (obj->impl) {
                     destroy_object_body(obj);
+                }
                 // -
                 if (!obj->freeing && (0 == obj->references)) {
                     obj->freeing = true;
-                    deleting     = true;
+                    deleting = true;
                 }
             }
         }
@@ -146,8 +146,9 @@ public:
 
                 m_actors.erase(obj);
 
-                if (m_actors.size() == 0)
+                if (m_actors.size() == 0) {
                     m_clean.signaled();
+                }
             }
             // -
             delete obj;
@@ -155,7 +156,7 @@ public:
     }
     //-------------------------------------------------------------------------
     void handle_message(std::unique_ptr<msg_t> msg) {
-        assert(msg->target != nullptr);
+        assert(msg->target);
 
         m_module->handle_message(std::move(msg));
     }
@@ -165,7 +166,7 @@ public:
             return;
         }
 
-        std::unique_ptr< object_t::waiter_t > node;
+        std::unique_ptr<object_t::waiter_t> node;
         event_t event;
 
         {
@@ -181,13 +182,13 @@ public:
             }
         }
 
-        if (node.get() != nullptr) {
+        if (node.get()) {
             event.wait();
         }
     }
     //-----------------------------------------------------------------------------
     long release(object_t* const obj) {
-        assert(obj != 0);
+        assert(obj);
         assert(obj->references > 0);
 
         const long result = --obj->references;
@@ -222,13 +223,13 @@ public:
             m_module->shutdown(ev);
         }
 
-        assert(m_actors.size() == 0);
+        assert(m_actors.empty());
     }
     //-------------------------------------------------------------------------
     // Послать сообщение указанному объекту
     void send(object_t* const sender, object_t* const target, msg_t* const msg) {
-        assert(msg    != nullptr);
-        assert(target != nullptr);
+        assert(msg);
+        assert(target);
 
         msg->sender = sender;
         msg->target = target;
@@ -307,7 +308,7 @@ void runtime_t::join(object_t* const obj) {
 }
 //-----------------------------------------------------------------------------
 void runtime_t::process_binded_actors() {
-    assert(threadCtx != nullptr);
+    assert(threadCtx);
 
     this->process_binded_actors(threadCtx->actors, false);
 }
@@ -340,16 +341,19 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
     for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
         object_t* const actor = *i;
 
-        while (msg_t* const package = actor->select_message())
+        while (msg_t* const package = actor->select_message()) {
             this->handle_message(std::unique_ptr<msg_t>(package));
+        }
 
-        if (need_delete)
+        if (need_delete) {
             this->deconstruct_object(actor);
+        }
     }
 
     if (need_delete) {
-        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i)
+        for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
             this->release(*i);
+        }
 
         actors.clear();
     }

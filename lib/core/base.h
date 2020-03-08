@@ -37,9 +37,9 @@ struct msg_t;
 /**
  * Объект
  */
-struct object_t : public intrusive_t< object_t > {
-    struct waiter_t : public intrusive_t< waiter_t > {
-        event_t*    event;
+struct object_t : public intrusive_t<object_t> {
+    struct waiter_t : public intrusive_t<waiter_t> {
+        event_t* event;
     };
 
     using atomic_stack_t = generics::mpsc_stack_t<msg_t> ;
@@ -49,21 +49,21 @@ struct object_t : public intrusive_t< object_t > {
     std::recursive_mutex cs;
 
     // Реализация объекта
-    base_t*             impl;
+    base_t* impl;
     // Список сигналов для потоков, ожидающих уничтожения объекта
-    waiter_t*           waiters;
+    waiter_t* waiters;
     // Очередь сообщений, поступивших данному объекту
-    atomic_stack_t      input_stack;
-    intusive_stack_t    local_stack;
+    atomic_stack_t input_stack;
+    intusive_stack_t local_stack;
     // Count of references to object
-    std::atomic<long>   references;
+    std::atomic<long> references;
     // Флаги состояния текущего объекта
-    ui32                binded    : 1;
-    ui32                deleting  : 1;
-    ui32                exclusive : 1;
-    ui32                freeing   : 1;
-    ui32                scheduled : 1;
-    ui32                unimpl    : 1;
+    ui32 binded    : 1;
+    ui32 deleting  : 1;
+    ui32 exclusive : 1;
+    ui32 freeing   : 1;
+    ui32 scheduled : 1;
+    ui32 unimpl    : 1;
 
 public:
     object_t(base_t* const impl_);
@@ -82,13 +82,13 @@ public:
 /**
  * Базовый тип для сообщений
  */
-struct msg_t : intrusive_t< msg_t > {
+struct msg_t : intrusive_t<msg_t> {
     // Код типа сообщения
-    const std::type_index   type;
+    const std::type_index type;
     // Отправитель сообщения
-    object_t*               sender;
+    object_t* sender;
     // Получатель сообщения
-    object_t*               target;
+    object_t* target;
 
 public:
     msg_t(const std::type_index& idx);
@@ -104,12 +104,14 @@ struct msg_wrap_t
     inline msg_wrap_t(const T& d)
         : msg_t(typeid(T))
         , T(d)
-    { }
+    {
+    }
 
     inline msg_wrap_t(T&& d)
         : msg_t(typeid(T))
         , T(std::move(d))
-    { }
+    {
+    }
 
     inline const T& data() const {
         return *static_cast<const T*>(this);
@@ -140,7 +142,7 @@ class base_t {
 
     public:
         inline HandlerItem(const std::type_index& t, handler_t* h)
-            : type   (t)
+            : type(t)
             , handler(h)
         {
         }
@@ -155,12 +157,12 @@ class base_t {
     >
     class mem_handler_t : public handler_t {
     public:
-        using delegate_t = std::function< void (C*, actor_ref&, const MsgT&) >;
+        using delegate_t = std::function<void (C*, actor_ref&, const MsgT&)>;
 
     public:
         mem_handler_t(const delegate_t& delegate_, C* c)
-            : m_delegate( delegate_ )
-            , m_c       (c)
+            : m_delegate(delegate_)
+            , m_c(c)
         {
         }
 
@@ -168,25 +170,25 @@ class base_t {
         virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(m_c, actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data());
+            m_delegate(m_c, actor, static_cast<const msg_wrap_t<MsgT>*>(msg)->data());
         }
 
     private:
         /// Делегат, хранящий указатель на
         /// метод конкретного объекта.
-        const delegate_t    m_delegate;
+        const delegate_t m_delegate;
 
-        C* const            m_c;
+        C* const m_c;
     };
 
     template <typename MsgT>
     class fun_handler_t : public handler_t {
     public:
-        using delegate_t = std::function< void (actor_ref&, const MsgT&) >;
+        using delegate_t = std::function<void (actor_ref&, const MsgT&)>;
 
     public:
         fun_handler_t(const delegate_t& delegate_)
-            : m_delegate( delegate_ )
+            : m_delegate(delegate_)
         {
         }
 
@@ -194,13 +196,13 @@ class base_t {
         virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data());
+            m_delegate(actor, static_cast<const msg_wrap_t<MsgT>*>(msg)->data());
         }
 
     private:
         /// Делегат, хранящий указатель на
         /// метод конкретного объекта.
-        const delegate_t    m_delegate;
+        const delegate_t m_delegate;
     };
 
 public:
@@ -213,28 +215,28 @@ protected:
 
     /// Установка обработчика для сообщения данного типа
     template < typename MsgT, typename ClassName >
-        inline void Handler( void (ClassName::*func)(actor_ref& sender, const MsgT& msg) ) {
+        inline void Handler(void (ClassName::*func)(actor_ref& sender, const MsgT& msg)) {
             // Установить обработчик
             set_handler(
                 // Обрабочик
-                new mem_handler_t< MsgT, ClassName >(func, static_cast<ClassName*>(this)),
+                new mem_handler_t<MsgT, ClassName>(func, static_cast<ClassName*>(this)),
                 // Тип сообщения
                 std::type_index(typeid(MsgT)));
         }
 
     /// Установка обработчика для сообщения данного типа
     template <typename MsgT>
-        inline void Handler(std::function< void (actor_ref& sender, const MsgT& msg) > func) {
+        inline void Handler(std::function<void (actor_ref& sender, const MsgT& msg)> func) {
             // Установить обработчик
             set_handler(
                 // Обрабочик
-                new fun_handler_t< MsgT >(func),
+                new fun_handler_t<MsgT>(func),
                 // Тип сообщения
                 std::type_index(typeid(MsgT)));
         }
 
     /// Сброс обработчика для сообщения данного типа
-    template < typename MsgT >
+    template <typename MsgT>
         inline void Handler() {
             // Сбросить обработчик указанного типа
             set_handler(nullptr, std::type_index(typeid(MsgT)));
@@ -250,11 +252,11 @@ private:
     using Handlers = std::vector<HandlerItem>;
 
     // Карта обработчиков сообщений для данного объекта
-    Handlers        m_handlers;
+    Handlers m_handlers;
     // Поток, в котором должен выполнятся объект
     core::worker_t* m_thread;
     // -
-    bool            m_terminating;
+    bool m_terminating;
 };
 
 } // namespace core

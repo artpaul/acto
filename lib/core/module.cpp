@@ -15,18 +15,18 @@ TLS_VARIABLE object_t* active_actor;
  */
 class main_module_t::impl : public worker_callback_i {
     // -
-    using HeaderQueue = generics::queue_t< object_t >;
+    using HeaderQueue = generics::queue_t<object_t>;
     // -
-    using WorkerStack = generics::mpsc_stack_t< worker_t >;
+    using WorkerStack = generics::mpsc_stack_t<worker_t>;
 
     //
     struct workers_t {
         // Текущее кол-во потоков
-        std::atomic<long>   count;
+        std::atomic<long> count;
         // Текущее кол-во эксклюзивных потоков
-        std::atomic<long>   reserved;
+        std::atomic<long> reserved;
         // Свободные потоки
-        WorkerStack         idle;
+        WorkerStack idle;
     };
 
     // Максимальное кол-во рабочих потоков в системе
@@ -37,11 +37,11 @@ public:
         : m_rt(rt)
         , m_event(true)
         , m_evworker(true)
-        , m_processors ( NumberOfProcessors() )
-        , m_active     (true)
+        , m_processors(NumberOfProcessors())
+        , m_active(true)
         , m_terminating(false)
     {
-        m_workers.count    = 0;
+        m_workers.count = 0;
         m_workers.reserved = 0;
 
         m_evnoworkers.signaled();
@@ -69,7 +69,7 @@ public:
 
 public:
     object_t* create_actor(base_t* const body, const int options) {
-        assert(body != nullptr);
+        assert(body);
 
         object_t* const result = m_rt->create_actor(body, options);
 
@@ -77,9 +77,9 @@ public:
         if (options & acto::aoExclusive) {
             worker_t* const worker = this->create_worker();
 
-            result->scheduled  = true;
+            result->scheduled = true;
 
-            body->m_thread     = worker;
+            body->m_thread = worker;
 
             ++m_workers.reserved;
 
@@ -90,7 +90,7 @@ public:
     }
 
     void destroy_object_body(base_t* const body) {
-        assert(body != nullptr);
+        assert(body);
 
         base_t* const impl = static_cast<base_t*>(body);
 
@@ -106,7 +106,7 @@ public:
 
         object_t* const obj = package->target;
 
-        assert(obj->impl != 0);
+        assert(obj->impl);
 
         try {
             assert(active_actor == nullptr);
@@ -131,7 +131,7 @@ public:
     }
 
     void push_idle(worker_t* const worker) {
-        assert(worker != 0);
+        assert(worker);
 
         m_workers.idle.push(worker);
 
@@ -151,7 +151,7 @@ public:
 private:
     void execute() {
         int newWorkerTimeout = 2;
-        int lastCleanupTime  = clock();
+        int lastCleanupTime = clock();
 
         while (m_active) {
             while(!m_queue.empty()) {
@@ -160,7 +160,7 @@ private:
             }
 
             if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-                generics::stack_t< worker_t > queue(m_workers.idle.extract());
+                generics::stack_t<worker_t> queue(m_workers.idle.extract());
 
                 // Удалить все потоки
                 while (worker_t* const item = queue.pop()) {
@@ -239,25 +239,23 @@ private:
     }
 
 private:
-    runtime_t* const    m_rt;
+    runtime_t* const m_rt;
     ///
-    event_t             m_event;
-    event_t             m_evworker;
-    event_t             m_evnoworkers;
+    event_t m_event;
+    event_t m_evworker;
+    event_t m_evnoworkers;
     /// Количество физических процессоров (ядер) в системе
-    long                m_processors;
+    long m_processors;
     /// Очередь объектов, которым пришли сообщения
-    HeaderQueue         m_queue;
+    HeaderQueue m_queue;
     /// Экземпляр системного потока
-    std::unique_ptr<std::thread>
-                        m_scheduler;
+    std::unique_ptr<std::thread> m_scheduler;
     /// -
-    workers_t           m_workers;
+    workers_t m_workers;
     /// -
-    std::atomic<bool>   m_active;
-    std::atomic<bool>   m_terminating;
+    std::atomic<bool> m_active;
+    std::atomic<bool> m_terminating;
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -281,10 +279,9 @@ void main_module_t::handle_message(std::unique_ptr<msg_t> msg) {
 }
 
 void main_module_t::send_message(msg_t* const p) {
-    std::unique_ptr<msg_t>
-                    package(p);
+    std::unique_ptr<msg_t> package(p);
     object_t* const target = package->target;
-    bool            should_push = false;
+    bool should_push = false;
 
     {
         // Эксклюзивный доступ
@@ -299,7 +296,7 @@ void main_module_t::send_message(msg_t* const p) {
             // 2. Подобрать для него необходимый поток
             if (!target->binded) {
                 // Если с объектом связан эксклюзивный поток
-                worker_t* const thread = static_cast< base_t* >(target->impl)->m_thread;
+                worker_t* const thread = static_cast<base_t*>(target->impl)->m_thread;
 
                 if (thread != nullptr) {
                     thread->wakeup();
