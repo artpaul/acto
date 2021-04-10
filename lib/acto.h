@@ -6,85 +6,8 @@
 
 namespace acto {
 
-///////////////////////////////////////////////////////////////////////////////
-//                         ИНТЕРФЕЙС БИБЛИОТЕКИ                              //
-///////////////////////////////////////////////////////////////////////////////
-
 /**
- * Пользовательский объект (актер)
- */
-class actor_ref {
-    friend void join(actor_ref& obj);
-    friend void destroy(actor_ref& object);
-
-public:
-    actor_ref();
-
-    explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
-
-    actor_ref(const actor_ref& rhs);
-    actor_ref(actor_ref&& rhs);
-
-    ~actor_ref();
-
-public:
-    actor_ref& operator = (const actor_ref& rhs);
-    actor_ref& operator = (actor_ref&& rhs);
-
-    bool operator == (const actor_ref& rhs) const;
-
-    bool operator != (const actor_ref& rhs) const;
-
-    /// Инициализирован ли текущий объект
-    bool assigned() const;
-
-    core::object_t* data() const {
-        return m_object;
-    }
-
-    // Послать сообщение объекту
-    template <typename MsgT>
-    inline void send(const MsgT& msg) const {
-        if (m_object) {
-            send_message(
-                new core::msg_wrap_t<MsgT>(msg)
-            );
-        }
-    }
-
-    // Послать сообщение объекту
-    template <typename MsgT>
-    inline void send(MsgT&& msg) const {
-        if (m_object) {
-            send_message(
-                new core::msg_wrap_t<typename std::remove_reference<MsgT>::type>(std::forward<MsgT>(msg))
-            );
-        }
-    }
-
-    // Послать сообщение объекту
-    template <typename MsgT, typename ... P>
-    inline void send(P&& ... p) const {
-        if (m_object) {
-            send_message(
-                new core::msg_wrap_t<MsgT>(MsgT(std::forward<P>(p) ... ))
-            );
-        }
-    }
-
-private:
-    ///
-    bool same(const actor_ref& rhs) const;
-    ///
-    void send_message(core::msg_t* const msg) const;
-
-private:
-    core::object_t* m_object;
-};
-
-
-/**
- * Базовый класс для реализации пользовательских объектов (актеров)
+ * Base class for all user-defined actors.
  */
 class actor : public core::base_t {
     friend class core::main_module_t;
@@ -96,11 +19,7 @@ protected:
     actor_ref   self;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
-
-/* Уничтожить указанный объект */
+/* Destroys the given object. */
 ACTO_API void destroy(actor_ref& object);
 
 //
@@ -117,12 +36,11 @@ ACTO_API void join(actor_ref& obj);
 // привязанных к текущему системному потоку (опция aoBindToThread)
 ACTO_API void process_messages();
 
-/* Завершить использование библиотеки */
+/* Library shutdown. */
 ACTO_API void shutdown();
 
-/* Инициализировать библиотеку */
+/* Library initialization. */
 ACTO_API void startup();
-
 
 namespace detail {
 

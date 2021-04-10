@@ -14,8 +14,6 @@
 
 namespace acto {
 
-class actor_ref;
-
 /// Индивидуальный поток для актера
 const int aoExclusive    = 0x01;
 
@@ -23,7 +21,6 @@ const int aoExclusive    = 0x01;
 /// Не имеет эффекта, если используется в контексте потока,
 /// созданного самой библиотекой.
 const int aoBindToThread = 0x02;
-
 
 namespace core {
 
@@ -116,6 +113,82 @@ struct msg_wrap_t
     }
 };
 
+} // namespace code
+
+
+/**
+ * Пользовательский объект (актер)
+ */
+class actor_ref {
+    friend void join(actor_ref& obj);
+    friend void destroy(actor_ref& object);
+
+public:
+    actor_ref();
+
+    explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
+
+    actor_ref(const actor_ref& rhs);
+    actor_ref(actor_ref&& rhs);
+
+    ~actor_ref();
+
+public:
+    actor_ref& operator = (const actor_ref& rhs);
+    actor_ref& operator = (actor_ref&& rhs);
+
+    bool operator == (const actor_ref& rhs) const;
+
+    bool operator != (const actor_ref& rhs) const;
+
+    /// Инициализирован ли текущий объект
+    bool assigned() const;
+
+    core::object_t* data() const {
+        return m_object;
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send(const MsgT& msg) const {
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<MsgT>(msg)
+            );
+        }
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT>
+    inline void send(MsgT&& msg) const {
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<typename std::remove_reference<MsgT>::type>(std::forward<MsgT>(msg))
+            );
+        }
+    }
+
+    // Послать сообщение объекту
+    template <typename MsgT, typename ... P>
+    inline void send(P&& ... p) const {
+        if (m_object) {
+            send_message(
+                new core::msg_wrap_t<MsgT>(MsgT(std::forward<P>(p) ... ))
+            );
+        }
+    }
+
+private:
+    ///
+    bool same(const actor_ref& rhs) const;
+    ///
+    void send_message(core::msg_t* const msg) const;
+
+private:
+    core::object_t* m_object;
+};
+
+namespace core {
 
 /**
  * Базовый класс для локальных актеров.
