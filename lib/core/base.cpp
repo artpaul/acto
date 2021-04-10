@@ -43,8 +43,6 @@ msg_t* object_t::select_message() {
 
 msg_t::msg_t(const std::type_index& idx)
     : type(idx)
-    , sender(nullptr)
-    , target(nullptr)
 {
 }
 
@@ -58,38 +56,23 @@ msg_t::~msg_t() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-base_t::base_t()
-    : m_thread(nullptr)
-    , m_terminating(false)
-{
-}
-
-base_t::~base_t()
-{ }
-
 void base_t::die() {
     this->m_terminating = true;
 }
 
 void base_t::consume_package(const std::unique_ptr<msg_t>& p) {
-    for (Handlers::const_iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
-        if (hi->type == p->type) {
-            hi->handler->invoke(p->sender, p.get());
-            return;
-        }
+    const auto hi = m_handlers.find(p->type);
+    if (hi != m_handlers.end()) {
+        hi->second->invoke(p->sender, p.get());
     }
 }
 
-void base_t::set_handler(handler_t* const handler, const std::type_index& type) {
-    for (Handlers::iterator hi = m_handlers.begin(); hi != m_handlers.end(); ++hi) {
-        if (hi->type == type) {
-            hi->handler.reset(handler);
-            return;
-        }
+void base_t::set_handler(const std::type_index& type, std::unique_ptr<handler_t> h) {
+    if (h) {
+        m_handlers[type] = std::move(h);
+    } else {
+        m_handlers.erase(type);
     }
-
-    // Запись для данного типа сообщения еще не существует
-    m_handlers.push_back(HandlerItem(type, handler));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -11,16 +11,17 @@
 #include <typeindex>
 #include <typeinfo>
 #include <vector>
+#include <unordered_map>
 
 namespace acto {
 
 /// Индивидуальный поток для актера
-const int aoExclusive    = 0x01;
+static constexpr int aoExclusive = 0x01;
 
 /// Привязать актера к текущему системному потоку.
 /// Не имеет эффекта, если используется в контексте потока,
 /// созданного самой библиотекой.
-const int aoBindToThread = 0x02;
+static constexpr int aoBindToThread = 0x02;
 
 namespace core {
 
@@ -29,7 +30,6 @@ class main_module_t;
 class runtime_t;
 class worker_t;
 struct msg_t;
-
 
 /**
  * Объект
@@ -79,13 +79,13 @@ public:
 /**
  * Базовый тип для сообщений
  */
-struct msg_t : intrusive_t< msg_t > {
+struct msg_t : intrusive_t<msg_t> {
     // Код типа сообщения
-    const std::type_index   type;
+    const std::type_index type;
     // Отправитель сообщения
-    object_t*               sender;
+    object_t* sender{nullptr};
     // Получатель сообщения
-    object_t*               target;
+    object_t* target{nullptr};
 
 public:
     msg_t(const std::type_index& idx);
@@ -148,17 +148,7 @@ public:
         return m_object;
     }
 
-    // Послать сообщение объекту
-    template <typename MsgT>
-    inline void send(const MsgT& msg) const {
-        if (m_object) {
-            send_message(
-                new core::msg_wrap_t<MsgT>(msg)
-            );
-        }
-    }
-
-    // Послать сообщение объекту
+    /// Sends a message to the actor.
     template <typename MsgT>
     inline void send(MsgT&& msg) const {
         if (m_object) {
@@ -168,7 +158,7 @@ public:
         }
     }
 
-    // Послать сообщение объекту
+    /// Sends a message to the actor.
     template <typename MsgT, typename ... P>
     inline void send(P&& ... p) const {
         if (m_object) {
@@ -198,25 +188,9 @@ class base_t {
 
     class handler_t {
     public:
-        virtual ~handler_t()
-        { }
+        virtual ~handler_t() = default;
 
         virtual void invoke(object_t* const sender, const msg_t* const msg) const = 0;
-    };
-
-    ///
-    struct HandlerItem {
-        // Тип обработчика
-        const std::type_index       type;
-        // Обработчик
-        std::unique_ptr<handler_t>  handler;
-
-    public:
-        inline HandlerItem(const std::type_index& t, handler_t* h)
-            : type   (t)
-            , handler(h)
-        {
-        }
     };
 
     /**
@@ -232,8 +206,8 @@ class base_t {
 
     public:
         mem_handler_t(const delegate_t& delegate_, C* c)
-            : m_delegate( delegate_ )
-            , m_c       (c)
+            : m_delegate(delegate_)
+            , m_c(c)
         {
         }
 
@@ -241,15 +215,15 @@ class base_t {
         virtual void invoke(object_t* const sender, const msg_t* const msg) const {
             actor_ref actor(sender);
 
-            m_delegate(m_c, actor, static_cast< const msg_wrap_t<MsgT>* >(msg)->data());
+            m_delegate(m_c, actor, static_cast<const msg_wrap_t<MsgT>*>(msg)->data());
         }
 
     private:
         /// Делегат, хранящий указатель на
         /// метод конкретного объекта.
-        const delegate_t    m_delegate;
+        const delegate_t m_delegate;
 
-        C* const            m_c;
+        C* const m_c;
     };
 
     template <typename MsgT>
@@ -273,12 +247,11 @@ class base_t {
     private:
         /// Делегат, хранящий указатель на
         /// метод конкретного объекта.
-        const delegate_t    m_delegate;
+        const delegate_t m_delegate;
     };
 
 public:
-    base_t();
-    virtual ~base_t();
+    virtual ~base_t() = default;
 
 protected:
     /// Завершить собственную работу
@@ -289,10 +262,10 @@ protected:
         inline void Handler( void (ClassName::*func)(actor_ref& sender, const MsgT& msg) ) {
             // Установить обработчик
             set_handler(
-                // Обрабочик
-                new mem_handler_t< MsgT, ClassName >(func, static_cast<ClassName*>(this)),
                 // Тип сообщения
-                std::type_index(typeid(MsgT)));
+                std::type_index(typeid(MsgT)),
+                // Обрабочик
+                std::make_unique<mem_handler_t<MsgT, ClassName>>(func, static_cast<ClassName*>(this)));
         }
 
     /// Установка обработчика для сообщения данного типа
@@ -300,34 +273,34 @@ protected:
         inline void Handler(std::function< void (actor_ref& sender, const MsgT& msg) > func) {
             // Установить обработчик
             set_handler(
-                // Обрабочик
-                new fun_handler_t< MsgT >(func),
                 // Тип сообщения
-                std::type_index(typeid(MsgT)));
+                std::type_index(typeid(MsgT)),
+                // Обрабочик
+                std::make_unique<fun_handler_t<MsgT>>(func));
         }
 
     /// Сброс обработчика для сообщения данного типа
     template < typename MsgT >
         inline void Handler() {
             // Сбросить обработчик указанного типа
-            set_handler(nullptr, std::type_index(typeid(MsgT)));
+            set_handler(std::type_index(typeid(MsgT)), nullptr);
         }
 
 private:
     void consume_package(const std::unique_ptr<msg_t>& p);
 
-    void set_handler(handler_t* const handler, const std::type_index& type);
+    void set_handler(const std::type_index& type, std::unique_ptr<handler_t> h);
 
 private:
     /// Карта обработчиков сообщений
-    using Handlers = std::vector<HandlerItem>;
+    using Handlers = std::unordered_map<std::type_index, std::unique_ptr<handler_t>>;
 
-    // Карта обработчиков сообщений для данного объекта
-    Handlers        m_handlers;
-    // Поток, в котором должен выполнятся объект
-    core::worker_t* m_thread;
-    // -
-    bool            m_terminating;
+    /// List of message handlers.
+    Handlers m_handlers;
+    /// Поток, в котором должен выполнятся объект
+    core::worker_t* m_thread{nullptr};
+    ///
+    bool m_terminating{false};
 };
 
 } // namespace core
