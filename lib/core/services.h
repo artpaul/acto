@@ -37,7 +37,7 @@ class ACTO_API service_t {
 //    Обеспечивает посылку уведомлений актерам через
 //    заданные промежутки времени.
 class ACTO_API timer_t : public service_t {
-    friend void finalize();
+  friend void finalize();
 
 public:
 	 timer_t();

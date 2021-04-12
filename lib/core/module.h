@@ -14,53 +14,55 @@ class runtime_t;
  * Модуль, обеспечивающий обработку локальных актёров
  */
 class main_module_t {
-    /// -
-    core::object_t* create_actor(base_t* const body, const int options);
+public:
+  main_module_t();
+  ~main_module_t();
+
+  static main_module_t* instance() {
+    static main_module_t value;
+
+    return &value;
+  }
+
+  /// Определить отправителя сообщения
+  static object_t* determine_sender();
 
 public:
-     main_module_t();
-    ~main_module_t();
+  /// -
+  void destroy_object_body(base_t* const body);
+  /// -
+  void handle_message(std::unique_ptr<msg_t> msg);
+  /// Отправить сообщение соответствующему объекту
+  void send_message(std::unique_ptr<msg_t> msg);
+  /// -
+  void shutdown(event_t& event);
+  /// -
+  void startup(runtime_t*);
 
-    static main_module_t* instance() {
-        static main_module_t value;
+  /** Makes actor instance. */
+  template <typename Impl>
+  object_t* make_instance(actor_ref context, const int options, Impl* value) {
+    assert(value);
+    // Создать объект ядра (счетчик ссылок увеличивается автоматически)
+    core::object_t* const result = create_actor(value, options);
 
-        return &value;
+    if (result) {
+      value->context_ = std::move(context);
+      value->self_ = actor_ref(result);
+      value->bootstrap();
+    } else {
+        delete value;
     }
 
-    /// Определить отправителя сообщения
-    static object_t* determine_sender();
-
-public:
-    /// -
-    void destroy_object_body(base_t* const body);
-    /// -
-    void handle_message(std::unique_ptr<msg_t> msg);
-    /// Отправить сообщение соответствующему объекту
-    void send_message(msg_t* const msg);
-    /// -
-    void shutdown(event_t& event);
-    /// -
-    void startup(runtime_t*);
-
-    /// Создать экземпляр актёра
-    template <typename Impl>
-    object_t* make_instance(const actor_ref& context, const int options) {
-        Impl* const value = new Impl();
-        // Создать объект ядра (счетчик ссылок увеличивается автоматически)
-        core::object_t* const result = this->create_actor(value, options);
-
-        if (result) {
-            value->context = context;
-            value->self    = actor_ref(result);
-        }
-
-        return result;
-    }
+    return result;
+  }
 
 private:
-    class impl;
+  core::object_t* create_actor(base_t* body, const int options);
 
-    std::unique_ptr< impl > m_pimpl;
+private:
+  class impl;
+  std::unique_ptr<impl> m_pimpl{nullptr};
 };
 
 } // namespace core

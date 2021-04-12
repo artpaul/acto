@@ -3,33 +3,31 @@
 namespace acto {
 namespace generics {
 
-/** */
 template <typename T>
 class sequence_t {
-    T*  m_head;
-
 public:
-    sequence_t(T* const item)
-        : m_head(item)
-    {
-    }
+  constexpr sequence_t(T* const item) noexcept
+     : head_(item)
+  {
+  }
 
-    T* extract() {
-        T* const result = m_head;
-        m_head = nullptr;
-        return result;
-    }
+  T* extract() noexcept {
+    T* const result = head_;
+    head_ = nullptr;
+    return result;
+  }
 
-    T* pop() {
-        T* const result = m_head;
-        // -
-        if (result) {
-            m_head       = result->next;
-            result->next = nullptr;
-        }
-        // -
-        return result;
+  T* pop() noexcept {
+    T* const result = head_;
+    if (result) {
+      head_ = result->next;
+      result->next = nullptr;
     }
+    return result;
+  }
+
+private:
+  T* head_{nullptr};
 };
 
 } // namespace generics

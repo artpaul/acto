@@ -21,7 +21,7 @@
 #include <acto.h>
 
 #ifdef ACTO_WIN
-#   include <conio.h>
+# include <conio.h>
 #endif
 
 // Кол-во игроков в игре
@@ -33,7 +33,7 @@ static const size_t LISTENERS  = 30;
 
 // -
 struct msg_complete {
-    size_t  cycles;
+  size_t  cycles;
 };
 
 // -
@@ -57,44 +57,44 @@ struct msg_stop
 //    который в цикле проверяет какие-то значения.
 class Listener : public acto::actor {
 public:
-    Listener()
-        : m_active(false)
-        , m_counter(0)
-    {
-        Handler< msg_loop  >(&Listener::doLoop);
-        Handler< msg_start >(&Listener::doStart);
-        Handler< msg_stop  >(&Listener::doStop);
-    }
+  Listener()
+    : m_active(false)
+    , m_counter(0)
+  {
+    handler< msg_loop  >(&Listener::doLoop);
+    handler< msg_start >(&Listener::doStart);
+    handler< msg_stop  >(&Listener::doStop);
+  }
 
 public:
-    void doLoop(acto::actor_ref& sender, const msg_loop& msg) {
-        if (m_active) {
-            m_counter++;
-            // Продолжить цикл
-            self.send(msg_loop());
-        }
+  void doLoop(acto::actor_ref sender, const msg_loop& msg) {
+    if (m_active) {
+      m_counter++;
+      // Продолжить цикл
+      self().send(msg_loop());
     }
+  }
 
-    void doStart(acto::actor_ref& sender, const msg_start& msg) {
-        m_active  = true;
-        // Начать цикл
-        self.send(msg_loop());
-    }
+  void doStart(acto::actor_ref sender, const msg_start& msg) {
+    m_active  = true;
+    // Начать цикл
+    self().send(msg_loop());
+  }
 
-    void doStop(acto::actor_ref& sender, const msg_stop& msg) {
-        m_active = false;
-        // -
-        msg_complete    rval;
-        rval.cycles = m_counter;
-        // Послать владельцу свою статистику выполнения
-        context.send(rval);
-        // -
-        this->die();
-    }
+  void doStop(acto::actor_ref sender, const msg_stop& msg) {
+    m_active = false;
+    // -
+    msg_complete    rval;
+    rval.cycles = m_counter;
+    // Послать владельцу свою статистику выполнения
+    context().send(rval);
+    // -
+    this->die();
+  }
 
 private:
-    bool        m_active;
-    size_t      m_counter;
+  bool m_active;
+  size_t m_counter;
 };
 
 
@@ -103,73 +103,72 @@ private:
 //    и собирает статистику их работы.
 class Analizer : public acto::actor {
 public:
-    Analizer() {
-        Handler< msg_complete >(&Analizer::doComplete);
-        // -
-        Handler< msg_start >   (&Analizer::doStart);
-        Handler< msg_stop  >   (&Analizer::doStop);
-    }
+  Analizer() {
+    handler< msg_complete >(&Analizer::doComplete);
 
-    ~Analizer() {
-        for (size_t i = 0; i < m_listeners.size(); i++)
-            acto::destroy(m_listeners[i]);
-    }
+    handler< msg_start >   (&Analizer::doStart);
+    handler< msg_stop  >   (&Analizer::doStop);
+  }
 
-private:
-    void doComplete(acto::actor_ref& sender, const msg_complete& msg) {
-        std::cout << msg.cycles << std::endl;
-    }
-
-    void doStart(acto::actor_ref& sender, const msg_start& msg) {
-        for (size_t i = 0; i < LISTENERS; i++) {
-            acto::actor_ref actor = acto::spawn< Listener >(self);
-
-            actor.send(msg_start());
-            m_listeners.push_back(actor);
-        }
-    }
-
-    void doStop(acto::actor_ref& sender, const msg_stop& msg) {
-        for (size_t i = 0; i < m_listeners.size(); i++) {
-            m_listeners[i].send(msg_stop());
-            // Ждать завершения работы агента
-            acto::join(m_listeners[i]);
-        }
-        this->die();
-    }
+  ~Analizer() {
+    for (size_t i = 0; i < m_listeners.size(); i++)
+      acto::destroy(m_listeners[i]);
+  }
 
 private:
-    std::vector<acto::actor_ref> m_listeners;
+  void doComplete(acto::actor_ref sender, const msg_complete& msg) {
+    std::cout << msg.cycles << std::endl;
+  }
+
+  void doStart(acto::actor_ref sender, const msg_start& msg) {
+    for (size_t i = 0; i < LISTENERS; i++) {
+      acto::actor_ref actor = acto::spawn<Listener>(self());
+
+      actor.send(msg_start());
+      m_listeners.push_back(actor);
+    }
+  }
+
+  void doStop(acto::actor_ref sender, const msg_stop& msg) {
+    for (size_t i = 0; i < m_listeners.size(); i++) {
+       m_listeners[i].send(msg_stop());
+       // Ждать завершения работы агента
+       acto::join(m_listeners[i]);
+      }
+      this->die();
+  }
+
+private:
+  std::vector<acto::actor_ref> m_listeners;
 };
 
 
 //-----------------------------------------------------------------------------
 int main() {
-    // Инициализировать библиотеку.
-    acto::startup();
-    {
-        // -
-        acto::actor_ref analizer = acto::spawn< Analizer >(acto::aoExclusive);
-        // -
-        std::cout << "Statistic is being collected." << std::endl;
-        std::cout << "Please wait some seconds..." << std::endl;
-        // Запустить выполнение примера
-        analizer.send(msg_start());
+  // Инициализировать библиотеку.
+  acto::startup();
+  {
+    acto::actor_ref analizer = acto::spawn< Analizer >(acto::aoExclusive);
+    // -
+    std::cout << "Statistic is being collected." << std::endl;
+    std::cout << "Please wait some seconds..." << std::endl;
+    // Запустить выполнение примера
+    analizer.send(msg_start());
 
-        acto::core::sleep(5 * 1000);
-        // Оставноваить выполнение и собрать статистику
-        analizer.send(msg_stop());
+    acto::core::sleep(5 * 1000);
+    // Оставноваить выполнение и собрать статистику
+    analizer.send(msg_stop());
 
-        acto::join(analizer);
-    }
-    // Освободить ресурсы
-    acto::shutdown();
+    acto::join(analizer);
+  }
+  // Освободить ресурсы
+  acto::shutdown();
 
-    std::cout << ":end" << std::endl;
+  std::cout << ":end" << std::endl;
 
 #ifdef ACTO_WIN
-    _getch();
+  _getch();
 #endif
 
-    return 0;
+  return 0;
 }

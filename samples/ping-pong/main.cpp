@@ -25,9 +25,9 @@
 #include <acto.h>
 
 #ifdef ACTO_WIN
-#   include <conio.h>
+# include <conio.h>
 #else
-#   include <stdio.h>
+# include <stdio.h>
 #endif
 
 // Кол-во мячей в игре
@@ -45,15 +45,15 @@ static const int PLAYERS  = 10 * 1000;
 
 // Начать игру
 struct msg_start {
-    // Кол-во мячей в игре
-    int             balls;
-    acto::actor_ref console;
+  // Кол-во мячей в игре
+  int             balls;
+  acto::actor_ref console;
 
 public:
-    msg_start(int balls_, acto::actor_ref& console_)
-        : balls( balls_ )
-        , console( console_ )
-    { }
+  msg_start(int balls_, acto::actor_ref& console_)
+      : balls( balls_ )
+      , console( console_ )
+  { }
 };
 
 
@@ -69,12 +69,12 @@ struct msg_ball
 
 // Вывести текст на консоль
 struct msg_out {
-    std::string     text;
+  std::string     text;
 
 public:
-    msg_out(const std::string& text_)
-        : text( text_ )
-    { }
+  msg_out(const std::string& text_)
+      : text( text_ )
+  { }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -88,170 +88,168 @@ public:
 //       выводе из разных потоков.
 class Console : public acto::actor {
 public:
-    Console() {
-        // Метод Handler связывает конкретную процедуру с библиотекой
-        // для обработки сообщения указанного типа.
-        Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
-            { std::cout << msg.text << std::endl; }
-        );
+  Console() {
+    // Метод handler связывает конкретную процедуру с библиотекой
+    // для обработки сообщения указанного типа.
+    handler< msg_out >( [] (acto::actor_ref sender, const msg_out& msg)
+      { std::cout << msg.text << std::endl; }
+    );
 
 
-        // Во время работы программы можно сменить обработчик просто указав другой метод.
-        // Ex:
-        //    Handler< msg_out >( &Console::another_proc );
-        //
-        //    Handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
-        //        { ; }
-        //    );
-        // Для того, чтобы отключить обработку указанного сообщения необходимо вызвать
-        // метод Handler без параметров.
-        // Ex:
-        //    Handler< msg_out >();
-        //
-        // Метод Handler является защищенным методом класса act_o::actor.
-        // Это означает, что его невозможно использовать во вне класса-актера.
-        // Также это означает, что Handler устанавливает обработчики только
-        // для объектов данного класса и никакого другого.
-    }
+    // Во время работы программы можно сменить обработчик просто указав другой метод.
+    // Ex:
+    //    handler< msg_out >( &Console::another_proc );
+    //
+    //    handler< msg_out >( [] (acto::actor_ref& sender, const msg_out& msg)
+    //        { ; }
+    //    );
+    // Для того, чтобы отключить обработку указанного сообщения необходимо вызвать
+    // метод handler без параметров.
+    // Ex:
+    //    handler< msg_out >();
+    //
+    // Метод handler является защищенным методом класса act_o::actor.
+    // Это означает, что его невозможно использовать во вне класса-актера.
+    // Также это означает, что handler устанавливает обработчики только
+    // для объектов данного класса и никакого другого.
+  }
 };
 
 
 // Desc: Отбивает мяч
 class Player : public acto::actor {
 private:
-    void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
-        // Отправить мяч обратно
-        sender.send(msg_ball());
-    }
+  void do_ball(acto::actor_ref sender, const msg_ball& msg) {
+    // Отправить мяч обратно
+    sender.send(msg_ball());
+  }
 
 public:
-    Player() {
-        Handler< msg_ball >( &Player::do_ball );
-    }
+  Player() {
+    handler< msg_ball >( &Player::do_ball );
+  }
 };
 
 
 // Desc: Мяч отскакивает одному из игроков
 class Wall : public acto::actor {
-    // Консоль
-    acto::actor_ref m_console;
-    // Множество игроков
-    acto::actor_ref m_players[ PLAYERS ];
-    // Счетчик отскоков мячей от стены
-    long long       m_counter;
-    // Признак окончания игры
-    bool            m_finished;
+  // Консоль
+  acto::actor_ref m_console;
+  // Множество игроков
+  acto::actor_ref m_players[ PLAYERS ];
+  // Счетчик отскоков мячей от стены
+  long long       m_counter;
+  // Признак окончания игры
+  bool            m_finished;
 
 public:
-    Wall()
-        : m_counter ( 0 )
-        , m_finished( false )
-    {
-        Handler< msg_ball   >( &Wall::do_ball   );
-        Handler< msg_finish >( &Wall::do_finish );
-        Handler< msg_start  >( &Wall::do_start  );
+  Wall()
+    : m_counter ( 0 )
+    , m_finished( false )
+  {
+    handler< msg_ball   >( &Wall::do_ball   );
+    handler< msg_finish >( &Wall::do_finish );
+    handler< msg_start  >( &Wall::do_start  );
 
-        // Инициализация игроков
-        for (int i = 0; i < PLAYERS; i++)
-            m_players[i] = acto::spawn< Player >();
-    }
+    // Инициализация игроков
+    for (int i = 0; i < PLAYERS; i++)
+      m_players[i] = acto::spawn< Player >();
+  }
 
-    ~Wall() {
-        // Необходимо явно вызвать функцию удаления для каждого созданного объекта
-        for (int i = 0; i < PLAYERS; i++)
-            acto::destroy(m_players[i]);
-    }
+  ~Wall() {
+    // Необходимо явно вызвать функцию удаления для каждого созданного объекта
+    for (int i = 0; i < PLAYERS; i++)
+      acto::destroy(m_players[i]);
+  }
 
 private:
-    void do_ball(acto::actor_ref& sender, const msg_ball& msg) {
-        if (!m_finished) {
-            // Увеличить счетчик отскоков от стены
-            m_counter++;
-            // Послать случайно выбранному игроку
-            m_players[ (rand() % PLAYERS) ].send(msg_ball());
-        }
+  void do_ball(acto::actor_ref sender, const msg_ball& msg) {
+    if (!m_finished) {
+      // Увеличить счетчик отскоков от стены
+      m_counter++;
+      // Послать случайно выбранному игроку
+      m_players[ (rand() % PLAYERS) ].send(msg_ball());
     }
+  }
 
-    void do_finish(acto::actor_ref& sender, const msg_finish& msg) {
-        m_finished = true;
-        // -
-        char    buffer[255];
+  void do_finish(acto::actor_ref sender, const msg_finish& msg) {
+    m_finished = true;
+    // -
+    char    buffer[255];
 
-        sprintf(buffer, "Counter : %d", (int)m_counter);
-        // Отправить сообщение на консоль
-        m_console.send< msg_out >(std::string(buffer));
-        // Завершить выполнение текущего актера
-        this->die();
-    }
+    sprintf(buffer, "Counter : %d", (int)m_counter);
+    // Отправить сообщение на консоль
+    m_console.send< msg_out >(std::string(buffer));
+    // Завершить выполнение текущего актера
+    this->die();
+  }
 
-    void do_start(acto::actor_ref& sender, const msg_start& msg) {
-        m_console = msg.console;
+  void do_start(acto::actor_ref sender, const msg_start& msg) {
+    m_console = msg.console;
 
-        // Послать мячи в игру
-        for (int i = 0; i < msg.balls; i++)
-            m_players[ (rand() % PLAYERS) ].send(msg_ball());
-    }
+    // Послать мячи в игру
+    for (int i = 0; i < msg.balls; i++)
+      m_players[ (rand() % PLAYERS) ].send(msg_ball());
+  }
 };
 
-
-//-------------------------------------------------------------------------------------------------
 int main() {
-    std::cout << "Balls    : " << BALLS    << std::endl;
-    std::cout << "Duration : " << DURATION << std::endl;
-    std::cout << "Players  : " << PLAYERS  << std::endl;
-    std::cout << std::endl;
+  std::cout << "Balls    : " << BALLS    << std::endl;
+  std::cout << "Duration : " << DURATION << std::endl;
+  std::cout << "Players  : " << PLAYERS  << std::endl;
+  std::cout << std::endl;
 
-    for (unsigned int i = 1; i < 4; i++) {
-        std::cout << "--- " << i << " : start acto ---" << std::endl;
-        // Инициализировать библиотеку.
-        // Данную функцию необходимо вызывать обязательно, так как иначе
-        // поведение бибилиотеки будет непредсказуемым, но скорее всего она просто
-        // не будет функционировать.
-        acto::startup();
-        {
-            // Создать консоль.
-            // Все актеры должны создаваться с использованием шаблона act_o::spawn<>.
-            // Использование оператора new недопустимо.
-            acto::actor_ref console = acto::spawn< Console >(acto::aoBindToThread);
+  for (unsigned int i = 1; i < 4; i++) {
+    std::cout << "--- " << i << " : start acto ---" << std::endl;
+    // Инициализировать библиотеку.
+    // Данную функцию необходимо вызывать обязательно, так как иначе
+    // поведение бибилиотеки будет непредсказуемым, но скорее всего она просто
+    // не будет функционировать.
+    acto::startup();
+    {
+      // Создать консоль.
+      // Все актеры должны создаваться с использованием шаблона act_o::spawn<>.
+      // Использование оператора new недопустимо.
+      acto::actor_ref console = acto::spawn< Console >(acto::aoBindToThread);
 
-            for(unsigned int j = 0; j < 3; j++) {
-                // Создать стену.
-                // Опция "acto::aoExclusive" создает для объекта отдельный поток,
-                // в котором будут выполнятся все обработчики этого объекта
-                acto::actor_ref wall = acto::spawn< Wall >();
+      for(unsigned int j = 0; j < 1; j++) {
+        // Создать стену.
+        // Опция "acto::aoExclusive" создает для объекта отдельный поток,
+        // в котором будут выполнятся все обработчики этого объекта
+        acto::actor_ref wall = acto::spawn< Wall >();
 
-                // -
-                console.send< msg_out >("send start");
-
-                // Начать игру: инициализировать объект, запустить мячи
-                wall.send< msg_start >(BALLS, console);
-
-                // Игра продолжается некоторое время в независимых потоках
-                acto::core::sleep(DURATION);
-
-                // Остановить игру
-                wall.send(msg_finish());
-
-                // Дождаться завершения выполнения
-                acto::join(wall);
-
-                // Обработать сообщения для консоли
-                acto::process_messages();
-            }
-            acto::core::sleep(1000);
-        }
-        // По зовершении работы библиотеки необходимо вызвать эту функцию,
-        // чтобы освободить все занимаемые ресурсы.
-        acto::shutdown();
         // -
-        std::cout << "--- end acto ---" << std::endl;
-    }
+        console.send< msg_out >("send start");
 
-    // Выполнение программы закончено
-    std::cout << ": end" << std::endl;
-#ifdef ACTO_WIN
-    _getch();
-#endif
+        // Начать игру: инициализировать объект, запустить мячи
+        wall.send< msg_start >(BALLS, console);
+
+        // Игра продолжается некоторое время в независимых потоках
+        acto::core::sleep(DURATION);
+
+        // Остановить игру
+        wall.send(msg_finish());
+
+        // Дождаться завершения выполнения
+        acto::join(wall);
+
+        // Обработать сообщения для консоли
+        acto::process_messages();
+      }
+      acto::core::sleep(1000);
+    }
+    // По зовершении работы библиотеки необходимо вызвать эту функцию,
+    // чтобы освободить все занимаемые ресурсы.
+    acto::shutdown();
     // -
-    return 0;
+    std::cout << "--- end acto ---" << std::endl;
+  }
+
+  // Выполнение программы закончено
+  std::cout << ": end" << std::endl;
+#ifdef ACTO_WIN
+  _getch();
+#endif
+  // -
+  return 0;
 }
