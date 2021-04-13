@@ -16,9 +16,9 @@ struct binding_context_t {
 };
 
 /// -
-extern TLS_VARIABLE object_t* active_actor;
+extern thread_local object_t* active_actor;
 /// -
-static TLS_VARIABLE binding_context_t* threadCtx = nullptr;
+static thread_local std::unique_ptr<binding_context_t> thread_context{nullptr};
 
 /**
  */
@@ -45,7 +45,7 @@ public:
       result->references += 1;
       result->binded = true;
 
-      threadCtx->actors.insert(result);
+      thread_context->actors.insert(result);
     } else {
       std::lock_guard<std::mutex> g(m_cs);
 
@@ -233,96 +233,85 @@ private:
 };
 
 
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
 runtime_t::runtime_t()
     : m_pimpl(new impl())
 {
 }
-//-----------------------------------------------------------------------------
-runtime_t::~runtime_t() {
-}
-//-----------------------------------------------------------------------------
+
+runtime_t::~runtime_t() = default;
+
 runtime_t* runtime_t::instance() {
-    static runtime_t value;
-
-    return &value;
+  static runtime_t value;
+  return &value;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//                            PUBLIC METHODS                                 //
-///////////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------------
 unsigned long runtime_t::acquire(object_t* const obj) {
-    return m_pimpl->acquire(obj);
+  return m_pimpl->acquire(obj);
 }
-//-----------------------------------------------------------------------------
+
 object_t* runtime_t::create_actor(base_t* const body, const int options) {
-    return m_pimpl->create_actor(body, options);
+  return m_pimpl->create_actor(body, options);
 }
-//-----------------------------------------------------------------------------
+
 void runtime_t::create_thread_binding() {
-    if (!threadCtx) {
-        threadCtx = new binding_context_t();
-        threadCtx->counter = 1;
-    } else {
-        ++threadCtx->counter;
-    }
+  if (thread_context) {
+    ++thread_context->counter;
+  } else {
+    thread_context.reset(new binding_context_t);
+    thread_context->counter = 1;
+  }
 }
-//-----------------------------------------------------------------------------
+
 void runtime_t::deconstruct_object(object_t* const obj) {
-    m_pimpl->deconstruct_object(obj);
+  m_pimpl->deconstruct_object(obj);
 }
-//-----------------------------------------------------------------------------
+
 void runtime_t::destroy_thread_binding() {
-    if (threadCtx) {
-        if (--threadCtx->counter == 0) {
-            this->process_binded_actors(threadCtx->actors, true);
-
-            delete threadCtx, threadCtx = 0;
-        }
+  if (thread_context) {
+    if (--thread_context->counter == 0) {
+      this->process_binded_actors(thread_context->actors, true);
+      thread_context.reset();
     }
+  }
 }
-//-----------------------------------------------------------------------------
-void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
-    m_pimpl->handle_message(std::move(msg));
-}
-//-----------------------------------------------------------------------------
-void runtime_t::join(object_t* const obj) {
-    m_pimpl->join(obj);
-}
-//-----------------------------------------------------------------------------
-void runtime_t::process_binded_actors() {
-    assert(threadCtx != nullptr);
 
-    this->process_binded_actors(threadCtx->actors, false);
+void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
+  m_pimpl->handle_message(std::move(msg));
 }
-//-----------------------------------------------------------------------------
+
+void runtime_t::join(object_t* const obj) {
+  m_pimpl->join(obj);
+}
+
+void runtime_t::process_binded_actors() {
+  assert(thread_context);
+
+  this->process_binded_actors(thread_context->actors, false);
+}
+
 unsigned long runtime_t::release(object_t* const obj) {
   return m_pimpl->release(obj);
 }
-//-----------------------------------------------------------------------------
+
 void runtime_t::register_module(main_module_t* const inst) {
-    m_pimpl->register_module(inst);
-    inst->startup(this);
-}
-//-----------------------------------------------------------------------------
-void runtime_t::send(object_t* const sender, object_t* const target, std::unique_ptr<msg_t> msg) {
-    m_pimpl->send(sender, target, std::move(msg));
-}
-//-----------------------------------------------------------------------------
-void runtime_t::shutdown() {
-    this->destroy_thread_binding();
-    // -
-    m_pimpl->reset();
-}
-//-----------------------------------------------------------------------------
-void runtime_t::startup() {
-    this->create_thread_binding();
+  m_pimpl->register_module(inst);
+  inst->startup(this);
 }
 
-//-----------------------------------------------------------------------------
+void runtime_t::send(object_t* const sender, object_t* const target, std::unique_ptr<msg_t> msg) {
+  m_pimpl->send(sender, target, std::move(msg));
+}
+
+void runtime_t::shutdown() {
+  this->destroy_thread_binding();
+  // -
+  m_pimpl->reset();
+}
+
+void runtime_t::startup() {
+  this->create_thread_binding();
+}
+
 void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
   for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
     object_t* const actor = *i;

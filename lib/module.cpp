@@ -9,7 +9,7 @@ namespace acto {
 namespace core {
 
 /// Объект, от имени которого посылается сообщение
-TLS_VARIABLE object_t* active_actor;
+thread_local object_t* active_actor{nullptr};
 
 /**
  */

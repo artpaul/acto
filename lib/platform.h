@@ -71,9 +71,6 @@
     // -
 #   include <windows.h>
 
-#   define FORCE_INLINE     inline
-#   define TLS_VARIABLE     __declspec (thread)
-
     /* Целые со знаком */
     typedef __int8              i8;
     typedef __int16             i16;
@@ -110,9 +107,6 @@ namespace core {
 }
 
 #elif defined (ACTO_LINUX)
-
-#   define FORCE_INLINE     __inline__ __attribute__((always_inline))
-#   define TLS_VARIABLE     __thread
 
 #   include <pthread.h>
 #   include <stdint.h>
@@ -152,7 +146,4 @@ namespace core {
 
 }
 
-#else
-#   define FORCE_INLINE
-#   define TLS_VARIABLE
 #endif
