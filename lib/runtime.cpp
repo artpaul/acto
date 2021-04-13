@@ -19,16 +19,16 @@ static thread_local object_t* active_actor{nullptr};
 /// -
 static thread_local std::unique_ptr<binding_context_t> thread_context{nullptr};
 
-runtime_t::runtime_t() {
+runtime_t::runtime_t()
+  : m_scheduler(&runtime_t::execute, this)
+{
   m_clean.signaled();
   m_evnoworkers.signaled();
-  m_scheduler.reset(new std::thread(&runtime_t::execute, this));
 }
 
 runtime_t::~runtime_t() {
-  // Дождаться, когда все потоки будут удалены
   m_terminating = true;
-
+  // Дождаться, когда все потоки будут удалены
   m_event.signaled();
   m_evnoworkers.wait();
 
@@ -36,8 +36,8 @@ runtime_t::~runtime_t() {
 
   m_event.signaled();
 
-  if (m_scheduler->joinable()) {
-    m_scheduler->join();
+  if (m_scheduler.joinable()) {
+    m_scheduler.join();
   }
 
   assert(m_workers.count == 0 && m_workers.reserved == 0);
@@ -100,7 +100,7 @@ void runtime_t::create_thread_binding() {
 }
 
 void runtime_t::deconstruct_object(object_t* const obj) {
-  assert(obj != 0);
+  assert(obj);
 
   bool deleting = false;
   {
@@ -161,8 +161,7 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
 
   try {
     assert(active_actor == nullptr);
-    // TN: Данный параметр читает только функция determine_sender,
-    //     которая всегда выполняется в контексте этого потока.
+
     active_actor = obj;
 
     obj->impl->consume_package(std::move(msg));
@@ -202,7 +201,7 @@ void runtime_t::join(object_t* const obj) {
 void runtime_t::process_binded_actors() {
   assert(thread_context);
 
-  this->process_binded_actors(thread_context->actors, false);
+  process_binded_actors(thread_context->actors, false);
 }
 
 unsigned long runtime_t::release(object_t* const obj) {
@@ -232,7 +231,28 @@ void runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
     acquire(msg->sender);
   }
 
-  send_message(std::move(msg));
+  {
+    std::lock_guard<std::recursive_mutex> g(target->cs);
+
+    // Can not send messages to deleting object.
+    if (target->deleting) {
+        return;
+    }
+    // 1. Поставить сообщение в очередь объекта
+    target->enqueue(std::move(msg));
+    // 2. Подобрать для него необходимый поток
+    if (target->binded) {
+      return;
+    }
+    // Wakeup object's thread if the target has
+    // a dedicated thread for message processing.
+    if (worker_t* const thread = target->impl->thread_) {
+      thread->wakeup();
+    } else if (!target->scheduled) {
+      target->scheduled = true;
+      push_object(target);
+    }
+  }
 }
 
 void runtime_t::shutdown() {
@@ -255,7 +275,7 @@ void runtime_t::shutdown() {
 }
 
 void runtime_t::startup() {
-  this->create_thread_binding();
+  create_thread_binding();
 }
 
 void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
@@ -263,16 +283,16 @@ void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool ne
     object_t* const actor = *i;
 
     while (auto msg = actor->select_message()) {
-      this->handle_message(std::move(msg));
+      handle_message(std::move(msg));
     }
     if (need_delete) {
-      this->deconstruct_object(actor);
+      deconstruct_object(actor);
     }
   }
 
   if (need_delete) {
     for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
-      this->release(*i);
+      release(*i);
     }
 
     actors.clear();
@@ -289,43 +309,10 @@ object_t* runtime_t::make_instance(actor_ref context, const int options, actor* 
     body->self_ = actor_ref(result);
     body->bootstrap();
   } else {
-      delete body;
+    delete body;
   }
 
   return result;
-}
-
-
-/// Отправить сообщение соответствующему объекту
-void runtime_t::send_message(std::unique_ptr<msg_t> msg) {
-  assert(msg);
-  assert(msg->target);
-
-  auto target = msg->target;
-
-  {
-    std::lock_guard<std::recursive_mutex> g(target->cs);
-
-    // Can not send messages to deleting object.
-    if (target->deleting) {
-        return;
-    }
-    assert(target->impl);
-    // 1. Поставить сообщение в очередь объекта
-    target->enqueue(std::move(msg));
-    // 2. Подобрать для него необходимый поток
-    if (target->binded) {
-      return;
-    }
-    // Wakeup object's thread if the target has
-    // dedicated thread for message processing.
-    if (worker_t* const thread = target->impl->thread_) {
-      thread->wakeup();
-    } else if (!target->scheduled) {
-      target->scheduled = true;
-      push_object(target);
-    }
-  }
 }
 
 void runtime_t::destroy_object_body(object_t* obj) {
@@ -381,43 +368,6 @@ void runtime_t::push_object(object_t* const obj) {
   m_event.signaled();
 }
 
-void runtime_t::execute() {
-  int newWorkerTimeout = 2;
-  clock_t lastCleanupTime = clock();
-
-  while (m_active) {
-    while(!m_queue.empty()) {
-      dispatch_to_worker(newWorkerTimeout);
-      yield();
-    }
-
-    if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
-      generics::stack_t<worker_t> queue(m_workers.idle.extract());
-
-      // Удалить все потоки
-      while (worker_t* const item = queue.pop()) {
-        delete_worker(item);
-      }
-
-      yield();
-    } else if ((clock() - lastCleanupTime) > (60 * CLOCKS_PER_SEC)) {
-      if (worker_t* const item = m_workers.idle.pop()) {
-        delete_worker(item);
-      }
-
-      lastCleanupTime = clock();
-    }
-  }
-}
-
-void runtime_t::delete_worker(worker_t* const item) {
-  delete item;
-  // Уведомить, что удалены все вычислительные потоки
-  if (--m_workers.count == 0) {
-    m_evnoworkers.signaled();
-  }
-}
-
 worker_t* runtime_t::create_worker() {
   worker_t* const result = new core::worker_t(this);
 
@@ -428,46 +378,75 @@ worker_t* runtime_t::create_worker() {
   return result;
 }
 
-void runtime_t::dispatch_to_worker(int& wait_timeout) {
-  // Прежде чем извлекать объект из очереди, необходимо проверить,
-  // что есть вычислительные ресурсы для его обработки
-  worker_t* worker = m_workers.idle.pop();
+void runtime_t::execute() {
+  int new_worker_timeout = 2;
+  clock_t last_cleanup_time = clock();
 
-  if (!worker) {
-    // Если текущее количество потоков меньше оптимального,
-    // то создать новый поток
-    if (m_workers.count < (m_workers.reserved + (m_processors << 1))) {
-      worker = create_worker();
-    } else {
-      // Подождать некоторое время осовобождения какого-нибудь потока
-      const wait_result result = m_evworker.wait(wait_timeout * 1000);
+  auto delete_worker = [this] (worker_t* const item) {
+    delete item;
+    // Уведомить, что удалены все вычислительные потоки
+    if (--m_workers.count == 0) {
+      m_evnoworkers.signaled();
+    }
+  };
 
-      worker = m_workers.idle.pop();
+  while (m_active) {
+    while(!m_queue.empty()) {
+      // Прежде чем извлекать объект из очереди, необходимо проверить,
+      // что есть вычислительные ресурсы для его обработки
+      worker_t* worker = m_workers.idle.pop();
 
-      if (!worker && (result == WR_TIMEOUT)) {
-        wait_timeout += 2;
-
-        if (m_workers.count < MAX_WORKERS) {
+      if (!worker) {
+        // Если текущее количество потоков меньше оптимального,
+        // то создать новый поток
+        if (m_workers.count < (m_workers.reserved + (m_processors << 1))) {
           worker = create_worker();
         } else {
-          m_evworker.wait();
+          // Подождать некоторое время осовобождения какого-нибудь потока
+          const wait_result result = m_evworker.wait(new_worker_timeout * 1000);
+
+          worker = m_workers.idle.pop();
+
+          if (!worker && (result == WR_TIMEOUT)) {
+            new_worker_timeout += 2;
+
+            if (m_workers.count < MAX_WORKERS) {
+              worker = create_worker();
+            } else {
+              m_evworker.wait();
+            }
+          } else if (new_worker_timeout > 2) {
+            new_worker_timeout -= 2;
+          }
         }
-      } else {
-        if (wait_timeout > 2) {
-          wait_timeout -= 2;
+      }
+
+      if (worker) {
+        if (object_t* const obj = m_queue.pop()) {
+          worker->assign(obj, (CLOCKS_PER_SEC >> 2));
+        } else {
+          m_workers.idle.push(worker);
         }
       }
     }
-  }
 
-  if (worker) {
-    if (object_t* const obj = m_queue.pop()) {
-      worker->assign(obj, (CLOCKS_PER_SEC >> 2));
-    } else {
-      m_workers.idle.push(worker);
+    if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
+      generics::stack_t<worker_t> queue(m_workers.idle.extract());
+
+      // Удалить все потоки
+      while (worker_t* const item = queue.pop()) {
+        delete_worker(item);
+      }
+    } else if ((clock() - last_cleanup_time) > (60 * CLOCKS_PER_SEC)) {
+      if (worker_t* const item = m_workers.idle.pop()) {
+        delete_worker(item);
+      }
+
+      last_cleanup_time = clock();
     }
   }
 }
+
 
 object_t* make_instance(actor_ref context, const int options, actor* body) {
   return runtime_t::instance()->make_instance(std::move(context), options, body);

@@ -7,10 +7,8 @@
 #include <atomic>
 #include <functional>
 #include <mutex>
-//#include <set>
 #include <typeindex>
 #include <typeinfo>
-#include <vector>
 #include <unordered_map>
 
 namespace acto {

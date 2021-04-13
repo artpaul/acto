@@ -15,24 +15,23 @@ struct object_t;
 struct msg_t;
 
 /**
- */
-class worker_callbacks {
-public:
-  virtual ~worker_callbacks() = default;
-
-  virtual void handle_message(std::unique_ptr<msg_t>) = 0;
-  virtual void push_delete(object_t* const) = 0;
-  virtual void push_idle  (worker_t* const) = 0;
-  virtual void  push_object(object_t* const) = 0;
-  virtual object_t* pop_object() = 0;
-};
-
-/**
  * Системный поток
  */
 class worker_t : public generics::intrusive_t<worker_t> {
 public:
-  worker_t(worker_callbacks* const slots);
+  class callbacks {
+  public:
+    virtual ~callbacks() = default;
+
+    virtual void handle_message(std::unique_ptr<msg_t>) = 0;
+    virtual void push_delete(object_t* const) = 0;
+    virtual void push_idle(worker_t* const) = 0;
+    virtual void push_object(object_t* const) = 0;
+    virtual object_t* pop_object() = 0;
+  };
+
+public:
+  worker_t(callbacks* const slots);
   ~worker_t();
 
   // Поместить сообщение в очередь
@@ -52,7 +51,7 @@ private:
   bool process();
 
 private:
-  worker_callbacks* const m_slots;
+  callbacks* const m_slots;
   /// Флаг активности потока
   std::atomic<bool> m_active{true};
   object_t* m_object{nullptr};

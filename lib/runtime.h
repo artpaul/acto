@@ -13,22 +13,7 @@ namespace core {
 /**
  * Данные среды выполнения
  */
-class runtime_t : public worker_callbacks {
-  // -
-  using HeaderQueue = generics::queue_t< object_t >;
-  // -
-  using WorkerStack = generics::mpsc_stack_t< worker_t >;
-
-  //
-  struct workers_t {
-    // Текущее кол-во потоков
-    std::atomic<unsigned long> count{0};
-    // Текущее кол-во эксклюзивных потоков
-    std::atomic<unsigned long> reserved{0};
-    // Свободные потоки
-    WorkerStack idle;
-  };
-
+class runtime_t : public worker_t::callbacks {
   // Максимальное кол-во рабочих потоков в системе
   static constexpr ssize_t MAX_WORKERS = 512;
 
@@ -78,24 +63,28 @@ private:
   void push_object(object_t* const obj) override;
 
 private:
-  void send_message(std::unique_ptr<msg_t> msg);
   void destroy_object_body(object_t* obj);
 
   void execute();
 
-  void delete_worker(worker_t* const item);
-
   worker_t* create_worker();
-
-  void dispatch_to_worker(int& wait_timeout);
 
   void process_binded_actors(std::set<object_t*>& actors, const bool need_delete);
 
 private:
-  /// Тип множества актеров
   using actors = std::set<object_t*>;
 
-  /// Количество физических процессоров (ядер) в системе
+  struct workers_t {
+    /// Number of allocated threads.
+    std::atomic<unsigned long> count{0};
+    /// Number of dedicated threads.
+    std::atomic<unsigned long> reserved{0};
+    /// List of idle threads.
+    generics::mpsc_stack_t<worker_t> idle;
+  };
+
+
+  /// Number of physical cores in the system.
   const unsigned long m_processors{NumberOfProcessors()};
   /// Критическая секция для доступа к полям
   std::mutex m_cs;
@@ -107,15 +96,15 @@ private:
   event_t m_event{true};
   event_t m_evworker{true};
   event_t m_evnoworkers;
-  /// Очередь объектов, которым пришли сообщения
-  HeaderQueue m_queue;
-  /// Экземпляр системного потока
-  std::unique_ptr<std::thread> m_scheduler;
+  /// Queue of ojbects with non empty inbox.
+  generics::queue_t<object_t> m_queue;
   /// -
   workers_t m_workers;
   /// -
   std::atomic<bool> m_active{true};
   std::atomic<bool> m_terminating{false};
+  /// Scheduler thread.
+  std::thread m_scheduler;
 };
 
 } // namepsace core

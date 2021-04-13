@@ -4,7 +4,7 @@
 namespace acto {
 namespace core {
 
-worker_t::worker_t(worker_callbacks* const slots)
+worker_t::worker_t(callbacks* const slots)
   : m_slots (slots)
   , m_thread(&worker_t::execute, this)
 {
