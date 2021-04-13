@@ -1,27 +1,26 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+cmake_minimum_required (VERSION 3.1)
 
-FUNCTION (SUBDIRS)
-    FOREACH (dir ${ARGV})
-        ADD_SUBDIRECTORY (${dir})
-    ENDFOREACH(dir)
-ENDFUNCTION (SUBDIRS)
+project (acto LANGUAGES CXX)
+  find_package (Threads REQUIRED)
 
-PROJECT (ACTO-SOLUTION)
+  if (UNIX)
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Werror")
 
-	SET (CMAKE_CXX_STANDARD 14)
-	SET (CMAKE_CXX_STANDARD_REQUIRED ON)
+    link_libraries (pthread)
+  elseif (WIN32)
+    #
+  endif ()
 
-    INCLUDE_DIRECTORIES(lib)
+  # Library sources.
+  add_subdirectory (lib)
 
-	IF (UNIX)
-		SET (CMAKE_CXX_FLAGS "-pthread -Wall -Werror")
-		SET (CMAKE_EXE_LINKER_FLAGS, "-lrt -lpthread")
-	ELSEIF (WIN32)
-		#
-    ENDIF ()
+  # Determine whether this is a standalone project or
+  # included by other projects.
+  if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set (CMAKE_CXX_STANDARD 14)
+    set (CMAKE_CXX_STANDARD_REQUIRED ON)
+    set (CMAKE_CXX_EXTENSIONS OFF)
 
-    SUBDIRS (
-        lib
-        samples/cycles
-        samples/ping-pong
-    )
+    # Build samples.
+    add_subdirectory (samples)
+  endif ()
