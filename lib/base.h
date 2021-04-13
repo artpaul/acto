@@ -196,7 +196,7 @@ class base_t {
   public:
     virtual ~handler_t() = default;
 
-    virtual void invoke(object_t* const sender, std::unique_ptr<msg_t> msg) const = 0;
+    virtual void invoke(const std::unique_ptr<msg_t> msg) const = 0;
   };
 
   /**
@@ -215,8 +215,8 @@ class base_t {
     }
 
     // Вызвать обработчик
-    virtual void invoke(object_t* const sender, std::unique_ptr<msg_t> msg) const {
-      m_delegate(m_c, actor_ref(sender), static_cast<const msg_wrap_t<MsgT>*>(msg.get())->data());
+    void invoke(const std::unique_ptr<msg_t> msg) const override {
+      m_delegate(m_c, actor_ref(msg->sender), static_cast<const msg_wrap_t<MsgT>*>(msg.get())->data());
     }
 
   private:
@@ -239,8 +239,8 @@ class base_t {
     }
 
     // Вызвать обработчик
-    virtual void invoke(object_t* const sender, std::unique_ptr<msg_t> msg) const {
-      m_delegate(actor_ref(sender), static_cast<const msg_wrap_t<MsgT>*>(msg.get())->data());
+    void invoke(const std::unique_ptr<msg_t> msg) const override {
+      m_delegate(actor_ref(msg->sender), static_cast<const msg_wrap_t<MsgT>*>(msg.get())->data());
     }
 
   private:

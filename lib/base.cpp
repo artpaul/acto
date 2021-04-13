@@ -49,15 +49,15 @@ void base_t::die() {
 void base_t::consume_package(std::unique_ptr<msg_t> p) {
   const auto hi = handlers_.find(p->type);
   if (hi != handlers_.end()) {
-      hi->second->invoke(p->sender, std::move(p));
+    hi->second->invoke(std::move(p));
   }
 }
 
 void base_t::set_handler(const std::type_index& type, std::unique_ptr<handler_t> h) {
   if (h) {
-      handlers_[type] = std::move(h);
+    handlers_[type] = std::move(h);
   } else {
-      handlers_.erase(type);
+    handlers_.erase(type);
   }
 }
 
