@@ -36,7 +36,7 @@ struct msg_t;
  */
 struct object_t : public intrusive_t<object_t> {
   struct waiter_t : public intrusive_t<waiter_t> {
-    event_t* event{nullptr};
+    event_t event;
   };
 
   using atomic_stack_t = generics::mpsc_stack_t<msg_t> ;
@@ -47,7 +47,7 @@ struct object_t : public intrusive_t<object_t> {
 
   // Реализация объекта
   base_t* impl{nullptr};
-  // Список сигналов для потоков, ожидающих уничтожения объекта
+  // Список сигналов для потоков, ожидающих уничтожения объекта.
   waiter_t* waiters{nullptr};
   // Очередь сообщений, поступивших данному объекту
   atomic_stack_t input_stack;

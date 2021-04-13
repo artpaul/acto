@@ -114,25 +114,21 @@ public:
       return;
     }
 
-    std::unique_ptr< object_t::waiter_t > node;
-    event_t event;
+    object_t::waiter_t node;
 
     {
       std::lock_guard<std::recursive_mutex> g(obj->cs);
 
       if (obj->impl) {
-        node.reset(new object_t::waiter_t());
-
-        node->event  = &event;
-        node->next   = obj->waiters;
-        obj->waiters = node.get();
-        event.reset();
+        node.event.reset();
+        node.next = obj->waiters;
+        obj->waiters = &node;
+      } else {
+        return;
       }
     }
 
-    if (node.get() != nullptr) {
-      event.wait();
-    }
+    node.event.wait();
   }
 
   unsigned long release(object_t* const obj) {
@@ -157,9 +153,9 @@ public:
     {
       std::lock_guard<std::mutex> g(m_cs);
 
-      Actors temporary(m_actors);
+      actors temporary(m_actors);
 
-      for (Actors::iterator i = temporary.begin(); i != temporary.end(); ++i) {
+      for (actors::iterator i = temporary.begin(); i != temporary.end(); ++i) {
         deconstruct_object(*i);
       }
     }
@@ -209,15 +205,12 @@ private:
     obj->unimpl = false;
 
     if (obj->waiters) {
-      object_t::waiter_t* next = nullptr;
-      object_t::waiter_t* it   = obj->waiters;
-
-      while (it) {
+      for (object_t::waiter_t* it = obj->waiters; it != nullptr; ) {
         // TN: Необходимо читать значение следующего указателя
         //     заранее, так как пробуждение ждущего потока
         //     приведет к удалению текущего узла списка
-        next = it->next;
-        it->event->signaled();
+        object_t::waiter_t* next = it->next;
+        it->event.signaled();
         it = next;
       }
 
@@ -227,14 +220,14 @@ private:
 
 private:
   /// Тип множества актеров
-  using Actors = std::set<object_t*>;
+  using actors = std::set<object_t*>;
 
   /// Критическая секция для доступа к полям
   std::mutex m_cs;
   ///
   event_t m_clean;
   /// Текущее множество актеров
-  Actors m_actors;
+  actors m_actors;
 
   main_module_t* m_module{nullptr};
 };
