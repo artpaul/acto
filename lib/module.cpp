@@ -22,9 +22,9 @@ class main_module_t::impl : public worker_callbacks {
   //
   struct workers_t {
     // Текущее кол-во потоков
-    std::atomic<long> count{0};
+    std::atomic<unsigned long> count{0};
     // Текущее кол-во эксклюзивных потоков
-    std::atomic<long> reserved{0};
+    std::atomic<unsigned long> reserved{0};
     // Свободные потоки
     WorkerStack idle;
   };
@@ -167,7 +167,7 @@ public:
 private:
   void execute() {
     int newWorkerTimeout = 2;
-    int lastCleanupTime = clock();
+    clock_t lastCleanupTime = clock();
 
     while (m_active) {
       while(!m_queue.empty()) {
@@ -254,13 +254,14 @@ private:
   }
 
 private:
+  /// Количество физических процессоров (ядер) в системе
+  const unsigned long m_processors{NumberOfProcessors()};
+
   runtime_t* const m_rt;
   ///
   event_t m_event{true};
   event_t m_evworker{true};
   event_t m_evnoworkers;
-  /// Количество физических процессоров (ядер) в системе
-  long m_processors{NumberOfProcessors()};
   /// Очередь объектов, которым пришли сообщения
   HeaderQueue m_queue;
   /// Экземпляр системного потока

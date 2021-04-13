@@ -87,7 +87,7 @@ namespace acto {
 
 namespace core {
     /// Количетсов физически процессоров (ядер) в системе
-    inline unsigned int NumberOfProcessors() {
+    inline unsigned long NumberOfProcessors() {
         SYSTEM_INFO     si;
         // -
         ::GetSystemInfo( &si );
@@ -129,7 +129,7 @@ namespace acto {
 
 namespace core {
     /// Количетсов физически процессоров (ядер) в системе
-    inline unsigned int NumberOfProcessors() {
+    inline unsigned long NumberOfProcessors() {
         static long n_cpu = ::sysconf(_SC_NPROCESSORS_CONF);
 
         return n_cpu;

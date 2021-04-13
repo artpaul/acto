@@ -17,9 +17,6 @@
 #include <iostream>
 #include <string>
 
-// Исключить компоненты сетевого взаимодействия
-#define ACTO_EXCLUDE_REMOTE
-
 // Для использование библиотеки достаточно подключить
 // только один этот файл
 #include <acto.h>
@@ -91,7 +88,7 @@ public:
   Console() {
     // Метод handler связывает конкретную процедуру с библиотекой
     // для обработки сообщения указанного типа.
-    handler< msg_out >( [] (acto::actor_ref sender, const msg_out& msg)
+    handler< msg_out >( [] (acto::actor_ref, const msg_out& msg)
       { std::cout << msg.text << std::endl; }
     );
 
@@ -119,7 +116,7 @@ public:
 // Desc: Отбивает мяч
 class Player : public acto::actor {
 private:
-  void do_ball(acto::actor_ref sender, const msg_ball& msg) {
+  void do_ball(acto::actor_ref sender, const msg_ball&) {
     // Отправить мяч обратно
     sender.send(msg_ball());
   }
@@ -163,7 +160,7 @@ public:
   }
 
 private:
-  void do_ball(acto::actor_ref sender, const msg_ball& msg) {
+  void do_ball(acto::actor_ref, const msg_ball&) {
     if (!m_finished) {
       // Увеличить счетчик отскоков от стены
       m_counter++;
@@ -172,7 +169,7 @@ private:
     }
   }
 
-  void do_finish(acto::actor_ref sender, const msg_finish& msg) {
+  void do_finish(acto::actor_ref, const msg_finish&) {
     m_finished = true;
     // -
     char    buffer[255];
@@ -184,7 +181,7 @@ private:
     this->die();
   }
 
-  void do_start(acto::actor_ref sender, const msg_start& msg) {
+  void do_start(acto::actor_ref, const msg_start& msg) {
     m_console = msg.console;
 
     // Послать мячи в игру

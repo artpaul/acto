@@ -67,7 +67,7 @@ public:
   }
 
 public:
-  void doLoop(acto::actor_ref sender, const msg_loop& msg) {
+  void doLoop(acto::actor_ref, const msg_loop&) {
     if (m_active) {
       m_counter++;
       // Продолжить цикл
@@ -75,13 +75,13 @@ public:
     }
   }
 
-  void doStart(acto::actor_ref sender, const msg_start& msg) {
+  void doStart(acto::actor_ref, const msg_start&) {
     m_active  = true;
     // Начать цикл
     self().send(msg_loop());
   }
 
-  void doStop(acto::actor_ref sender, const msg_stop& msg) {
+  void doStop(acto::actor_ref, const msg_stop&) {
     m_active = false;
     // -
     msg_complete    rval;
@@ -116,20 +116,20 @@ public:
   }
 
 private:
-  void doComplete(acto::actor_ref sender, const msg_complete& msg) {
+  void doComplete(acto::actor_ref, const msg_complete& msg) {
     std::cout << msg.cycles << std::endl;
   }
 
-  void doStart(acto::actor_ref sender, const msg_start& msg) {
+  void doStart(acto::actor_ref, const msg_start&) {
     for (size_t i = 0; i < LISTENERS; i++) {
-      acto::actor_ref actor = acto::spawn<Listener>(self());
+      acto::actor_ref listener = acto::spawn<Listener>(self());
 
-      actor.send(msg_start());
-      m_listeners.push_back(actor);
+      listener.send(msg_start());
+      m_listeners.push_back(listener);
     }
   }
 
-  void doStop(acto::actor_ref sender, const msg_stop& msg) {
+  void doStop(acto::actor_ref, const msg_stop&) {
     for (size_t i = 0; i < m_listeners.size(); i++) {
        m_listeners[i].send(msg_stop());
        // Ждать завершения работы агента
