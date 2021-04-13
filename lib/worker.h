@@ -1,7 +1,7 @@
 #pragma once
 
+#include "generics.h"
 #include "event.h"
-#include "intrlist.h"
 
 #include <atomic>
 #include <ctime>
@@ -30,7 +30,7 @@ public:
 /**
  * Системный поток
  */
-class worker_t : public intrusive_t<worker_t> {
+class worker_t : public generics::intrusive_t<worker_t> {
 public:
   worker_t(worker_callbacks* const slots);
   ~worker_t();

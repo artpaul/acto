@@ -6,9 +6,7 @@ target_include_directories (acto-lib PUBLIC
 
 target_sources (acto-lib PRIVATE
   "acto.cpp"
-  "base.cpp"
   "event.cpp"
-  "module.cpp"
   "runtime.cpp"
   "worker.cpp"
 )
