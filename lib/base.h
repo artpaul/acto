@@ -1,9 +1,9 @@
 #pragma once
 
-#include <util/event.h>
-#include <util/intrlist.h>
-#include <util/platform.h>
-#include <util/stack.h>
+#include "event.h"
+#include "intrlist.h"
+#include "platform.h"
+#include "stack.h"
 
 #include <functional>
 #include <mutex>

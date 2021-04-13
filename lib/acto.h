@@ -1,8 +1,8 @@
 #pragma once
 
-#include <core/module.h>
-#include <core/services.h>
-#include <util/platform.h>
+#include "module.h"
+#include "services.h"
+#include "platform.h"
 
 namespace acto {
 

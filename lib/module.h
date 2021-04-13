@@ -1,9 +1,8 @@
 #pragma once
 
 #include "base.h"
-
-#include <util/event.h>
-#include <util/queue.h>
+#include "event.h"
+#include "queue.h"
 
 namespace acto {
 namespace core {

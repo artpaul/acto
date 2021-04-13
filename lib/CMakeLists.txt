@@ -1,8 +1,8 @@
 add_library (acto-lib STATIC
     "acto.cpp"
-    "core/base.cpp"
-    "core/module.cpp"
-    "core/runtime.cpp"
-    "core/worker.cpp"
-    "util/event.cpp"
+    "base.cpp"
+    "event.cpp"
+    "module.cpp"
+    "runtime.cpp"
+    "worker.cpp"
 )
