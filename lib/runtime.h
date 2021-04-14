@@ -14,8 +14,10 @@ namespace core {
  * Данные среды выполнения
  */
 class runtime_t : public worker_t::callbacks {
+  using actors_set = std::set<object_t*>;
+
   // Максимальное кол-во рабочих потоков в системе
-  static constexpr ssize_t MAX_WORKERS = 512;
+  static constexpr unsigned int MAX_WORKERS = 512;
 
 public:
   runtime_t();
@@ -69,11 +71,9 @@ private:
 
   worker_t* create_worker();
 
-  void process_binded_actors(std::set<object_t*>& actors, const bool need_delete);
+  void process_binded_actors(actors_set& actors, const bool need_delete);
 
 private:
-  using actors = std::set<object_t*>;
-
   struct workers_t {
     /// Number of allocated threads.
     std::atomic<unsigned long> count{0};
@@ -91,7 +91,7 @@ private:
   ///
   event_t m_clean;
   /// Текущее множество актеров
-  actors m_actors;
+  actors_set m_actors;
   ///
   event_t m_event{true};
   event_t m_evworker{true};

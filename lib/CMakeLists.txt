@@ -10,3 +10,9 @@ target_sources (acto-lib PRIVATE
   "runtime.cpp"
   "worker.cpp"
 )
+
+if (UNIX)
+  target_link_libraries (acto-lib
+    pthread
+  )
+endif ()

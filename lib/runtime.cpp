@@ -220,7 +220,6 @@ unsigned long runtime_t::release(object_t* const obj) {
 void runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(target);
-  assert(target->impl);
 
   msg->sender = active_actor;
   msg->target = target;
@@ -262,10 +261,10 @@ void runtime_t::shutdown() {
   {
     std::lock_guard<std::mutex> g(m_cs);
 
-    actors temporary(m_actors);
+    actors_set temporary(m_actors);
 
-    for (actors::iterator i = temporary.begin(); i != temporary.end(); ++i) {
-      deconstruct_object(*i);
+    for (auto ti = temporary.cbegin(); ti != temporary.cend(); ++ti) {
+      deconstruct_object(*ti);
     }
   }
 
@@ -278,21 +277,19 @@ void runtime_t::startup() {
   create_thread_binding();
 }
 
-void runtime_t::process_binded_actors(std::set<object_t*>& actors, const bool need_delete) {
-  for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
-    object_t* const actor = *i;
-
-    while (auto msg = actor->select_message()) {
+void runtime_t::process_binded_actors(actors_set& actors, const bool need_delete) {
+  for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
+    while (auto msg = (*ai)->select_message()) {
       handle_message(std::move(msg));
     }
     if (need_delete) {
-      deconstruct_object(actor);
+      deconstruct_object(*ai);
     }
   }
 
   if (need_delete) {
-    for (std::set<object_t*>::iterator i = actors.begin(); i != actors.end(); ++i) {
-      release(*i);
+    for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
+      release(*ai);
     }
 
     actors.clear();

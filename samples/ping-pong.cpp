@@ -13,19 +13,18 @@
 //                                                                                               //
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <cstdlib>
-#include <iostream>
-#include <string>
+#ifdef _WIN32
+# define _CRT_SECURE_NO_WARNINGS
+# include <conio.h>
+#endif
 
 // Для использование библиотеки достаточно подключить
 // только один этот файл
 #include <acto.h>
 
-#ifdef ACTO_WIN
-# include <conio.h>
-#else
-# include <stdio.h>
-#endif
+#include <cstdlib>
+#include <iostream>
+#include <string>
 
 // Кол-во мячей в игре
 static const int BALLS    = 1  * 1000;
