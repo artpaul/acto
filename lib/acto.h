@@ -74,15 +74,13 @@ public:
 };
 
 
-/**
- * Базовый тип для сообщений
- */
 struct msg_t : generics::intrusive_t<msg_t> {
-  // Код типа сообщения
+  /// Unique code for the message type.
   const std::type_index type;
-  // Отправитель сообщения
+  /// Sender of the message.
+  /// Can be empty.
   object_t* sender{nullptr};
-  // Получатель сообщения
+  /// Receiver of the message.
   object_t* target{nullptr};
 
 public:
@@ -94,26 +92,75 @@ public:
   virtual ~msg_t();
 };
 
+
+template <typename T, bool>
+struct message_container;
+
+/**
+ * Implements empty base optimization.
+ */
 template <typename T>
-struct msg_wrap_t
-  : public msg_t
-  , private T
-{
-  inline msg_wrap_t(T&& d)
-    : msg_t(typeid(T))
-    , T(std::move(d))
+struct message_container<T, false> : private T {
+  constexpr message_container(T&& t)
+    : T(std::move(t))
   {
   }
 
   template <typename ... Args>
-  inline msg_wrap_t(Args&& ... args)
-    : msg_t(typeid(T))
-    , T(std::forward<Args>(args) ... )
+  constexpr message_container(Args&& ... args)
+    : T(std::forward<Args>(args) ... )
   {
   }
 
-  inline const T& data() const {
+  constexpr const T& data() const {
     return *static_cast<const T*>(this);
+  }
+};
+
+/**
+ * Final classes cannot be used as a base class, so
+ * we need to store them as a field.
+ */
+template <typename T>
+struct message_container<T, true> {
+  constexpr message_container(T&& t)
+    : value_(std::move(t))
+  {
+  }
+
+  template <typename ... Args>
+  constexpr message_container(Args&& ... args)
+    : value_(std::forward<Args>(args) ... )
+  {
+  }
+
+  constexpr const T& data() const {
+    return value_;
+  }
+
+private:
+  const T value_;
+};
+
+template <typename T>
+using message_container_t = message_container<T, std::is_final<T>::value>;
+
+template <typename T>
+struct msg_wrap_t
+  : public msg_t
+  , public message_container_t<T>
+{
+  constexpr msg_wrap_t(T&& d)
+    : msg_t(typeid(T))
+    , message_container_t<T>(std::move(d))
+  {
+  }
+
+  template <typename ... Args>
+  constexpr msg_wrap_t(Args&& ... args)
+    : msg_t(typeid(T))
+    , message_container_t<T>(std::forward<Args>(args) ... )
+  {
   }
 };
 

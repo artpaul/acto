@@ -43,19 +43,19 @@ static const int PLAYERS  = 10 * 1000;
 // Начать игру
 struct msg_start {
   // Кол-во мячей в игре
-  int             balls;
+  int balls;
   acto::actor_ref console;
 
 public:
-  msg_start(int balls_, acto::actor_ref& console_)
-      : balls( balls_ )
-      , console( console_ )
+  msg_start(int balls_, acto::actor_ref console_)
+    : balls(balls_)
+    , console(std::move(console_))
   { }
 };
 
 
 // Завершить игру
-struct msg_finish
+struct msg_finish final
 { };
 
 
@@ -66,11 +66,11 @@ struct msg_ball
 
 // Вывести текст на консоль
 struct msg_out {
-  std::string     text;
+  std::string text;
 
 public:
-  msg_out(const std::string& text_)
-      : text( text_ )
+  msg_out(std::string text_)
+    : text(std::move(text_))
   { }
 };
 
