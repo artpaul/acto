@@ -48,7 +48,7 @@ runtime_t* runtime_t::instance() {
   return &value;
 }
 
-unsigned long runtime_t::acquire(object_t* const obj) {
+unsigned long runtime_t::acquire(object_t* const obj) const noexcept {
   assert(bool(obj) && obj->references);
   return ++obj->references;
 }
@@ -170,7 +170,7 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
   } catch (...) {
     active_actor = nullptr;
   }
-
+  // XXX: unimpl after consuming the message.
   if (obj->impl->terminating_) {
     deconstruct_object(obj);
   }
@@ -217,7 +217,7 @@ unsigned long runtime_t::release(object_t* const obj) {
   return result;
 }
 
-void runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
+bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(target);
 
@@ -235,13 +235,13 @@ void runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
 
     // Can not send messages to deleting object.
     if (target->deleting) {
-        return;
+        return false;
     }
     // 1. Поставить сообщение в очередь объекта
     target->enqueue(std::move(msg));
     // 2. Подобрать для него необходимый поток
     if (target->binded) {
-      return;
+      return true;
     }
     // Wakeup object's thread if the target has
     // a dedicated thread for message processing.
@@ -252,6 +252,8 @@ void runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
       push_object(target);
     }
   }
+
+  return true;
 }
 
 void runtime_t::shutdown() {
@@ -303,7 +305,7 @@ object_t* runtime_t::make_instance(actor_ref context, const int options, actor* 
 
   if (result) {
     body->context_ = std::move(context);
-    body->self_ = actor_ref(result);
+    body->self_ = actor_ref(result, true);
     body->bootstrap();
   } else {
     delete body;

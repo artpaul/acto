@@ -27,7 +27,7 @@ public:
 
 public:
   /// Захватить ссылку на объект
-  unsigned long acquire(object_t* const obj);
+  unsigned long acquire(object_t* const obj) const noexcept;
   /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
   object_t* create_actor(actor* const body, const int options);
   /// Создать контекст связи с текущим системным потоком
@@ -47,7 +47,7 @@ public:
   /// Зарегистрировать новый модуль
   void register_module();
   /// Послать сообщение указанному объекту
-  void send(object_t* const target, std::unique_ptr<msg_t> msg);
+  bool send(object_t* const target, std::unique_ptr<msg_t> msg);
   /// Завершить выполнение
   void shutdown();
   /// Начать выполнение

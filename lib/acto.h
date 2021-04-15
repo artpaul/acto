@@ -177,41 +177,52 @@ class actor_ref {
 public:
   actor_ref() = default;
 
-  explicit actor_ref(core::object_t* const an_object, const bool acquire = true);
+  actor_ref(core::object_t* const an_object, const bool acquire) noexcept;
 
-  actor_ref(const actor_ref& rhs);
-  actor_ref(actor_ref&& rhs);
+  actor_ref(const actor_ref& rhs) noexcept;
+  actor_ref(actor_ref&& rhs) noexcept;
 
   ~actor_ref();
 
 public:
-  /// Инициализирован ли текущий объект
+  /** Is the reference initialized with an object. */
   bool assigned() const noexcept;
 
+  /** Waits until the actor stops. */
   void join();
 
-  /// Sends a message to the actor.
+  /**
+   * Sends a message to the actor.
+   *
+   * @return true if the message has been placed in the actor's mailbox.
+   */
   template <typename MsgT>
-  inline void send(MsgT&& msg) const {
+  inline bool send(MsgT&& msg) const {
     if (m_object) {
-      send_message(
+      return send_message(
         std::make_unique<core::msg_wrap_t<typename std::remove_reference<MsgT>::type>>(std::move(msg))
       );
     }
+    return false;
   }
 
-  /// Sends a message to the actor.
+  /**
+   * Sends a message to the actor.
+   *
+   * @return true if the message has been placed in the actor's mailbox.
+   */
   template <typename MsgT, typename ... P>
-  inline void send(P&& ... p) const {
+  inline bool send(P&& ... p) const {
     if (m_object) {
-      send_message(
+      return send_message(
         std::make_unique<core::msg_wrap_t<MsgT>>(std::forward<P>(p) ... ));
     }
+    return false;
   }
 
 public:
   actor_ref& operator = (const actor_ref& rhs);
-  actor_ref& operator = (actor_ref&& rhs) noexcept;
+  actor_ref& operator = (actor_ref&& rhs);
 
   bool operator == (const actor_ref& rhs) const noexcept;
   bool operator != (const actor_ref& rhs) const noexcept;
@@ -222,7 +233,7 @@ public:
 
 private:
   /// Dispatches a message.
-  void send_message(std::unique_ptr<core::msg_t> msg) const;
+  bool send_message(std::unique_ptr<core::msg_t> msg) const;
 
 private:
   core::object_t* m_object{nullptr};
@@ -261,7 +272,7 @@ class actor {
     void invoke(const std::unique_ptr<core::msg_t> msg) const override {
       m_delegate(
         m_c,
-        actor_ref(msg->sender),
+        actor_ref(msg->sender, true),
         static_cast<const core::msg_wrap_t<MsgT>*>(msg.get())->data());
     }
 
@@ -287,7 +298,7 @@ class actor {
     // Вызвать обработчик
     void invoke(const std::unique_ptr<core::msg_t> msg) const override {
       m_delegate(
-        actor_ref(msg->sender),
+        actor_ref(msg->sender, true),
         static_cast<const core::msg_wrap_t<MsgT>*>(msg.get())->data());
     }
 
@@ -359,7 +370,7 @@ private:
   /// List of message handlers.
   handlers handlers_;
   /// Dedicated thread for the object.
-  core::worker_t* thread_{nullptr};
+  core::worker_t* thread_{nullptr};  // TODO: move to object_t?
   /// Object in terminating state.
   bool terminating_{false};
 };

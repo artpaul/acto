@@ -5,7 +5,7 @@ namespace acto {
 
 static std::atomic_long startup_counter(0);
 
-actor_ref::actor_ref(core::object_t* const an_object, const bool acquire)
+actor_ref::actor_ref(core::object_t* const an_object, const bool acquire) noexcept
   : m_object(an_object)
 {
   if (m_object && acquire) {
@@ -13,7 +13,7 @@ actor_ref::actor_ref(core::object_t* const an_object, const bool acquire)
   }
 }
 
-actor_ref::actor_ref(const actor_ref& rhs)
+actor_ref::actor_ref(const actor_ref& rhs) noexcept
   : m_object(rhs.m_object)
 {
   if (m_object) {
@@ -21,7 +21,7 @@ actor_ref::actor_ref(const actor_ref& rhs)
   }
 }
 
-actor_ref::actor_ref(actor_ref&& rhs)
+actor_ref::actor_ref(actor_ref&& rhs) noexcept
   : m_object(rhs.m_object)
 {
   rhs.m_object = nullptr;
@@ -43,8 +43,8 @@ void actor_ref::join() {
   }
 }
 
-void actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
-  core::runtime_t::instance()->send(m_object, std::move(msg));
+bool actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
+  return core::runtime_t::instance()->send(m_object, std::move(msg));
 }
 
 actor_ref& actor_ref::operator = (const actor_ref& rhs) {
@@ -60,7 +60,7 @@ actor_ref& actor_ref::operator = (const actor_ref& rhs) {
   return *this;
 }
 
-actor_ref& actor_ref::operator = (actor_ref&& rhs) noexcept {
+actor_ref& actor_ref::operator = (actor_ref&& rhs) {
   if (this != &rhs) {
     if (m_object && m_object != rhs.m_object) {
         core::runtime_t::instance()->release(m_object);
