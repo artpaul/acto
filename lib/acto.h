@@ -43,14 +43,16 @@ struct object_t : public generics::intrusive_t<object_t> {
   // Критическая секция для доступа к полям
   std::recursive_mutex cs;
 
-  // Реализация объекта
+  /// Pointer to the object inherited from the actor class (aka actor body).
   actor* impl{nullptr};
+  /// Dedicated thread for the object.
+  worker_t* thread{nullptr};
   // Список сигналов для потоков, ожидающих уничтожения объекта.
   waiter_t* waiters{nullptr};
   // Очередь сообщений, поступивших данному объекту
   atomic_stack_t input_stack;
   intusive_stack_t local_stack;
-  // Count of references to object
+  // Count of references to the object.
   std::atomic<unsigned long> references{0};
   // Флаги состояния текущего объекта
   ui32 binded : 1;
@@ -369,8 +371,6 @@ private:
   actor_ref self_;
   /// List of message handlers.
   handlers handlers_;
-  /// Dedicated thread for the object.
-  core::worker_t* thread_{nullptr};  // TODO: move to object_t?
   /// Object in terminating state.
   bool terminating_{false};
 };

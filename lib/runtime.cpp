@@ -80,7 +80,7 @@ object_t* runtime_t::create_actor(actor* const body, const int options) {
     worker_t* const worker = this->create_worker();
 
     result->scheduled = true;
-    body->thread_ = worker;
+    result->thread = worker;
 
     ++m_workers.reserved;
 
@@ -245,7 +245,7 @@ bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
     }
     // Wakeup object's thread if the target has
     // a dedicated thread for message processing.
-    if (worker_t* const thread = target->impl->thread_) {
+    if (worker_t* const thread = target->thread) {
       thread->wakeup();
     } else if (!target->scheduled) {
       target->scheduled = true;
@@ -323,9 +323,9 @@ void runtime_t::destroy_object_body(object_t* obj) {
   //     два и более потока
 
   {
-    if (obj->impl->thread_) {
+    if (obj->thread) {
       --m_workers.reserved;
-      obj->impl->thread_->wakeup();
+      obj->thread->wakeup();
     }
   }
 
