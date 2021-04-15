@@ -65,14 +65,14 @@ struct object_t : public generics::intrusive_t<object_t> {
 public:
   object_t(actor* const impl_);
 
-  /// Поставить сообщение в очередь
-  void enqueue(std::unique_ptr<msg_t> msg);
+  /// Pushes a message into the mailbox.
+  void enqueue(std::unique_ptr<msg_t> msg) noexcept;
 
-  /// Есть ли сообщения
-  bool has_messages() const;
+  /// Whether any messages in the mailbox.
+  bool has_messages() const noexcept;
 
-  /// Выбрать сообщение из очереди
-  std::unique_ptr<msg_t> select_message();
+  /// Selects a message from the mailbox.
+  std::unique_ptr<msg_t> select_message() noexcept;
 };
 
 
@@ -86,7 +86,7 @@ struct msg_t : generics::intrusive_t<msg_t> {
   object_t* target{nullptr};
 
 public:
-  constexpr msg_t(const std::type_index& idx)
+  constexpr msg_t(const std::type_index& idx) noexcept
     : type(idx)
   {
   }
@@ -177,7 +177,7 @@ class actor_ref {
   friend void destroy(actor_ref& object);
 
 public:
-  actor_ref() = default;
+  actor_ref() noexcept = default;
 
   actor_ref(core::object_t* const an_object, const bool acquire) noexcept;
 

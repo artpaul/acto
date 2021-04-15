@@ -202,11 +202,11 @@ private:
 template <typename T>
 class mpsc_stack_t {
 public:
-  bool empty() const {
+  bool empty() const noexcept {
     return (m_head.load() == nullptr);
   }
 
-  sequence_t<T> extract() {
+  sequence_t<T> extract() noexcept {
     do {
       T* top = m_head.load();
 
@@ -219,7 +219,7 @@ public:
     } while (true);
   }
 
-  void push(T* const node) {
+  void push(T* const node) noexcept {
     do {
       T* top = m_head.load();
       node->next = top;
@@ -229,13 +229,13 @@ public:
     } while (true);
   }
 
-  void push(sequence_t<T>&& seq) {
+  void push(sequence_t<T>&& seq) noexcept {
     while (T* const item = seq.pop()) {
       this->push(item);
     }
   }
 
-  T* pop() {
+  T* pop() noexcept {
     do {
       T* top = m_head.load();
 
@@ -268,10 +268,6 @@ public:
   stack_t(sequence_t<T>&& seq) noexcept
     : m_head(seq.extract())
   {
-  }
-
-  ~stack_t() {
-    assert(m_head == nullptr);
   }
 
   bool empty() const noexcept {

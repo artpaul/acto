@@ -151,15 +151,15 @@ object_t::object_t(actor* const impl_)
 {
 }
 
-void object_t::enqueue(std::unique_ptr<msg_t> msg) {
+void object_t::enqueue(std::unique_ptr<msg_t> msg) noexcept {
   input_stack.push(msg.release());
 }
 
-bool object_t::has_messages() const {
+bool object_t::has_messages() const noexcept {
   return !local_stack.empty() || !input_stack.empty();
 }
 
-std::unique_ptr<msg_t> object_t::select_message() {
+std::unique_ptr<msg_t> object_t::select_message() noexcept {
   if (msg_t* p = local_stack.pop()) {
     return std::unique_ptr<msg_t>(p);
   } else {
