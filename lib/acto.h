@@ -7,6 +7,7 @@
 #include <atomic>
 #include <functional>
 #include <mutex>
+#include <thread>
 #include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
@@ -55,12 +56,12 @@ struct object_t : public generics::intrusive_t<object_t> {
   // Count of references to the object.
   std::atomic<unsigned long> references{0};
   // Флаги состояния текущего объекта
-  ui32 binded : 1;
-  ui32 deleting : 1;
-  ui32 exclusive : 1;
-  ui32 freeing : 1;
-  ui32 scheduled : 1;
-  ui32 unimpl : 1;
+  uint32_t binded : 1;
+  uint32_t deleting : 1;
+  uint32_t exclusive : 1;
+  uint32_t freeing : 1;
+  uint32_t scheduled : 1;
+  uint32_t unimpl : 1;
 
 public:
   object_t(actor* const impl_);
@@ -165,6 +166,15 @@ struct msg_wrap_t
   {
   }
 };
+
+template <typename D>
+inline void sleep(const D duration) {
+  std::this_thread::sleep_for(duration);
+}
+
+inline void yield() {
+  std::this_thread::yield();
+}
 
 } // namespace core
 

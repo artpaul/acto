@@ -221,7 +221,7 @@ int main() {
         wall.send< msg_start >(BALLS, console);
 
         // Игра продолжается некоторое время в независимых потоках
-        acto::core::sleep(DURATION);
+        acto::core::sleep(std::chrono::milliseconds(DURATION));
 
         // Остановить игру
         wall.send(msg_finish());
@@ -232,7 +232,7 @@ int main() {
         // Обработать сообщения для консоли
         acto::process_messages();
       }
-      acto::core::sleep(1000);
+      acto::core::sleep(std::chrono::milliseconds(1000));
     }
     // По зовершении работы библиотеки необходимо вызвать эту функцию,
     // чтобы освободить все занимаемые ресурсы.

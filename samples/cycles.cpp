@@ -155,7 +155,7 @@ int main() {
     // Запустить выполнение примера
     analizer.send(msg_start());
 
-    acto::core::sleep(5 * 1000);
+    acto::core::sleep(std::chrono::seconds(5));
     // Оставноваить выполнение и собрать статистику
     analizer.send(msg_stop());
 

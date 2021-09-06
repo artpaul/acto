@@ -85,7 +85,7 @@ private:
 
 
   /// Number of physical cores in the system.
-  const unsigned long m_processors{NumberOfProcessors()};
+  const unsigned long m_processors{std::thread::hardware_concurrency()};
   /// Критическая секция для доступа к полям
   std::mutex m_cs;
   ///
