@@ -35,7 +35,7 @@ runtime_t::~runtime_t() {
   m_active = false;
 
   m_event.signaled();
-
+  // Stop scheduler's thread.
   if (m_scheduler.joinable()) {
     m_scheduler.join();
   }
@@ -74,8 +74,7 @@ object_t* runtime_t::create_actor(actor* const body, const int options) {
 
     m_clean.reset();
   }
-
-  // Создать для актера индивидуальный поток
+  // Create dedicated thread for the actor if necessary.
   if (options & acto::aoExclusive) {
     worker_t* const worker = this->create_worker();
 

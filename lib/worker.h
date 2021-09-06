@@ -34,7 +34,9 @@ public:
   worker_t(callbacks* const slots);
   ~worker_t();
 
-  // Поместить сообщение в очередь
+  /**
+   * Assigns the object to the worker.
+   */
   void assign(object_t* const obj, const clock_t slice);
 
   void wakeup();
@@ -51,17 +53,18 @@ private:
   bool process();
 
 private:
-  callbacks* const m_slots;
+  callbacks* const slots_;
   /// Флаг активности потока
-  std::atomic<bool> m_active{true};
-  object_t* m_object{nullptr};
+  std::atomic<bool> active_{true};
+  /// Current assigned object.
+  object_t* object_{nullptr};
 
-  clock_t m_start{0};
-  clock_t m_time{0};
+  clock_t start_{0};
+  clock_t time_{0};
 
-  event_t m_event{true};
-  event_t m_complete;
-  std::thread m_thread;
+  event_t event_{true};
+  event_t complete_;
+  std::thread thread_;
 };
 
 } // namespace core

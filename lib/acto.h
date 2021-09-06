@@ -16,7 +16,7 @@ namespace acto {
 
 class actor;
 
-/// Индивидуальный поток для актера
+/// Use dedicated thread for an actor.
 static constexpr int aoExclusive = 0x01;
 
 /// Привязать актера к текущему системному потоку.
@@ -55,7 +55,7 @@ struct object_t : public generics::intrusive_t<object_t> {
   intusive_stack_t local_stack;
   // Count of references to the object.
   std::atomic<unsigned long> references{0};
-  // Флаги состояния текущего объекта
+  /// State flags.
   uint32_t binded : 1;
   uint32_t deleting : 1;
   uint32_t exclusive : 1;
@@ -180,7 +180,7 @@ inline void yield() {
 
 
 /**
- * Пользовательский объект (актер)
+ * Reference to an actor object.
  */
 class actor_ref {
   friend void join(actor_ref& obj);
@@ -206,7 +206,7 @@ public:
   /**
    * Sends a message to the actor.
    *
-   * @return true if the message has been placed in the actor's mailbox.
+   * @return true if the message has been placed into the actor's mailbox.
    */
   template <typename MsgT>
   inline bool send(MsgT&& msg) const {
@@ -221,7 +221,7 @@ public:
   /**
    * Sends a message to the actor.
    *
-   * @return true if the message has been placed in the actor's mailbox.
+   * @return true if the message has been placed into the actor's mailbox.
    */
   template <typename MsgT, typename ... P>
   inline bool send(P&& ... p) const {
@@ -340,29 +340,27 @@ protected:
   /// Установка обработчика для сообщения данного типа
   template <typename M, typename ClassName>
   inline void handler(void (ClassName::*func)(actor_ref sender, const M& msg)) {
-    // Установить обработчик
     set_handler(
-      // Тип сообщения
+      // Type of the handler.
       std::type_index(typeid(M)),
-      // Обрабочик
+      // Callback.
       std::make_unique<mem_handler_t<M, ClassName>>(func, static_cast<ClassName*>(this)));
   }
 
   /// Установка обработчика для сообщения данного типа
   template <typename M>
-  inline void handler(std::function< void (actor_ref sender, const M& msg) > func) {
+  inline void handler(std::function<void(actor_ref sender, const M& msg)> func) {
     // Установить обработчик
     set_handler(
-      // Тип сообщения
+      // Type of the handler.
       std::type_index(typeid(M)),
-      // Обрабочик
-      std::make_unique<fun_handler_t<M>>(func));
+      // Callback.
+      std::make_unique<fun_handler_t<M>>(std::move(func)));
   }
 
   /// Сброс обработчика для сообщения данного типа
   template <typename M>
   inline void handler() {
-    // Сбросить обработчик указанного типа
     set_handler(std::type_index(typeid(M)), nullptr);
   }
 
