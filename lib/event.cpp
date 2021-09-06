@@ -37,13 +37,11 @@ wait_result event_t::wait() {
     m_triggered = false;
   }
 
-  return WR_SIGNALED;
+  return wait_result::signaled;
 }
 
-wait_result event_t::wait(const unsigned int msec) {
-  using namespace std::chrono;
-
-  const auto  deadline = high_resolution_clock::now() + milliseconds(msec);
+wait_result event_t::wait(const std::chrono::milliseconds msec) {
+  const auto deadline = std::chrono::high_resolution_clock::now() + msec;
   unique_lock g(m_mutex);
 
   while (!m_triggered) {
@@ -51,7 +49,7 @@ wait_result event_t::wait(const unsigned int msec) {
       if (m_auto) {
         m_triggered = false;
       }
-      return WR_TIMEOUT;
+      return wait_result::timeout;
     }
   }
 
@@ -59,7 +57,7 @@ wait_result event_t::wait(const unsigned int msec) {
     m_triggered = false;
   }
 
-  return WR_SIGNALED;
+  return wait_result::signaled;
 }
 
 } // namespace core

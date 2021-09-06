@@ -83,7 +83,7 @@ object_t* runtime_t::create_actor(actor* const body, const int options) {
 
     ++m_workers.reserved;
 
-    worker->assign(result, 0);
+    worker->assign(result, std::chrono::steady_clock::duration());
   }
 
   return result;
@@ -377,8 +377,8 @@ worker_t* runtime_t::create_worker() {
 }
 
 void runtime_t::execute() {
-  int new_worker_timeout = 2;
-  clock_t last_cleanup_time = clock();
+  auto last_cleanup_time = std::chrono::steady_clock::now();
+  auto new_worker_timeout = std::chrono::seconds(2);
 
   auto delete_worker = [this] (worker_t* const item) {
     delete item;
@@ -401,46 +401,46 @@ void runtime_t::execute() {
           worker = create_worker();
         } else {
           // Подождать некоторое время осовобождения какого-нибудь потока
-          const wait_result result = m_evworker.wait(new_worker_timeout * 1000);
+          const wait_result result = m_evworker.wait(new_worker_timeout);
 
           worker = m_workers.idle.pop();
 
-          if (!worker && (result == WR_TIMEOUT)) {
-            new_worker_timeout += 2;
+          if (!worker && (result == wait_result::timeout)) {
+            new_worker_timeout += std::chrono::seconds(2);
 
             if (m_workers.count < MAX_WORKERS) {
               worker = create_worker();
             } else {
               m_evworker.wait();
             }
-          } else if (new_worker_timeout > 2) {
-            new_worker_timeout -= 2;
+          } else if (new_worker_timeout > std::chrono::seconds(2)) {
+            new_worker_timeout -= std::chrono::seconds(2);
           }
         }
       }
 
       if (worker) {
         if (object_t* const obj = m_queue.pop()) {
-          worker->assign(obj, (CLOCKS_PER_SEC >> 2));
+          worker->assign(obj, std::chrono::milliseconds(500));
         } else {
           m_workers.idle.push(worker);
         }
       }
     }
 
-    if (m_terminating || (m_event.wait(60 * 1000) == WR_TIMEOUT)) {
+    if (m_terminating || (m_event.wait(std::chrono::seconds(60)) == wait_result::timeout)) {
       generics::stack_t<worker_t> queue(m_workers.idle.extract());
 
       // Удалить все потоки
       while (worker_t* const item = queue.pop()) {
         delete_worker(item);
       }
-    } else if ((clock() - last_cleanup_time) > (60 * CLOCKS_PER_SEC)) {
+    } else if ((std::chrono::steady_clock::now() - last_cleanup_time) > std::chrono::seconds(60)) {
       if (worker_t* const item = m_workers.idle.pop()) {
         delete_worker(item);
       }
 
-      last_cleanup_time = clock();
+      last_cleanup_time = std::chrono::steady_clock::now();
     }
   }
 }

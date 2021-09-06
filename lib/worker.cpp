@@ -21,11 +21,11 @@ worker_t::~worker_t() {
   }
 }
 
-void worker_t::assign(object_t* const obj, const clock_t slice) {
+void worker_t::assign(object_t* const obj, const std::chrono::steady_clock::duration slice) {
   assert(!object_ && obj);
 
   object_ = obj;
-  start_ = clock();
+  start_ = std::chrono::steady_clock::now();
   time_ = slice;
   // Так как поток оперирует объектом, то необходимо захватить
   // ссылку на объект, иначе объект может быть удален
@@ -88,7 +88,7 @@ bool worker_t::process() {
       slots_->handle_message(std::move(msg));
 
       // Проверить истечение лимита времени обработки для данного объекта.
-      if (!obj->exclusive && ((clock() - start_) > time_)) {
+      if (!obj->exclusive && ((std::chrono::steady_clock::now() - start_) > time_)) {
         std::lock_guard<std::recursive_mutex> g(obj->cs);
 
         if (!obj->deleting) {
@@ -127,7 +127,7 @@ bool worker_t::process() {
       }
       /// Retrieve next object from the queue.
       if ((object_ = slots_->pop_object())) {
-        start_ = clock();
+        start_ = std::chrono::steady_clock::now();
         runtime_t::instance()->acquire(object_);
       } else {
         // Поместить текущий поток в список свободных

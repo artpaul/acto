@@ -4,7 +4,7 @@
 #include "event.h"
 
 #include <atomic>
-#include <ctime>
+#include <chrono>
 #include <thread>
 
 namespace acto {
@@ -37,7 +37,7 @@ public:
   /**
    * Assigns the object to the worker.
    */
-  void assign(object_t* const obj, const clock_t slice);
+  void assign(object_t* const obj, const std::chrono::steady_clock::duration slice);
 
   void wakeup();
 
@@ -59,8 +59,8 @@ private:
   /// Current assigned object.
   object_t* object_{nullptr};
 
-  clock_t start_{0};
-  clock_t time_{0};
+  std::chrono::steady_clock::time_point start_{};
+  std::chrono::steady_clock::duration time_{};
 
   event_t event_{true};
   event_t complete_;

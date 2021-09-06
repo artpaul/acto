@@ -1,19 +1,16 @@
 #pragma once
 
-#include <memory>
+#include <chrono>
 #include <condition_variable>
+#include <memory>
 
 namespace acto {
 namespace core {
 
-/** */
-enum wait_result {
-  // -
-  WR_ERROR,
-  // -
-  WR_SIGNALED,
-  // Превышен установленный период ожидания
-  WR_TIMEOUT
+enum class wait_result {
+  error,
+  signaled,
+  timeout,
 };
 
 /** Событие */
@@ -29,7 +26,7 @@ public:
   void signaled();
   ///
   wait_result wait();
-  wait_result wait(const unsigned int msec);
+  wait_result wait(const std::chrono::milliseconds msec);
 
 private:
   const bool m_auto;
