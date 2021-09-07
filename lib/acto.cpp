@@ -145,7 +145,6 @@ object_t::object_t(actor* const impl_)
   , binded(false)
   , deleting(false)
   , exclusive(false)
-  , freeing(false)
   , scheduled(false)
   , unimpl(false)
 {
@@ -173,7 +172,9 @@ msg_t::~msg_t() {
   if (sender) {
     runtime_t::instance()->release(sender);
   }
-  runtime_t::instance()->release(target);
+  if (target) {
+    runtime_t::instance()->release(target);
+  }
 }
 
 } // namespace core

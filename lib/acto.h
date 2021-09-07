@@ -59,7 +59,6 @@ struct object_t : public generics::intrusive_t<object_t> {
   uint32_t binded : 1;
   uint32_t deleting : 1;
   uint32_t exclusive : 1;
-  uint32_t freeing : 1;
   uint32_t scheduled : 1;
   uint32_t unimpl : 1;
 

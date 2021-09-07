@@ -105,45 +105,61 @@ void runtime_t::create_thread_binding() {
 void runtime_t::deconstruct_object(object_t* const obj) {
   assert(obj);
 
-  bool deleting = false;
   {
     std::lock_guard<std::recursive_mutex> g(obj->cs);
-    // 1. Если объект уже находится в состоянии "осовобождаемы",
-    //    то он будет неминуемо удален и более ничего делать не нежно
-    if (obj->freeing) {
+    // Return from a recursive call
+    // during deletion of the actor's body.
+    if (obj->unimpl) {
       return;
     }
-    // 2. Перевести объект в состояние "удаляемый", что в частности
-    //    ведет к невозможности послать сообщения данному объекту
     obj->deleting = true;
-    // 3.
-    if (!obj->scheduled && !obj->unimpl) {
+    // The object still has some messages in the mailbox.
+    if (obj->scheduled) {
+      return;
+    } else {
       assert(!obj->has_messages());
-
-      if (obj->impl) {
-        destroy_object_body(obj);
+    }
+    if (obj->impl) {
+      if (obj->thread) {
+        --m_workers.reserved;
+        obj->thread->wakeup();
       }
-      if (!obj->freeing && (0 == obj->references)) {
-        obj->freeing = true;
-        deleting = true;
+
+      obj->unimpl = true;
+      delete obj->impl, obj->impl = nullptr;
+      obj->unimpl = false;
+
+      if (obj->waiters) {
+        for (object_t::waiter_t* it = obj->waiters; it != nullptr; ) {
+          // TN: Необходимо читать значение следующего указателя
+          //     заранее, так как пробуждение ждущего потока
+          //     приведет к удалению текущего узла списка
+          object_t::waiter_t* next = it->next;
+          it->event.signaled();
+          it = next;
+        }
+
+        obj->waiters = nullptr;
       }
     }
-  }
-
-  if (deleting) {
-    // Удалить регистрацию объекта
-    if (!obj->binded) {
-      std::lock_guard<std::mutex> g(m_cs);
-
-      m_actors.erase(obj);
-
-      if (m_actors.size() == 0) {
-        m_clean.signaled();
-      }
+    // Cannot delete the object if there are still some references to it.
+    if (obj->references) {
+      return;
     }
-
-    delete obj;
   }
+  // Remove object from the global registry.
+  if (!obj->binded) {
+    std::lock_guard<std::mutex> g(m_cs);
+
+    m_actors.erase(obj);
+
+    if (m_actors.empty()) {
+      m_clean.signaled();
+    }
+  }
+  // There are no more references to the object,
+  // so delete it.
+  delete obj;
 }
 
 void runtime_t::destroy_thread_binding() {
@@ -173,7 +189,6 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
   } catch (...) {
     active_actor = nullptr;
   }
-  // XXX: unimpl after consuming the message.
   if (obj->impl->terminating_) {
     deconstruct_object(obj);
   }
@@ -224,25 +239,24 @@ bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(target);
 
-  msg->sender = active_actor;
-  msg->target = target;
-
-  acquire(target);
-
-  if (msg->sender) {
-    acquire(msg->sender);
-  }
-
   {
     std::lock_guard<std::recursive_mutex> g(target->cs);
-
     // Can not send messages to deleting object.
     if (target->deleting) {
         return false;
+    } else {
+      // Acquire reference to a sender.
+      if (active_actor) {
+        msg->sender = active_actor;
+        acquire(active_actor);
+      }
+      // Acquire reference to the target actor.
+      msg->target = target;
+      acquire(target);
     }
-    // 1. Поставить сообщение в очередь объекта
+    // Enqueue the message.
     target->enqueue(std::move(msg));
-    // 2. Подобрать для него необходимый поток
+    // Do not try to select a worker thread for a binded actor.
     if (target->binded) {
       return true;
     }
@@ -315,39 +329,6 @@ object_t* runtime_t::make_instance(actor_ref context, const int options, actor* 
   }
 
   return result;
-}
-
-void runtime_t::destroy_object_body(object_t* obj) {
-  assert(obj);
-  assert(!obj->unimpl && obj->impl);
-
-  // TN: Эта процедура всегда должна вызываться внутри блокировки
-  //     полей объекта, если ссылкой на объект могут владеть
-  //     два и более потока
-
-  {
-    if (obj->thread) {
-      --m_workers.reserved;
-      obj->thread->wakeup();
-    }
-  }
-
-  obj->unimpl = true;
-  delete obj->impl, obj->impl = nullptr;
-  obj->unimpl = false;
-
-  if (obj->waiters) {
-    for (object_t::waiter_t* it = obj->waiters; it != nullptr; ) {
-      // TN: Необходимо читать значение следующего указателя
-      //     заранее, так как пробуждение ждущего потока
-      //     приведет к удалению текущего узла списка
-      object_t::waiter_t* next = it->next;
-      it->event.signaled();
-      it = next;
-    }
-
-    obj->waiters = nullptr;
-  }
 }
 
 void runtime_t::push_delete(object_t* const obj) {

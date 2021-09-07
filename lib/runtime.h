@@ -65,8 +65,6 @@ private:
   void push_object(object_t* const obj) override;
 
 private:
-  void destroy_object_body(object_t* obj);
-
   void execute();
 
   worker_t* create_worker();
