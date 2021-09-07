@@ -4,20 +4,24 @@
 
 namespace acto {
 namespace core {
+namespace {
 
 /** Контекс потока */
 struct binding_context_t {
   // Список актеров ассоциированных
   // только с текущим потоком
-  std::set<object_t*> actors;
+  std::unordered_set<object_t*> actors;
   // Счетчик инициализаций
   std::atomic<long> counter;
 };
 
-/// Объект, от имени которого посылается сообщение
+/// Pointer to the active actor is using to
+/// implicitly determine a sender for a message.
 static thread_local object_t* active_actor{nullptr};
 /// -
 static thread_local std::unique_ptr<binding_context_t> thread_context{nullptr};
+
+} // namespace
 
 runtime_t::runtime_t()
   : m_scheduler(&runtime_t::execute, this)

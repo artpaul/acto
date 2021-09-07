@@ -4,8 +4,8 @@
 #include "worker.h"
 
 #include <atomic>
-#include <set>
 #include <thread>
+#include <unordered_set>
 
 namespace acto {
 namespace core {
@@ -14,7 +14,7 @@ namespace core {
  * Данные среды выполнения
  */
 class runtime_t : public worker_t::callbacks {
-  using actors_set = std::set<object_t*>;
+  using actors_set = std::unordered_set<object_t*>;
 
   // Максимальное кол-во рабочих потоков в системе
   static constexpr unsigned int MAX_WORKERS = 512;
