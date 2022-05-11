@@ -200,7 +200,7 @@ public:
   inline bool send(Msg&& msg) const {
     if (m_object) {
       return send_message(std::make_unique<
-        core::msg_wrap_t<typename std::remove_reference<Msg>::type>>(
+        core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
         std::move(msg)));
     }
     return false;
@@ -230,7 +230,7 @@ public:
     if (m_object) {
       return send_message_on_behalf(sender.m_object,
         std::make_unique<
-          core::msg_wrap_t<typename std::remove_reference<Msg>::type>>(
+          core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
           std::move(msg)));
     }
     return false;
@@ -281,54 +281,44 @@ class actor {
     virtual void invoke(const std::unique_ptr<core::msg_t> msg) const = 0;
   };
 
-  /**
-   * Обертка для вызова обработчика сообщения конкретного типа
-   */
-  template <typename MsgT, typename C>
+  /** Wrapper for member function pointers. */
+  template <typename M, typename C>
   class mem_handler_t : public handler_t {
-  public:
-    using delegate_t = std::function<void(C*, actor_ref, const MsgT&)>;
+    using F = std::function<void(C*, actor_ref, const M&)>;
 
   public:
-    mem_handler_t(const delegate_t& delegate_, C* c)
-      : m_delegate(delegate_)
-      , m_c(c) {
+    mem_handler_t(F&& func, C* ptr)
+      : func_(std::move(func))
+      , ptr_(ptr) {
     }
 
-    // Вызвать обработчик
-    void invoke(const std::unique_ptr<core::msg_t> msg) const override {
-      m_delegate(m_c, actor_ref(msg->sender, true),
-        static_cast<const core::msg_wrap_t<MsgT>*>(msg.get())->data());
+    void invoke(std::unique_ptr<core::msg_t> msg) const override {
+      func_(ptr_, actor_ref(msg->sender, true),
+        static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
     }
 
   private:
-    /// Делегат, хранящий указатель на
-    /// метод конкретного объекта.
-    const delegate_t m_delegate;
-
-    C* const m_c;
+    const F func_;
+    C* const ptr_;
   };
 
-  template <typename MsgT>
+  /** Wrapper for functor objects. */
+  template <typename M>
   class fun_handler_t : public handler_t {
-  public:
-    using delegate_t = std::function<void(actor_ref, const MsgT&)>;
+    using F = std::function<void(actor_ref sender, const M& msg)>;
 
   public:
-    fun_handler_t(const delegate_t& delegate_)
-      : m_delegate(delegate_) {
+    fun_handler_t(F&& func)
+      : func_(std::move(func)) {
     }
 
-    // Вызвать обработчик
-    void invoke(const std::unique_ptr<core::msg_t> msg) const override {
-      m_delegate(actor_ref(msg->sender, true),
-        static_cast<const core::msg_wrap_t<MsgT>*>(msg.get())->data());
+    void invoke(std::unique_ptr<core::msg_t> msg) const override {
+      func_(actor_ref(msg->sender, true),
+        static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
     }
 
   private:
-    /// Делегат, хранящий указатель на
-    /// метод конкретного объекта.
-    const delegate_t m_delegate;
+    const F func_;
   };
 
 public:
@@ -349,9 +339,9 @@ protected:
   /// Stops itself.
   void die();
 
-  /// Установка обработчика для сообщения данного типа
+  /// Sets handler as member function pointer.
   template <typename M, typename ClassName>
-  inline void handler(void (ClassName::*func)(actor_ref sender, const M& msg)) {
+  inline void handler(void (ClassName::*func)(actor_ref, const M&)) {
     set_handler(
       // Type of the handler.
       std::type_index(typeid(M)),
@@ -360,11 +350,9 @@ protected:
         func, static_cast<ClassName*>(this)));
   }
 
-  /// Установка обработчика для сообщения данного типа
+  /// Sets handler as functor object.
   template <typename M>
-  inline void handler(
-    std::function<void(actor_ref sender, const M& msg)> func) {
-    // Установить обработчик
+  inline void handler(std::function<void(actor_ref, const M&)> func) {
     set_handler(
       // Type of the handler.
       std::type_index(typeid(M)),
@@ -372,7 +360,7 @@ protected:
       std::make_unique<fun_handler_t<M>>(std::move(func)));
   }
 
-  /// Сброс обработчика для сообщения данного типа
+  /// Removes handler for the given type.
   template <typename M>
   inline void handler() {
     set_handler(std::type_index(typeid(M)), nullptr);
