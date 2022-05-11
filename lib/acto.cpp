@@ -45,6 +45,12 @@ bool actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
   return core::runtime_t::instance()->send(m_object, std::move(msg));
 }
 
+bool actor_ref::send_message_on_behalf(
+  core::object_t* sender, std::unique_ptr<core::msg_t> msg) const {
+  return core::runtime_t::instance()->send_on_behalf(
+    m_object, sender, std::move(msg));
+}
+
 actor_ref& actor_ref::operator=(const actor_ref& rhs) {
   if (this != &rhs) {
     if (rhs.m_object) {

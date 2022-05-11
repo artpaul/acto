@@ -196,11 +196,11 @@ public:
    *
    * @return true if the message has been placed into the actor's mailbox.
    */
-  template <typename MsgT>
-  inline bool send(MsgT&& msg) const {
+  template <typename Msg>
+  inline bool send(Msg&& msg) const {
     if (m_object) {
       return send_message(std::make_unique<
-        core::msg_wrap_t<typename std::remove_reference<MsgT>::type>>(
+        core::msg_wrap_t<typename std::remove_reference<Msg>::type>>(
         std::move(msg)));
     }
     return false;
@@ -211,11 +211,36 @@ public:
    *
    * @return true if the message has been placed into the actor's mailbox.
    */
-  template <typename MsgT, typename... P>
+  template <typename Msg, typename... P>
   inline bool send(P&&... p) const {
     if (m_object) {
       return send_message(
-        std::make_unique<core::msg_wrap_t<MsgT>>(std::forward<P>(p)...));
+        std::make_unique<core::msg_wrap_t<Msg>>(std::forward<P>(p)...));
+    }
+    return false;
+  }
+
+  /**
+   * Sends a message to the actor.
+   *
+   * @return true if the message has been placed into the actor's mailbox.
+   */
+  template <typename Msg>
+  inline bool send_on_behalf(const actor_ref& sender, Msg&& msg) const {
+    if (m_object) {
+      return send_message_on_behalf(sender.m_object,
+        std::make_unique<
+          core::msg_wrap_t<typename std::remove_reference<Msg>::type>>(
+          std::move(msg)));
+    }
+    return false;
+  }
+
+  template <typename Msg, typename... P>
+  inline bool send_on_behalf(const actor_ref& sender, P&&... p) const {
+    if (m_object) {
+      return send_message_on_behalf(sender.m_object,
+        std::make_unique<core::msg_wrap_t<Msg>>(std::forward<P>(p)...));
     }
     return false;
   }
@@ -234,6 +259,10 @@ public:
 private:
   /// Dispatches a message.
   bool send_message(std::unique_ptr<core::msg_t> msg) const;
+
+  /// Dispatches a message.
+  bool send_message_on_behalf(
+    core::object_t* sender, std::unique_ptr<core::msg_t> msg) const;
 
 private:
   core::object_t* m_object{nullptr};

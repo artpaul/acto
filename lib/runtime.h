@@ -46,8 +46,15 @@ public:
   unsigned long release(object_t* const obj);
   /// Зарегистрировать новый модуль
   void register_module();
-  /// Послать сообщение указанному объекту
+
+  /// Sends the message to the specific actor.
+  /// Uses the active actor as a sender.
   bool send(object_t* const target, std::unique_ptr<msg_t> msg);
+
+  /// Sends the message to the specific actor.
+  bool send_on_behalf(
+    object_t* const target, object_t* sender, std::unique_ptr<msg_t> msg);
+
   /// Завершить выполнение
   void shutdown();
   /// Начать выполнение

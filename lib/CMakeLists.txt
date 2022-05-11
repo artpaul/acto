@@ -12,7 +12,7 @@ target_sources (acto-lib PRIVATE
 )
 
 if (UNIX)
-  target_link_libraries (acto-lib
+  target_link_libraries (acto-lib PUBLIC
     pthread
   )
 endif ()

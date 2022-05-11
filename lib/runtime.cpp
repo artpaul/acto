@@ -235,6 +235,11 @@ unsigned long runtime_t::release(object_t* const obj) {
 }
 
 bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
+  return send_on_behalf(target, active_actor, std::move(msg));
+}
+
+bool runtime_t::send_on_behalf(
+  object_t* const target, object_t* const sender, std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(target);
 
@@ -245,9 +250,9 @@ bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
       return false;
     } else {
       // Acquire reference to a sender.
-      if (active_actor) {
-        msg->sender = active_actor;
-        acquire(active_actor);
+      if (sender) {
+        msg->sender = sender;
+        acquire(sender);
       }
       // Acquire reference to the target actor.
       msg->target = target;

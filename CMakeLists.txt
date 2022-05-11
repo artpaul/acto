@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.1)
 
+option (ACTO_BUILD_SAMPLES "Set to ON to build samples" OFF)
+
 project (acto LANGUAGES CXX)
   find_package (Threads REQUIRED)
-
-  option (ACTO_BUILD_SAMPLES "Set to ON to build samples" OFF)
 
   # Determine whether this is a standalone project or
   # included by other projects.
