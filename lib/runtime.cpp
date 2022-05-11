@@ -1,5 +1,5 @@
-#include "generics.h"
 #include "runtime.h"
+#include "generics.h"
 #include "worker.h"
 
 namespace acto {
@@ -24,8 +24,7 @@ static thread_local std::unique_ptr<binding_context_t> thread_context{nullptr};
 } // namespace
 
 runtime_t::runtime_t()
-  : m_scheduler(&runtime_t::execute, this)
-{
+  : m_scheduler(&runtime_t::execute, this) {
   m_clean.signaled();
   m_evnoworkers.signaled();
 }
@@ -130,7 +129,7 @@ void runtime_t::deconstruct_object(object_t* const obj) {
       obj->unimpl = false;
 
       if (obj->waiters) {
-        for (object_t::waiter_t* it = obj->waiters; it != nullptr; ) {
+        for (object_t::waiter_t* it = obj->waiters; it != nullptr;) {
           // TN: Необходимо читать значение следующего указателя
           //     заранее, так как пробуждение ждущего потока
           //     приведет к удалению текущего узла списка
@@ -243,7 +242,7 @@ bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
     std::lock_guard<std::recursive_mutex> g(target->cs);
     // Can not send messages to deleting object.
     if (target->deleting) {
-        return false;
+      return false;
     } else {
       // Acquire reference to a sender.
       if (active_actor) {
@@ -296,7 +295,8 @@ void runtime_t::startup() {
   create_thread_binding();
 }
 
-void runtime_t::process_binded_actors(actors_set& actors, const bool need_delete) {
+void runtime_t::process_binded_actors(
+  actors_set& actors, const bool need_delete) {
   for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
     while (auto msg = (*ai)->select_message()) {
       handle_message(std::move(msg));
@@ -315,7 +315,8 @@ void runtime_t::process_binded_actors(actors_set& actors, const bool need_delete
   }
 }
 
-object_t* runtime_t::make_instance(actor_ref context, const int options, actor* body) {
+object_t* runtime_t::make_instance(
+  actor_ref context, const int options, actor* body) {
   assert(body);
   // Создать объект ядра (счетчик ссылок увеличивается автоматически)
   core::object_t* const result = create_actor(body, options);
@@ -365,7 +366,7 @@ void runtime_t::execute() {
   auto last_cleanup_time = std::chrono::steady_clock::now();
   auto new_worker_timeout = std::chrono::seconds(2);
 
-  auto delete_worker = [this] (worker_t* const item) {
+  auto delete_worker = [this](worker_t* const item) {
     delete item;
     // Уведомить, что удалены все вычислительные потоки
     if (--m_workers.count == 0) {
@@ -374,7 +375,7 @@ void runtime_t::execute() {
   };
 
   while (m_active) {
-    while(!m_queue.empty()) {
+    while (!m_queue.empty()) {
       // Прежде чем извлекать объект из очереди, необходимо проверить,
       // что есть вычислительные ресурсы для его обработки
       worker_t* worker = m_workers.idle.pop();
@@ -413,14 +414,18 @@ void runtime_t::execute() {
       }
     }
 
-    if (m_terminating || (m_event.wait(std::chrono::seconds(60)) == wait_result::timeout)) {
+    if (m_terminating ||
+        (m_event.wait(std::chrono::seconds(60)) == wait_result::timeout))
+    {
       generics::stack_t<worker_t> queue(m_workers.idle.extract());
 
       // Удалить все потоки
       while (worker_t* const item = queue.pop()) {
         delete_worker(item);
       }
-    } else if ((std::chrono::steady_clock::now() - last_cleanup_time) > std::chrono::seconds(60)) {
+    } else if ((std::chrono::steady_clock::now() - last_cleanup_time) >
+               std::chrono::seconds(60))
+    {
       if (worker_t* const item = m_workers.idle.pop()) {
         delete_worker(item);
       }
@@ -430,9 +435,9 @@ void runtime_t::execute() {
   }
 }
 
-
 object_t* make_instance(actor_ref context, const int options, actor* body) {
-  return runtime_t::instance()->make_instance(std::move(context), options, body);
+  return runtime_t::instance()->make_instance(
+    std::move(context), options, body);
 }
 
 } // namespace core

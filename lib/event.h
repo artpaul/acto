@@ -16,7 +16,7 @@ enum class wait_result {
 /** Событие */
 class event_t {
 public:
-   event_t(const bool auto_reset = false);
+  event_t(const bool auto_reset = false);
   ~event_t();
 
 public:

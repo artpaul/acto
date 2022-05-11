@@ -81,7 +81,6 @@ private:
     generics::mpsc_stack_t<worker_t> idle;
   };
 
-
   /// Number of physical cores in the system.
   const unsigned long m_processors{std::thread::hardware_concurrency()};
   /// Критическая секция для доступа к полям
@@ -105,5 +104,5 @@ private:
   std::thread m_scheduler;
 };
 
-} // namepsace core
+} // namespace core
 } // namespace acto

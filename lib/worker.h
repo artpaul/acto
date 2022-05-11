@@ -1,7 +1,7 @@
 #pragma once
 
-#include "generics.h"
 #include "event.h"
+#include "generics.h"
 
 #include <atomic>
 #include <chrono>
@@ -10,7 +10,7 @@
 namespace acto {
 namespace core {
 
-class  worker_t;
+class worker_t;
 struct object_t;
 struct msg_t;
 
@@ -37,7 +37,8 @@ public:
   /**
    * Assigns the object to the worker.
    */
-  void assign(object_t* const obj, const std::chrono::steady_clock::duration slice);
+  void assign(
+    object_t* const obj, const std::chrono::steady_clock::duration slice);
 
   void wakeup();
 

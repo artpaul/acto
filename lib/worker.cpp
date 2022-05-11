@@ -1,13 +1,12 @@
-#include "runtime.h"
 #include "worker.h"
+#include "runtime.h"
 
 namespace acto {
 namespace core {
 
 worker_t::worker_t(callbacks* const slots)
   : slots_(slots)
-  , thread_(&worker_t::execute, this)
-{
+  , thread_(&worker_t::execute, this) {
   complete_.reset();
 }
 
@@ -21,7 +20,8 @@ worker_t::~worker_t() {
   }
 }
 
-void worker_t::assign(object_t* const obj, const std::chrono::steady_clock::duration slice) {
+void worker_t::assign(
+  object_t* const obj, const std::chrono::steady_clock::duration slice) {
   assert(!object_ && obj);
 
   object_ = obj;
@@ -52,7 +52,7 @@ void worker_t::execute() {
     //
     // Ждать, пока не появится новое задание для данного потока
     //
-    event_.wait();  // Cond: (m_object != 0) || (m_active == false)
+    event_.wait(); // Cond: (m_object != 0) || (m_active == false)
   }
 
   complete_.signaled();
@@ -88,7 +88,8 @@ bool worker_t::process() {
       slots_->handle_message(std::move(msg));
 
       // Проверить истечение лимита времени обработки для данного объекта.
-      if (!obj->exclusive && ((std::chrono::steady_clock::now() - start_) > time_)) {
+      if (!obj->exclusive &&
+          ((std::chrono::steady_clock::now() - start_) > time_)) {
         std::lock_guard<std::recursive_mutex> g(obj->cs);
 
         if (!obj->deleting) {

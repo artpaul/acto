@@ -7,8 +7,7 @@ using unique_lock = std::unique_lock<std::mutex>;
 
 event_t::event_t(const bool auto_reset)
   : m_auto(auto_reset)
-  , m_triggered(false)
-{
+  , m_triggered(false) {
 }
 
 event_t::~event_t() = default;

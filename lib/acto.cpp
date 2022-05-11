@@ -5,25 +5,23 @@ namespace acto {
 
 static std::atomic_long startup_counter(0);
 
-actor_ref::actor_ref(core::object_t* const an_object, const bool acquire) noexcept
-  : m_object(an_object)
-{
+actor_ref::actor_ref(
+  core::object_t* const an_object, const bool acquire) noexcept
+  : m_object(an_object) {
   if (m_object && acquire) {
     core::runtime_t::instance()->acquire(m_object);
   }
 }
 
 actor_ref::actor_ref(const actor_ref& rhs) noexcept
-  : m_object(rhs.m_object)
-{
+  : m_object(rhs.m_object) {
   if (m_object) {
     core::runtime_t::instance()->acquire(m_object);
   }
 }
 
 actor_ref::actor_ref(actor_ref&& rhs) noexcept
-  : m_object(rhs.m_object)
-{
+  : m_object(rhs.m_object) {
   rhs.m_object = nullptr;
 }
 
@@ -47,7 +45,7 @@ bool actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
   return core::runtime_t::instance()->send(m_object, std::move(msg));
 }
 
-actor_ref& actor_ref::operator = (const actor_ref& rhs) {
+actor_ref& actor_ref::operator=(const actor_ref& rhs) {
   if (this != &rhs) {
     if (rhs.m_object) {
       core::runtime_t::instance()->acquire(rhs.m_object);
@@ -60,10 +58,10 @@ actor_ref& actor_ref::operator = (const actor_ref& rhs) {
   return *this;
 }
 
-actor_ref& actor_ref::operator = (actor_ref&& rhs) {
+actor_ref& actor_ref::operator=(actor_ref&& rhs) {
   if (this != &rhs) {
     if (m_object && m_object != rhs.m_object) {
-        core::runtime_t::instance()->release(m_object);
+      core::runtime_t::instance()->release(m_object);
     }
     m_object = rhs.m_object;
     rhs.m_object = nullptr;
@@ -71,14 +69,13 @@ actor_ref& actor_ref::operator = (actor_ref&& rhs) {
   return *this;
 }
 
-bool actor_ref::operator == (const actor_ref& rhs) const noexcept {
+bool actor_ref::operator==(const actor_ref& rhs) const noexcept {
   return m_object == rhs.m_object;
 }
 
-bool actor_ref::operator != (const actor_ref& rhs) const noexcept {
-  return !operator == (rhs);
+bool actor_ref::operator!=(const actor_ref& rhs) const noexcept {
+  return !operator==(rhs);
 }
-
 
 void actor::die() {
   terminating_ = true;
@@ -91,14 +88,14 @@ void actor::consume_package(std::unique_ptr<core::msg_t> p) {
   }
 }
 
-void actor::set_handler(const std::type_index& type, std::unique_ptr<handler_t> h) {
+void actor::set_handler(
+  const std::type_index& type, std::unique_ptr<handler_t> h) {
   if (h) {
     handlers_[type] = std::move(h);
   } else {
     handlers_.erase(type);
   }
 }
-
 
 void destroy(actor_ref& object) {
   if (core::object_t* const obj = object.m_object) {
@@ -146,8 +143,7 @@ object_t::object_t(actor* const impl_)
   , deleting(false)
   , exclusive(false)
   , scheduled(false)
-  , unimpl(false)
-{
+  , unimpl(false) {
 }
 
 void object_t::enqueue(std::unique_ptr<msg_t> msg) noexcept {

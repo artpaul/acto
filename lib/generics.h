@@ -15,7 +15,6 @@ struct intrusive_t {
   T* next{nullptr};
 };
 
-
 template <typename T>
 class intrusive_queue_t {
 public:
@@ -102,13 +101,11 @@ private:
   size_t m_size{0};
 };
 
-
 template <typename T>
 class sequence_t {
 public:
   constexpr sequence_t(T* const item) noexcept
-     : head_(item)
-  {
+    : head_(item) {
   }
 
   T* extract() noexcept {
@@ -129,7 +126,6 @@ public:
 private:
   T* head_{nullptr};
 };
-
 
 template <typename T>
 class queue_t {
@@ -159,7 +155,7 @@ public:
     guard g(m_cs);
 
     if (m_tail) {
-      node->next   = m_tail->next;
+      node->next = m_tail->next;
       m_tail->next = node;
     } else {
       node->next = node;
@@ -193,7 +189,6 @@ private:
   T* m_tail{nullptr};
   mutable std::mutex m_cs;
 };
-
 
 /**
  * Используемый алгоритм будет корректно работать, если только
@@ -256,7 +251,6 @@ private:
   std::atomic<T*> m_head{nullptr};
 };
 
-
 /**
  * Простой интрузивный стек без каких-либо блокировок
  */
@@ -266,8 +260,7 @@ public:
   stack_t() noexcept = default;
 
   stack_t(sequence_t<T>&& seq) noexcept
-    : m_head(seq.extract())
-  {
+    : m_head(seq.extract()) {
   }
 
   bool empty() const noexcept {
@@ -305,5 +298,5 @@ private:
   T* m_head{nullptr};
 };
 
-} // namepsace generics
+} // namespace generics
 } // namespace acto
