@@ -260,6 +260,7 @@ public:
 
   bool operator==(const actor_ref& rhs) const noexcept;
   bool operator!=(const actor_ref& rhs) const noexcept;
+  bool operator<(const actor_ref& rhs) const noexcept;
 
   explicit operator bool() const noexcept {
     return assigned();

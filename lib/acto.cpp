@@ -83,6 +83,10 @@ bool actor_ref::operator!=(const actor_ref& rhs) const noexcept {
   return !operator==(rhs);
 }
 
+bool actor_ref::operator<(const actor_ref& rhs) const noexcept {
+  return m_object < rhs.m_object;
+}
+
 void actor::die() {
   terminating_ = true;
 }
