@@ -99,7 +99,7 @@ struct message_container;
  * Implements empty base optimization.
  */
 template <typename T>
-struct message_container<T, false> : private T {
+struct message_container<T, true> : private T {
   constexpr message_container(T&& t)
     : T(std::move(t)) {
   }
@@ -119,7 +119,7 @@ struct message_container<T, false> : private T {
  * we need to store them as a field.
  */
 template <typename T>
-struct message_container<T, true> {
+struct message_container<T, false> {
   constexpr message_container(T&& t)
     : value_(std::move(t)) {
   }
@@ -138,7 +138,8 @@ private:
 };
 
 template <typename T>
-using message_container_t = message_container<T, std::is_final<T>::value>;
+using message_container_t =
+  message_container<T, std::is_empty<T>::value && !std::is_final<T>::value>;
 
 template <typename T>
 struct msg_wrap_t
