@@ -100,6 +100,8 @@ struct message_container;
  */
 template <typename T>
 struct message_container<T, true> : private T {
+  static constexpr bool is_value_movable = false;
+
   constexpr message_container(T&& t)
     : T(std::move(t)) {
   }
@@ -120,6 +122,8 @@ struct message_container<T, true> : private T {
  */
 template <typename T>
 struct message_container<T, false> {
+  static constexpr bool is_value_movable = std::is_move_constructible<T>::value;
+
   constexpr message_container(T&& t)
     : value_(std::move(t)) {
   }
@@ -129,12 +133,16 @@ struct message_container<T, false> {
     : value_(std::forward<Args>(args)...) {
   }
 
-  constexpr const T& data() const {
+  constexpr const T& data() const& {
     return value_;
   }
 
+  constexpr T data() && {
+    return std::move(value_);
+  }
+
 private:
-  const T value_;
+  T value_;
 };
 
 template <typename T>
@@ -283,9 +291,9 @@ class actor {
   };
 
   /** Wrapper for member function pointers. */
-  template <typename M, typename C>
+  template <typename M, typename C, typename P>
   class mem_handler_t : public handler_t {
-    using F = std::function<void(C*, actor_ref, const M&)>;
+    using F = std::function<void(C*, actor_ref, P)>;
 
   public:
     mem_handler_t(F&& func, C* ptr)
@@ -294,8 +302,12 @@ class actor {
     }
 
     void invoke(std::unique_ptr<core::msg_t> msg) const override {
+      using message_reference_t =
+        typename std::conditional<core::msg_wrap_t<M>::is_value_movable,
+          core::msg_wrap_t<M>&&, const core::msg_wrap_t<M>&>::type;
+
       func_(ptr_, actor_ref(msg->sender, true),
-        static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
+        static_cast<message_reference_t>(*msg.get()).data());
     }
 
   private:
@@ -341,13 +353,13 @@ protected:
   void die();
 
   /// Sets handler as member function pointer.
-  template <typename M, typename ClassName>
-  inline void handler(void (ClassName::*func)(actor_ref, const M&)) {
+  template <typename M, typename ClassName, typename P>
+  inline void handler(void (ClassName::*func)(actor_ref, P)) {
     set_handler(
       // Type of the handler.
       std::type_index(typeid(M)),
       // Callback.
-      std::make_unique<mem_handler_t<M, ClassName>>(
+      std::make_unique<mem_handler_t<M, ClassName, P>>(
         func, static_cast<ClassName*>(this)));
   }
 
