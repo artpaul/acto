@@ -56,37 +56,35 @@ unsigned long runtime_t::acquire(object_t* const obj) const noexcept {
   return ++obj->references;
 }
 
-object_t* runtime_t::create_actor(actor* const body, const int options) {
+object_t* runtime_t::create_actor(
+  std::unique_ptr<actor> body, const uint32_t options) {
   assert(body);
+  assert(!((options & aoBindToThread) && (options & aoExclusive)));
 
-  object_t* const result = new core::object_t(body);
-
-  result->references = 1;
-  // Зарегистрировать объект в системе
-  if (options & acto::aoBindToThread) {
+  object_t* const result = new core::object_t(options, std::move(body));
+  // Bind actor to the current thread.
+  if (result->binded) {
     result->references += 1;
-    result->binded = true;
-
     thread_context->actors.insert(result);
   } else {
-    std::lock_guard<std::mutex> g(m_cs);
+    {
+      std::lock_guard<std::mutex> g(m_cs);
 
-    result->exclusive = options & acto::aoExclusive;
+      m_actors.insert(result);
 
-    m_actors.insert(result);
+      m_clean.reset();
+    }
+    // Create dedicated thread for the actor if necessary.
+    if (result->exclusive) {
+      worker_t* const worker = create_worker();
 
-    m_clean.reset();
-  }
-  // Create dedicated thread for the actor if necessary.
-  if (options & acto::aoExclusive) {
-    worker_t* const worker = this->create_worker();
+      result->scheduled = true;
+      result->thread = worker;
 
-    result->scheduled = true;
-    result->thread = worker;
+      ++m_workers.reserved;
 
-    ++m_workers.reserved;
-
-    worker->assign(result, std::chrono::steady_clock::duration());
+      worker->assign(result, std::chrono::steady_clock::duration());
+    }
   }
 
   return result;
@@ -278,7 +276,7 @@ bool runtime_t::send_on_behalf(
 }
 
 void runtime_t::shutdown() {
-  this->destroy_thread_binding();
+  destroy_thread_binding();
 
   // 1. Инициировать процедуру удаления для всех оставшихся объектов
   {
@@ -302,6 +300,8 @@ void runtime_t::startup() {
 
 void runtime_t::process_binded_actors(
   actors_set& actors, const bool need_delete) {
+  // TODO: - switch between active actors to balance message processing.
+  //       - detect message loop.
   for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
     while (auto msg = (*ai)->select_message()) {
       handle_message(std::move(msg));
@@ -321,17 +321,15 @@ void runtime_t::process_binded_actors(
 }
 
 object_t* runtime_t::make_instance(
-  actor_ref context, const int options, actor* body) {
+  actor_ref context, const uint32_t options, std::unique_ptr<actor> body) {
   assert(body);
-  // Создать объект ядра (счетчик ссылок увеличивается автоматически)
-  core::object_t* const result = create_actor(body, options);
+  // Create core object.
+  core::object_t* const result = create_actor(std::move(body), options);
 
   if (result) {
-    body->context_ = std::move(context);
-    body->self_ = actor_ref(result, true);
-    body->bootstrap();
-  } else {
-    delete body;
+    result->impl->context_ = std::move(context);
+    result->impl->self_ = actor_ref(result, true);
+    result->impl->bootstrap();
   }
 
   return result;
@@ -440,9 +438,10 @@ void runtime_t::execute() {
   }
 }
 
-object_t* make_instance(actor_ref context, const int options, actor* body) {
+object_t* make_instance(
+  actor_ref context, const uint32_t options, std::unique_ptr<actor> body) {
   return runtime_t::instance()->make_instance(
-    std::move(context), options, body);
+    std::move(context), options, std::move(body));
 }
 
 } // namespace core

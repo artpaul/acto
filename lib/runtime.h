@@ -4,6 +4,7 @@
 #include "worker.h"
 
 #include <atomic>
+#include <memory>
 #include <thread>
 #include <unordered_set>
 
@@ -29,7 +30,7 @@ public:
   /// Захватить ссылку на объект
   unsigned long acquire(object_t* const obj) const noexcept;
   /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
-  object_t* create_actor(actor* const body, const int options);
+  object_t* create_actor(std::unique_ptr<actor> body, const uint32_t options);
   /// Создать контекст связи с текущим системным потоком
   void create_thread_binding();
   /// Уничтожить объект
@@ -60,7 +61,8 @@ public:
   /// Начать выполнение
   void startup();
 
-  object_t* make_instance(actor_ref context, const int options, actor* body);
+  object_t* make_instance(
+    actor_ref context, const uint32_t options, std::unique_ptr<actor> body);
 
 private:
   void push_delete(object_t* const obj) override;
@@ -76,6 +78,12 @@ private:
 
   worker_t* create_worker();
 
+  /**
+   * @brief Processes all available messages for the given acctors.
+   *
+   * @param actors set of actors to process.
+   * @param need_delete delete actors after process all messages.
+   */
   void process_binded_actors(actors_set& actors, const bool need_delete);
 
 private:

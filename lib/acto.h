@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <typeindex>
@@ -17,12 +18,12 @@ namespace acto {
 class actor;
 
 /// Use dedicated thread for an actor.
-static constexpr int aoExclusive = 0x01;
+static constexpr uint32_t aoExclusive = 0x01;
 
 /// Привязать актера к текущему системному потоку.
 /// Не имеет эффекта, если используется в контексте потока,
 /// созданного самой библиотекой.
-static constexpr int aoBindToThread = 0x02;
+static constexpr uint32_t aoBindToThread = 0x02;
 
 namespace core {
 
@@ -31,7 +32,7 @@ class worker_t;
 struct msg_t;
 
 /**
- * Объект
+ * Core object.
  */
 struct object_t : public generics::intrusive_t<object_t> {
   struct waiter_t : public generics::intrusive_t<waiter_t> {
@@ -45,7 +46,7 @@ struct object_t : public generics::intrusive_t<object_t> {
   std::recursive_mutex cs;
 
   /// Pointer to the object inherited from the actor class (aka actor body).
-  actor* impl{nullptr};
+  actor* impl;
   /// Dedicated thread for the object.
   worker_t* thread{nullptr};
   // Список сигналов для потоков, ожидающих уничтожения объекта.
@@ -56,14 +57,14 @@ struct object_t : public generics::intrusive_t<object_t> {
   // Count of references to the object.
   std::atomic<unsigned long> references{0};
   /// State flags.
-  uint32_t binded : 1;
+  const uint32_t binded : 1;
+  const uint32_t exclusive : 1;
   uint32_t deleting : 1;
-  uint32_t exclusive : 1;
   uint32_t scheduled : 1;
   uint32_t unimpl : 1;
 
 public:
-  object_t(actor* const impl_);
+  object_t(const uint32_t options, std::unique_ptr<actor> body);
 
   /// Pushes a message into the mailbox.
   void enqueue(std::unique_ptr<msg_t> msg) noexcept;
@@ -427,7 +428,8 @@ ACTO_API void startup();
 
 namespace core {
 
-object_t* make_instance(actor_ref context, const int options, actor* body);
+object_t* make_instance(
+  actor_ref context, const uint32_t options, std::unique_ptr<actor> body);
 
 } // namespace core
 
@@ -435,17 +437,11 @@ namespace detail {
 
 template <typename Impl>
 inline core::object_t* make_instance(
-  actor_ref context, const int options, Impl* impl) {
+  actor_ref context, const uint32_t options, std::unique_ptr<Impl> impl) {
   static_assert(std::is_base_of<::acto::actor, Impl>::value,
     "implementation should be derived from the acto::actor class");
 
-  return core::make_instance(std::move(context), options, impl);
-}
-
-template <typename Impl>
-inline core::object_t* make_instance(
-  actor_ref context, const int options, std::unique_ptr<Impl> impl) {
-  return make_instance(std::move(context), options, impl.release());
+  return core::make_instance(std::move(context), options, std::move(impl));
 }
 
 } // namespace detail
@@ -465,14 +461,14 @@ inline actor_ref spawn(actor_ref context) {
 }
 
 template <typename T>
-inline actor_ref spawn(const int options) {
+inline actor_ref spawn(const uint32_t options) {
   return actor_ref(
     detail::make_instance<T>(actor_ref(), options, std::make_unique<T>()),
     false);
 }
 
 template <typename T>
-inline actor_ref spawn(actor_ref context, const int options) {
+inline actor_ref spawn(actor_ref context, const uint32_t options) {
   return actor_ref(detail::make_instance<T>(
                      std::move(context), options, std::make_unique<T>()),
     false);

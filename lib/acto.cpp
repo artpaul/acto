@@ -147,11 +147,12 @@ void startup() {
 
 namespace core {
 
-object_t::object_t(actor* const impl_)
-  : impl(impl_)
-  , binded(false)
+object_t::object_t(const uint32_t options, std::unique_ptr<actor> body)
+  : impl(body.release())
+  , references(1)
+  , binded(bool(options & acto::aoBindToThread))
+  , exclusive(bool(options & acto::aoExclusive))
   , deleting(false)
-  , exclusive(false)
   , scheduled(false)
   , unimpl(false) {
 }
