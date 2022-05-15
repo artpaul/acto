@@ -301,6 +301,8 @@ class actor {
     mem_handler_t(F&& func, C* ptr)
       : func_(std::move(func))
       , ptr_(ptr) {
+      assert(func_);
+      assert(ptr_);
     }
 
     void invoke(std::unique_ptr<core::msg_t> msg) const override {
@@ -325,6 +327,7 @@ class actor {
   public:
     fun_handler_t(F&& func)
       : func_(std::move(func)) {
+      assert(func_);
     }
 
     void invoke(std::unique_ptr<core::msg_t> msg) const override {
@@ -378,6 +381,12 @@ protected:
   /// Removes handler for the given type.
   template <typename M>
   inline void handler() {
+    set_handler(std::type_index(typeid(M)), nullptr);
+  }
+
+  /// Removes handler for the given type.
+  template <typename M>
+  inline void handler(std::nullptr_t) {
     set_handler(std::type_index(typeid(M)), nullptr);
   }
 
