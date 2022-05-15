@@ -4,10 +4,14 @@
 namespace acto {
 namespace core {
 
-worker_t::worker_t(callbacks* const slots)
-  : slots_(slots)
-  , thread_(&worker_t::execute, this) {
-  complete_.reset();
+worker_t::worker_t(callbacks* const slots, std::function<void()> init_cb)
+  : slots_(slots) {
+  thread_ = std::thread([this, cb = std::move(init_cb)]() {
+    // Call the initialization in thread's context.
+    cb();
+    // Execute the event loop.
+    execute();
+  });
 }
 
 worker_t::~worker_t() {

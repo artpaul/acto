@@ -17,14 +17,4 @@
 # if !defined(_MT)
 #  error "Multithreaded mode not defined. Use /MD or /MT compiler options."
 # endif
-
-# ifdef ACTO_EXPORT
-#  define ACTO_API __declspec(dllexport)
-# elif ACTO_IMPORT
-#  define ACTO_API __declspec(dllimport)
-# else
-#  define ACTO_API
-# endif
-#else
-# define ACTO_API
 #endif

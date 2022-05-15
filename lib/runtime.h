@@ -29,14 +29,8 @@ public:
 public:
   /// Захватить ссылку на объект
   unsigned long acquire(object_t* const obj) const noexcept;
-  /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
-  object_t* create_actor(std::unique_ptr<actor> body, const uint32_t options);
-  /// Создать контекст связи с текущим системным потоком
-  void create_thread_binding();
   /// Уничтожить объект
   void deconstruct_object(object_t* const object);
-  ///
-  void destroy_thread_binding();
   ///
   void handle_message(std::unique_ptr<msg_t> msg) override;
   /// Ждать уничтожения тела объекта
@@ -58,11 +52,19 @@ public:
 
   /// Завершить выполнение
   void shutdown();
-  /// Начать выполнение
-  void startup();
 
-  object_t* make_instance(
-    actor_ref context, const uint32_t options, std::unique_ptr<actor> body);
+  object_t* make_instance(actor_ref context,
+    const actor_thread thread_opt,
+    std::unique_ptr<actor> body);
+
+private:
+  /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
+  object_t* create_actor(
+    std::unique_ptr<actor> body, const actor_thread thread_opt);
+
+  worker_t* create_worker();
+
+  void execute();
 
 private:
   void push_delete(object_t* const obj) override;
@@ -72,19 +74,6 @@ private:
   object_t* pop_object() override;
 
   void push_object(object_t* const obj) override;
-
-private:
-  void execute();
-
-  worker_t* create_worker();
-
-  /**
-   * @brief Processes all available messages for the given acctors.
-   *
-   * @param actors set of actors to process.
-   * @param need_delete delete actors after process all messages.
-   */
-  void process_binded_actors(actors_set& actors, const bool need_delete);
 
 private:
   struct workers_t {
@@ -108,7 +97,7 @@ private:
   event_t m_event{true};
   event_t m_evworker{true};
   event_t m_evnoworkers;
-  /// Queue of ojbects with non empty inbox.
+  /// Queue of objects with non empty inbox.
   generics::queue_t<object_t> m_queue;
   /// -
   workers_t m_workers;

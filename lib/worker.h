@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <thread>
 
 namespace acto {
@@ -31,7 +32,7 @@ public:
   };
 
 public:
-  worker_t(callbacks* const slots);
+  worker_t(callbacks* const slots, std::function<void()> init_cb);
   ~worker_t();
 
   /**

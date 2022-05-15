@@ -17,13 +17,18 @@ namespace acto {
 
 class actor;
 
-/// Use dedicated thread for an actor.
-static constexpr uint32_t aoExclusive = 0x01;
+enum class actor_thread {
+  /// Use shared pool of threads for the actor.
+  shared,
 
-/// Привязать актера к текущему системному потоку.
-/// Не имеет эффекта, если используется в контексте потока,
-/// созданного самой библиотекой.
-static constexpr uint32_t aoBindToThread = 0x02;
+  /// Use dedicated thread for the actor.
+  exclusive,
+
+  /// Bind actor to the current thread.
+  /// The option will be ignored if used inside the thread created by the
+  /// library.
+  bind,
+};
 
 namespace core {
 
@@ -64,7 +69,7 @@ struct object_t : public generics::intrusive_t<object_t> {
   uint32_t unimpl : 1;
 
 public:
-  object_t(const uint32_t options, std::unique_ptr<actor> body);
+  object_t(const actor_thread thread_opt, std::unique_ptr<actor> body);
 
   /// Pushes a message into the mailbox.
   void enqueue(std::unique_ptr<msg_t> msg) noexcept;
@@ -169,10 +174,6 @@ struct msg_wrap_t
 template <typename D>
 inline void sleep(const D duration) {
   std::this_thread::sleep_for(duration);
-}
-
-inline void yield() {
-  std::this_thread::yield();
 }
 
 } // namespace core
@@ -410,76 +411,74 @@ private:
   bool terminating_{false};
 };
 
-/** Destroys the given object. */
-ACTO_API void destroy(actor_ref& object);
+/**
+ * Destroys the given object.
+ */
+void destroy(actor_ref& object);
 
-//
-ACTO_API void finalize_thread();
-
-// Включить в текущем потоке возможность взаимодействия
-// с ядром библиотеки acto
-ACTO_API void initialize_thread();
-
-/** Waits until the actor will finish. */
-ACTO_API void join(actor_ref& obj);
+/**
+ * Waits until the actor will finish.
+ */
+void join(actor_ref& obj);
 
 /**
  * Processes all messages for objects
  * binded to the current thread (with aoBindToThread option).
  */
-ACTO_API void process_messages();
+void process_messages();
 
-/** Library shutdown. */
-ACTO_API void shutdown();
-
-/** Library initialization. */
-ACTO_API void startup();
+/**
+ * Stops all actors.
+ */
+void shutdown();
 
 namespace core {
 
-object_t* make_instance(
-  actor_ref context, const uint32_t options, std::unique_ptr<actor> body);
+object_t* make_instance(actor_ref context,
+  const actor_thread thread_opt,
+  std::unique_ptr<actor> body);
 
 } // namespace core
 
 namespace detail {
 
 template <typename Impl>
-inline core::object_t* make_instance(
-  actor_ref context, const uint32_t options, std::unique_ptr<Impl> impl) {
+inline core::object_t* make_instance(actor_ref context,
+  const actor_thread thread_opt,
+  std::unique_ptr<Impl> impl) {
   static_assert(std::is_base_of<::acto::actor, Impl>::value,
     "implementation should be derived from the acto::actor class");
 
-  return core::make_instance(std::move(context), options, std::move(impl));
+  return core::make_instance(std::move(context), thread_opt, std::move(impl));
 }
 
 } // namespace detail
 
 template <typename T, typename... P>
 inline actor_ref spawn(P&&... p) {
-  return actor_ref(detail::make_instance<T>(actor_ref(), 0,
+  return actor_ref(detail::make_instance<T>(actor_ref(), actor_thread::shared,
                      std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
 template <typename T>
 inline actor_ref spawn(actor_ref context) {
-  return actor_ref(
-    detail::make_instance<T>(std::move(context), 0, std::make_unique<T>()),
+  return actor_ref(detail::make_instance<T>(std::move(context),
+                     actor_thread::shared, std::make_unique<T>()),
     false);
 }
 
 template <typename T>
-inline actor_ref spawn(const uint32_t options) {
+inline actor_ref spawn(const actor_thread thread_opt) {
   return actor_ref(
-    detail::make_instance<T>(actor_ref(), options, std::make_unique<T>()),
+    detail::make_instance<T>(actor_ref(), thread_opt, std::make_unique<T>()),
     false);
 }
 
 template <typename T>
-inline actor_ref spawn(actor_ref context, const uint32_t options) {
+inline actor_ref spawn(actor_ref context, const actor_thread thread_opt) {
   return actor_ref(detail::make_instance<T>(
-                     std::move(context), options, std::make_unique<T>()),
+                     std::move(context), thread_opt, std::make_unique<T>()),
     false);
 }
 

@@ -3,8 +3,6 @@
 
 namespace acto {
 
-static std::atomic_long startup_counter(0);
-
 actor_ref::actor_ref(
   core::object_t* const an_object, const bool acquire) noexcept
   : m_object(an_object) {
@@ -117,14 +115,6 @@ void destroy(actor_ref& object) {
   }
 }
 
-void finalize_thread() {
-  core::runtime_t::instance()->destroy_thread_binding();
-}
-
-void initialize_thread() {
-  core::runtime_t::instance()->create_thread_binding();
-}
-
 void join(actor_ref& obj) {
   obj.join();
 }
@@ -134,24 +124,16 @@ void process_messages() {
 }
 
 void shutdown() {
-  if (startup_counter > 0 && (--startup_counter == 0)) {
-    core::runtime_t::instance()->shutdown();
-  }
-}
-
-void startup() {
-  if (++startup_counter == 1) {
-    core::runtime_t::instance()->startup();
-  }
+  core::runtime_t::instance()->shutdown();
 }
 
 namespace core {
 
-object_t::object_t(const uint32_t options, std::unique_ptr<actor> body)
+object_t::object_t(const actor_thread thread_opt, std::unique_ptr<actor> body)
   : impl(body.release())
   , references(1)
-  , binded(bool(options & acto::aoBindToThread))
-  , exclusive(bool(options & acto::aoExclusive))
+  , binded(thread_opt == actor_thread::bind)
+  , exclusive(thread_opt == actor_thread::exclusive)
   , deleting(false)
   , scheduled(false)
   , unimpl(false) {
@@ -182,6 +164,12 @@ msg_t::~msg_t() {
   if (target) {
     runtime_t::instance()->release(target);
   }
+}
+
+object_t* make_instance(
+  actor_ref context, const actor_thread opt, std::unique_ptr<actor> body) {
+  return runtime_t::instance()->make_instance(
+    std::move(context), opt, std::move(body));
 }
 
 } // namespace core

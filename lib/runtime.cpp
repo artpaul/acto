@@ -6,20 +6,58 @@ namespace acto {
 namespace core {
 namespace {
 
-/** Контекс потока */
+/**
+ * Local context of the current thread.
+ */
 struct binding_context_t {
-  // Список актеров ассоциированных
-  // только с текущим потоком
+  /// Pointer to the active actor is using to
+  /// implicitly determine a sender for a message.
+  object_t* active_actor{nullptr};
+
+  /// Set of actors binded to the current thread.
   std::unordered_set<object_t*> actors;
-  // Счетчик инициализаций
-  std::atomic<long> counter;
+
+  /// It is a worker thread created by the library.
+  bool is_worker_thread{false};
+
+  ~binding_context_t() {
+    // Mark all actors as deleting to prevent message loops.
+    for (auto* obj : actors) {
+      runtime_t::instance()->deconstruct_object(obj);
+    }
+
+    process_actors(true);
+  }
+
+  /**
+   * Processes all available messages for the acctors.
+   *
+   * @param need_delete delete actors after process all messages.
+   */
+  void process_actors(const bool need_delete) {
+    auto runtime = runtime_t::instance();
+    // TODO: - switch between active actors to balance message processing.
+    //       - detect message loop.
+    for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
+      while (auto msg = (*ai)->select_message()) {
+        runtime->handle_message(std::move(msg));
+      }
+      if (need_delete) {
+        runtime->deconstruct_object(*ai);
+      }
+    }
+
+    if (need_delete) {
+      for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
+        runtime->release(*ai);
+      }
+
+      actors.clear();
+    }
+  }
 };
 
-/// Pointer to the active actor is using to
-/// implicitly determine a sender for a message.
-static thread_local object_t* active_actor{nullptr};
-/// -
-static thread_local std::unique_ptr<binding_context_t> thread_context{nullptr};
+static thread_local binding_context_t thread_context;
 
 } // namespace
 
@@ -54,49 +92,6 @@ runtime_t* runtime_t::instance() {
 unsigned long runtime_t::acquire(object_t* const obj) const noexcept {
   assert(bool(obj) && obj->references);
   return ++obj->references;
-}
-
-object_t* runtime_t::create_actor(
-  std::unique_ptr<actor> body, const uint32_t options) {
-  assert(body);
-  assert(!((options & aoBindToThread) && (options & aoExclusive)));
-
-  object_t* const result = new core::object_t(options, std::move(body));
-  // Bind actor to the current thread.
-  if (result->binded) {
-    result->references += 1;
-    thread_context->actors.insert(result);
-  } else {
-    {
-      std::lock_guard<std::mutex> g(m_cs);
-
-      m_actors.insert(result);
-
-      m_clean.reset();
-    }
-    // Create dedicated thread for the actor if necessary.
-    if (result->exclusive) {
-      worker_t* const worker = create_worker();
-
-      result->scheduled = true;
-      result->thread = worker;
-
-      ++m_workers.reserved;
-
-      worker->assign(result, std::chrono::steady_clock::duration());
-    }
-  }
-
-  return result;
-}
-
-void runtime_t::create_thread_binding() {
-  if (thread_context) {
-    ++thread_context->counter;
-  } else {
-    thread_context.reset(new binding_context_t);
-    thread_context->counter = 1;
-  }
 }
 
 void runtime_t::deconstruct_object(object_t* const obj) {
@@ -159,15 +154,6 @@ void runtime_t::deconstruct_object(object_t* const obj) {
   delete obj;
 }
 
-void runtime_t::destroy_thread_binding() {
-  if (thread_context) {
-    if (--thread_context->counter == 0) {
-      this->process_binded_actors(thread_context->actors, true);
-      thread_context.reset();
-    }
-  }
-}
-
 void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(msg->target);
@@ -176,15 +162,15 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
   object_t* const obj = msg->target;
 
   try {
-    assert(active_actor == nullptr);
+    assert(thread_context.active_actor == nullptr);
 
-    active_actor = obj;
+    thread_context.active_actor = obj;
 
     obj->impl->consume_package(std::move(msg));
 
-    active_actor = nullptr;
+    thread_context.active_actor = nullptr;
   } catch (...) {
-    active_actor = nullptr;
+    thread_context.active_actor = nullptr;
   }
   if (obj->impl->terminating_) {
     deconstruct_object(obj);
@@ -192,7 +178,7 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
 }
 
 void runtime_t::join(object_t* const obj) {
-  if (active_actor == obj) {
+  if (thread_context.active_actor == obj) {
     return;
   }
 
@@ -214,9 +200,7 @@ void runtime_t::join(object_t* const obj) {
 }
 
 void runtime_t::process_binded_actors() {
-  assert(thread_context);
-
-  process_binded_actors(thread_context->actors, false);
+  thread_context.process_actors(false);
 }
 
 unsigned long runtime_t::release(object_t* const obj) {
@@ -233,7 +217,7 @@ unsigned long runtime_t::release(object_t* const obj) {
 }
 
 bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
-  return send_on_behalf(target, active_actor, std::move(msg));
+  return send_on_behalf(target, thread_context.active_actor, std::move(msg));
 }
 
 bool runtime_t::send_on_behalf(
@@ -243,7 +227,7 @@ bool runtime_t::send_on_behalf(
 
   {
     std::lock_guard<std::recursive_mutex> g(target->cs);
-    // Can not send messages to deleting object.
+    // Cannot send messages to deleting object.
     if (target->deleting) {
       return false;
     } else {
@@ -260,6 +244,7 @@ bool runtime_t::send_on_behalf(
     target->enqueue(std::move(msg));
     // Do not try to select a worker thread for a binded actor.
     if (target->binded) {
+      target->scheduled = true;
       return true;
     }
     // Wakeup object's thread if the target has
@@ -276,7 +261,8 @@ bool runtime_t::send_on_behalf(
 }
 
 void runtime_t::shutdown() {
-  destroy_thread_binding();
+  // Process all messages for binded actors and stop them.
+  thread_context.process_actors(true);
 
   // 1. Инициировать процедуру удаления для всех оставшихся объектов
   {
@@ -294,37 +280,12 @@ void runtime_t::shutdown() {
   assert(m_actors.size() == 0);
 }
 
-void runtime_t::startup() {
-  create_thread_binding();
-}
-
-void runtime_t::process_binded_actors(
-  actors_set& actors, const bool need_delete) {
-  // TODO: - switch between active actors to balance message processing.
-  //       - detect message loop.
-  for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
-    while (auto msg = (*ai)->select_message()) {
-      handle_message(std::move(msg));
-    }
-    if (need_delete) {
-      deconstruct_object(*ai);
-    }
-  }
-
-  if (need_delete) {
-    for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
-      release(*ai);
-    }
-
-    actors.clear();
-  }
-}
-
-object_t* runtime_t::make_instance(
-  actor_ref context, const uint32_t options, std::unique_ptr<actor> body) {
+object_t* runtime_t::make_instance(actor_ref context,
+  const actor_thread thread_opt,
+  std::unique_ptr<actor> body) {
   assert(body);
   // Create core object.
-  core::object_t* const result = create_actor(std::move(body), options);
+  core::object_t* const result = create_actor(std::move(body), thread_opt);
 
   if (result) {
     result->impl->context_ = std::move(context);
@@ -335,28 +296,40 @@ object_t* runtime_t::make_instance(
   return result;
 }
 
-void runtime_t::push_delete(object_t* const obj) {
-  deconstruct_object(obj);
-}
+object_t* runtime_t::create_actor(
+  std::unique_ptr<actor> body, const actor_thread thread_opt) {
+  object_t* const result = new core::object_t(thread_opt, std::move(body));
+  // Bind actor to the current thread if the thread did not created by the library.
+  if (thread_opt == actor_thread::bind && !thread_context.is_worker_thread) {
+    result->references += 1;
+    thread_context.actors.insert(result);
+  } else {
+    {
+      std::lock_guard<std::mutex> g(m_cs);
 
-void runtime_t::push_idle(worker_t* const worker) {
-  assert(worker);
+      m_actors.insert(result);
 
-  m_workers.idle.push(worker);
-  m_evworker.signaled();
-}
+      m_clean.reset();
+    }
+    // Create dedicated thread for the actor if necessary.
+    if (thread_opt == actor_thread::exclusive) {
+      worker_t* const worker = create_worker();
 
-object_t* runtime_t::pop_object() {
-  return m_queue.pop();
-}
+      result->scheduled = true;
+      result->thread = worker;
 
-void runtime_t::push_object(object_t* const obj) {
-  m_queue.push(obj);
-  m_event.signaled();
+      ++m_workers.reserved;
+
+      worker->assign(result, std::chrono::steady_clock::duration());
+    }
+  }
+
+  return result;
 }
 
 worker_t* runtime_t::create_worker() {
-  worker_t* const result = new core::worker_t(this);
+  worker_t* const result =
+    new core::worker_t(this, [] { thread_context.is_worker_thread = true; });
 
   if (++m_workers.count == 1) {
     m_evnoworkers.reset();
@@ -438,10 +411,24 @@ void runtime_t::execute() {
   }
 }
 
-object_t* make_instance(
-  actor_ref context, const uint32_t options, std::unique_ptr<actor> body) {
-  return runtime_t::instance()->make_instance(
-    std::move(context), options, std::move(body));
+void runtime_t::push_delete(object_t* const obj) {
+  deconstruct_object(obj);
+}
+
+void runtime_t::push_idle(worker_t* const worker) {
+  assert(worker);
+
+  m_workers.idle.push(worker);
+  m_evworker.signaled();
+}
+
+object_t* runtime_t::pop_object() {
+  return m_queue.pop();
+}
+
+void runtime_t::push_object(object_t* const obj) {
+  m_queue.push(obj);
+  m_event.signaled();
 }
 
 } // namespace core

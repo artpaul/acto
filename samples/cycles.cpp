@@ -145,10 +145,8 @@ private:
 
 //-----------------------------------------------------------------------------
 int main() {
-  // Инициализировать библиотеку.
-  acto::startup();
   {
-    acto::actor_ref analizer = acto::spawn< Analizer >(acto::aoExclusive);
+    acto::actor_ref analizer = acto::spawn< Analizer >(acto::actor_thread::exclusive);
     // -
     std::cout << "Statistic is being collected." << std::endl;
     std::cout << "Please wait some seconds..." << std::endl;

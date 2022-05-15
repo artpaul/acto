@@ -197,16 +197,11 @@ int main() {
 
   for (unsigned int i = 1; i < 4; i++) {
     std::cout << "--- " << i << " : start acto ---" << std::endl;
-    // Инициализировать библиотеку.
-    // Данную функцию необходимо вызывать обязательно, так как иначе
-    // поведение бибилиотеки будет непредсказуемым, но скорее всего она просто
-    // не будет функционировать.
-    acto::startup();
     {
       // Создать консоль.
       // Все актеры должны создаваться с использованием шаблона act_o::spawn<>.
       // Использование оператора new недопустимо.
-      acto::actor_ref console = acto::spawn< Console >(acto::aoBindToThread);
+      acto::actor_ref console = acto::spawn< Console >(acto::actor_thread::bind);
 
       for(unsigned int j = 0; j < 1; j++) {
         // Создать стену.
