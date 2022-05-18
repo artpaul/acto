@@ -220,8 +220,9 @@ bool runtime_t::send(object_t* const target, std::unique_ptr<msg_t> msg) {
   return send_on_behalf(target, thread_context.active_actor, std::move(msg));
 }
 
-bool runtime_t::send_on_behalf(
-  object_t* const target, object_t* const sender, std::unique_ptr<msg_t> msg) {
+bool runtime_t::send_on_behalf(object_t* const target,
+                               object_t* const sender,
+                               std::unique_ptr<msg_t> msg) {
   assert(msg);
   assert(target);
 
@@ -281,8 +282,8 @@ void runtime_t::shutdown() {
 }
 
 object_t* runtime_t::make_instance(actor_ref context,
-  const actor_thread thread_opt,
-  std::unique_ptr<actor> body) {
+                                   const actor_thread thread_opt,
+                                   std::unique_ptr<actor> body) {
   assert(body);
   // Create core object.
   core::object_t* const result = create_actor(std::move(body), thread_opt);
@@ -296,10 +297,11 @@ object_t* runtime_t::make_instance(actor_ref context,
   return result;
 }
 
-object_t* runtime_t::create_actor(
-  std::unique_ptr<actor> body, const actor_thread thread_opt) {
+object_t* runtime_t::create_actor(std::unique_ptr<actor> body,
+                                  const actor_thread thread_opt) {
   object_t* const result = new core::object_t(thread_opt, std::move(body));
-  // Bind actor to the current thread if the thread did not created by the library.
+  // Bind actor to the current thread if the thread did not created by the
+  // library.
   if (thread_opt == actor_thread::bind && !thread_context.is_worker_thread) {
     result->references += 1;
     thread_context.actors.insert(result);

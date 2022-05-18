@@ -24,8 +24,8 @@ worker_t::~worker_t() {
   }
 }
 
-void worker_t::assign(
-  object_t* const obj, const std::chrono::steady_clock::duration slice) {
+void worker_t::assign(object_t* const obj,
+                      const std::chrono::steady_clock::duration slice) {
   assert(!object_ && obj);
 
   object_ = obj;

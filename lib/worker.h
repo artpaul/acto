@@ -38,8 +38,8 @@ public:
   /**
    * Assigns the object to the worker.
    */
-  void assign(
-    object_t* const obj, const std::chrono::steady_clock::duration slice);
+  void assign(object_t* const obj,
+              const std::chrono::steady_clock::duration slice);
 
   void wakeup();
 

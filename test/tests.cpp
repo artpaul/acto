@@ -30,10 +30,13 @@ TEST_CASE("Spawn actor") {
   {
     auto a = acto::spawn<A>();
 
-    std::vector<acto::actor_ref> actors = {a,
+    std::vector<acto::actor_ref> actors = {
+      a,
       acto::spawn<A>(acto::actor_thread::shared),
-      acto::spawn<A>(acto::actor_thread::shared, 3), acto::spawn<A>(a),
-      acto::spawn<A>(a, 5), acto::spawn<A>(a, acto::actor_thread::shared),
+      acto::spawn<A>(acto::actor_thread::shared, 3),
+      acto::spawn<A>(a),
+      acto::spawn<A>(a, 5),
+      acto::spawn<A>(a, acto::actor_thread::shared),
       acto::spawn<A>(a, acto::actor_thread::shared, 7)};
     // Validate actors.
     for (const auto& x : actors) {

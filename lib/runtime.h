@@ -47,20 +47,21 @@ public:
   bool send(object_t* const target, std::unique_ptr<msg_t> msg);
 
   /// Sends the message to the specific actor.
-  bool send_on_behalf(
-    object_t* const target, object_t* sender, std::unique_ptr<msg_t> msg);
+  bool send_on_behalf(object_t* const target,
+                      object_t* sender,
+                      std::unique_ptr<msg_t> msg);
 
   /// Завершить выполнение
   void shutdown();
 
   object_t* make_instance(actor_ref context,
-    const actor_thread thread_opt,
-    std::unique_ptr<actor> body);
+                          const actor_thread thread_opt,
+                          std::unique_ptr<actor> body);
 
 private:
   /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
-  object_t* create_actor(
-    std::unique_ptr<actor> body, const actor_thread thread_opt);
+  object_t* create_actor(std::unique_ptr<actor> body,
+                         const actor_thread thread_opt);
 
   worker_t* create_worker();
 

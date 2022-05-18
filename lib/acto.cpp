@@ -3,8 +3,8 @@
 
 namespace acto {
 
-actor_ref::actor_ref(
-  core::object_t* const an_object, const bool acquire) noexcept
+actor_ref::actor_ref(core::object_t* const an_object,
+                     const bool acquire) noexcept
   : m_object(an_object) {
   if (m_object && acquire) {
     core::runtime_t::instance()->acquire(m_object);
@@ -43,10 +43,10 @@ bool actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
   return core::runtime_t::instance()->send(m_object, std::move(msg));
 }
 
-bool actor_ref::send_message_on_behalf(
-  core::object_t* sender, std::unique_ptr<core::msg_t> msg) const {
-  return core::runtime_t::instance()->send_on_behalf(
-    m_object, sender, std::move(msg));
+bool actor_ref::send_message_on_behalf(core::object_t* sender,
+                                       std::unique_ptr<core::msg_t> msg) const {
+  return core::runtime_t::instance()->send_on_behalf(m_object, sender,
+                                                     std::move(msg));
 }
 
 actor_ref& actor_ref::operator=(const actor_ref& rhs) {
@@ -96,8 +96,8 @@ void actor::consume_package(std::unique_ptr<core::msg_t> p) {
   }
 }
 
-void actor::set_handler(
-  const std::type_index& type, std::unique_ptr<handler_t> h) {
+void actor::set_handler(const std::type_index& type,
+                        std::unique_ptr<handler_t> h) {
   if (h) {
     handlers_[type] = std::move(h);
   } else {
@@ -166,10 +166,11 @@ msg_t::~msg_t() {
   }
 }
 
-object_t* make_instance(
-  actor_ref context, const actor_thread opt, std::unique_ptr<actor> body) {
-  return runtime_t::instance()->make_instance(
-    std::move(context), opt, std::move(body));
+object_t* make_instance(actor_ref context,
+                        const actor_thread opt,
+                        std::unique_ptr<actor> body) {
+  return runtime_t::instance()->make_instance(std::move(context), opt,
+                                              std::move(body));
 }
 
 } // namespace core

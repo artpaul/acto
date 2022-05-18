@@ -210,9 +210,10 @@ public:
   template <typename Msg>
   inline bool send(Msg&& msg) const {
     if (m_object) {
-      return send_message(std::make_unique<
-        core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
-        std::move(msg)));
+      return send_message(
+        std::make_unique<
+          core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
+          std::move(msg)));
     }
     return false;
   }
@@ -239,7 +240,8 @@ public:
   template <typename Msg>
   inline bool send_on_behalf(const actor_ref& sender, Msg&& msg) const {
     if (m_object) {
-      return send_message_on_behalf(sender.m_object,
+      return send_message_on_behalf(
+        sender.m_object,
         std::make_unique<
           core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
           std::move(msg)));
@@ -250,7 +252,8 @@ public:
   template <typename Msg, typename... P>
   inline bool send_on_behalf(const actor_ref& sender, P&&... p) const {
     if (m_object) {
-      return send_message_on_behalf(sender.m_object,
+      return send_message_on_behalf(
+        sender.m_object,
         std::make_unique<core::msg_wrap_t<Msg>>(std::forward<P>(p)...));
     }
     return false;
@@ -273,8 +276,8 @@ private:
   bool send_message(std::unique_ptr<core::msg_t> msg) const;
 
   /// Dispatches a message.
-  bool send_message_on_behalf(
-    core::object_t* sender, std::unique_ptr<core::msg_t> msg) const;
+  bool send_message_on_behalf(core::object_t* sender,
+                              std::unique_ptr<core::msg_t> msg) const;
 
 private:
   core::object_t* m_object{nullptr};
@@ -309,10 +312,11 @@ class actor {
     void invoke(std::unique_ptr<core::msg_t> msg) const override {
       using message_reference_t =
         typename std::conditional<core::msg_wrap_t<M>::is_value_movable,
-          core::msg_wrap_t<M>&&, const core::msg_wrap_t<M>&>::type;
+                                  core::msg_wrap_t<M>&&,
+                                  const core::msg_wrap_t<M>&>::type;
 
       func_(ptr_, actor_ref(msg->sender, true),
-        static_cast<message_reference_t>(*msg.get()).data());
+            static_cast<message_reference_t>(*msg.get()).data());
     }
 
   private:
@@ -333,7 +337,7 @@ class actor {
 
     void invoke(std::unique_ptr<core::msg_t> msg) const override {
       func_(actor_ref(msg->sender, true),
-        static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
+            static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
     }
 
   private:
@@ -435,40 +439,44 @@ void shutdown();
 namespace core {
 
 object_t* make_instance(actor_ref context,
-  const actor_thread thread_opt,
-  std::unique_ptr<actor> body);
+                        const actor_thread thread_opt,
+                        std::unique_ptr<actor> body);
 
 } // namespace core
 
 template <typename T, typename... P>
 inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
 spawn(P&&... p) {
-  return actor_ref(core::make_instance(actor_ref(), actor_thread::shared,
-                     std::make_unique<T>(std::forward<P>(p)...)),
+  return actor_ref(
+    core::make_instance(actor_ref(), actor_thread::shared,
+                        std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
 template <typename T, typename... P>
 inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
 spawn(actor_ref context, P&&... p) {
-  return actor_ref(core::make_instance(std::move(context), actor_thread::shared,
-                     std::make_unique<T>(std::forward<P>(p)...)),
+  return actor_ref(
+    core::make_instance(std::move(context), actor_thread::shared,
+                        std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
 template <typename T, typename... P>
 inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
 spawn(const actor_thread thread_opt, P&&... p) {
-  return actor_ref(core::make_instance(actor_ref(), thread_opt,
-                     std::make_unique<T>(std::forward<P>(p)...)),
+  return actor_ref(
+    core::make_instance(actor_ref(), thread_opt,
+                        std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
 template <typename T, typename... P>
 inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
 spawn(actor_ref context, const actor_thread thread_opt, P&&... p) {
-  return actor_ref(core::make_instance(std::move(context), thread_opt,
-                     std::make_unique<T>(std::forward<P>(p)...)),
+  return actor_ref(
+    core::make_instance(std::move(context), thread_opt,
+                        std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
