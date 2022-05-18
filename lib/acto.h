@@ -440,45 +440,35 @@ object_t* make_instance(actor_ref context,
 
 } // namespace core
 
-namespace detail {
-
-template <typename Impl>
-inline core::object_t* make_instance(actor_ref context,
-  const actor_thread thread_opt,
-  std::unique_ptr<Impl> impl) {
-  static_assert(std::is_base_of<::acto::actor, Impl>::value,
-    "implementation should be derived from the acto::actor class");
-
-  return core::make_instance(std::move(context), thread_opt, std::move(impl));
-}
-
-} // namespace detail
-
 template <typename T, typename... P>
-inline actor_ref spawn(P&&... p) {
-  return actor_ref(detail::make_instance<T>(actor_ref(), actor_thread::shared,
+inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
+spawn(P&&... p) {
+  return actor_ref(core::make_instance(actor_ref(), actor_thread::shared,
                      std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
-template <typename T>
-inline actor_ref spawn(actor_ref context) {
-  return actor_ref(detail::make_instance<T>(std::move(context),
-                     actor_thread::shared, std::make_unique<T>()),
+template <typename T, typename... P>
+inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
+spawn(actor_ref context, P&&... p) {
+  return actor_ref(core::make_instance(std::move(context), actor_thread::shared,
+                     std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
-template <typename T>
-inline actor_ref spawn(const actor_thread thread_opt) {
-  return actor_ref(
-    detail::make_instance<T>(actor_ref(), thread_opt, std::make_unique<T>()),
+template <typename T, typename... P>
+inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
+spawn(const actor_thread thread_opt, P&&... p) {
+  return actor_ref(core::make_instance(actor_ref(), thread_opt,
+                     std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
-template <typename T>
-inline actor_ref spawn(actor_ref context, const actor_thread thread_opt) {
-  return actor_ref(detail::make_instance<T>(
-                     std::move(context), thread_opt, std::make_unique<T>()),
+template <typename T, typename... P>
+inline std::enable_if_t<std::is_base_of<::acto::actor, T>::value, actor_ref>
+spawn(actor_ref context, const actor_thread thread_opt, P&&... p) {
+  return actor_ref(core::make_instance(std::move(context), thread_opt,
+                     std::make_unique<T>(std::forward<P>(p)...)),
     false);
 }
 
