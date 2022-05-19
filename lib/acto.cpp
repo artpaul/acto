@@ -108,7 +108,6 @@ void actor::set_handler(const std::type_index& type,
 void destroy(actor_ref& object) {
   if (core::object_t* const obj = object.m_object) {
     object.m_object = nullptr;
-    // Освободить ссылку на объект и удалить его
     if (core::runtime_t::instance()->release(obj) > 0) {
       core::runtime_t::instance()->deconstruct_object(obj);
     }

@@ -27,20 +27,24 @@ public:
   static runtime_t* instance();
 
 public:
-  /// Захватить ссылку на объект
+  /// Aquires reference to the object.
   unsigned long acquire(object_t* const obj) const noexcept;
-  /// Уничтожить объект
+
+  /// Sets object to deleting state and destroy object's body if there are no
+  /// messages left in the inbox.
   void deconstruct_object(object_t* const object);
+
   ///
   void handle_message(std::unique_ptr<msg_t> msg) override;
+
   /// Ждать уничтожения тела объекта
   void join(object_t* const obj);
+
   /// -
   void process_binded_actors();
+
   /// -
   unsigned long release(object_t* const obj);
-  /// Зарегистрировать новый модуль
-  void register_module();
 
   /// Sends the message to the specific actor.
   /// Uses the active actor as a sender.
@@ -51,7 +55,7 @@ public:
                       object_t* sender,
                       std::unique_ptr<msg_t> msg);
 
-  /// Завершить выполнение
+  /// Cleanups allocated resources.
   void shutdown();
 
   object_t* make_instance(actor_ref context,
@@ -59,7 +63,6 @@ public:
                           std::unique_ptr<actor> body);
 
 private:
-  /// Создать экземпляр объекта, связав его с соответсвтующей реализацией
   object_t* create_actor(std::unique_ptr<actor> body,
                          const actor_thread thread_opt);
 
@@ -88,20 +91,23 @@ private:
 
   /// Number of physical cores in the system.
   const unsigned long m_processors{std::thread::hardware_concurrency()};
-  /// Критическая секция для доступа к полям
-  std::mutex m_cs;
-  ///
-  event_t m_clean;
-  /// Текущее множество актеров
-  actors_set m_actors;
-  ///
-  event_t m_event{true};
-  event_t m_evworker{true};
-  event_t m_evnoworkers;
+
+  std::mutex mutex_;
+  /// There are no more managed objects event.
+  event_t no_actors_event_;
+  /// Object's queue become non empty event.
+  event_t queue_event_{true};
+  /// There are some idle workers evetn.
+  event_t idle_workers_event_{true};
+  /// There are no more worker threads event.
+  event_t no_workers_event_;
+
+  /// Set of managed objects.
+  actors_set actors_;
   /// Queue of objects with non empty inbox.
-  generics::queue_t<object_t> m_queue;
-  /// -
-  workers_t m_workers;
+  generics::queue_t<object_t> queue_;
+  /// Currently allocated worker threads.
+  workers_t workers_;
   /// -
   std::atomic<bool> m_active{true};
   std::atomic<bool> m_terminating{false};

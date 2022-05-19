@@ -63,25 +63,25 @@ static thread_local binding_context_t thread_context;
 
 runtime_t::runtime_t()
   : m_scheduler(&runtime_t::execute, this) {
-  m_clean.signaled();
-  m_evnoworkers.signaled();
+  no_actors_event_.signaled();
+  no_workers_event_.signaled();
 }
 
 runtime_t::~runtime_t() {
   m_terminating = true;
   // Дождаться, когда все потоки будут удалены
-  m_event.signaled();
-  m_evnoworkers.wait();
+  queue_event_.signaled();
+  no_workers_event_.wait();
 
   m_active = false;
 
-  m_event.signaled();
+  queue_event_.signaled();
   // Stop scheduler's thread.
   if (m_scheduler.joinable()) {
     m_scheduler.join();
   }
 
-  assert(m_workers.count == 0 && m_workers.reserved == 0);
+  assert(workers_.count == 0 && workers_.reserved == 0);
 }
 
 runtime_t* runtime_t::instance() {
@@ -113,7 +113,7 @@ void runtime_t::deconstruct_object(object_t* const obj) {
     }
     if (obj->impl) {
       if (obj->thread) {
-        --m_workers.reserved;
+        --workers_.reserved;
         obj->thread->wakeup();
       }
 
@@ -141,12 +141,12 @@ void runtime_t::deconstruct_object(object_t* const obj) {
   }
   // Remove object from the global registry.
   if (!obj->binded) {
-    std::lock_guard<std::mutex> g(m_cs);
+    std::lock_guard<std::mutex> g(mutex_);
 
-    m_actors.erase(obj);
+    actors_.erase(obj);
 
-    if (m_actors.empty()) {
-      m_clean.signaled();
+    if (actors_.empty()) {
+      no_actors_event_.signaled();
     }
   }
   // There are no more references to the object,
@@ -265,20 +265,23 @@ void runtime_t::shutdown() {
   // Process all messages for binded actors and stop them.
   thread_context.process_actors(true);
 
-  // 1. Инициировать процедуру удаления для всех оставшихся объектов
+  // Process shared actors.
   {
-    std::lock_guard<std::mutex> g(m_cs);
+    actors_set actors;
 
-    actors_set temporary(m_actors);
-
-    for (auto ti = temporary.cbegin(); ti != temporary.cend(); ++ti) {
-      deconstruct_object(*ti);
+    {
+      std::lock_guard<std::mutex> g(mutex_);
+      actors = actors_;
     }
+
+    for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
+      deconstruct_object(*ai);
+    }
+
+    no_actors_event_.wait();
   }
 
-  m_clean.wait();
-
-  assert(m_actors.size() == 0);
+  assert(actors_.empty());
 }
 
 object_t* runtime_t::make_instance(actor_ref context,
@@ -307,11 +310,11 @@ object_t* runtime_t::create_actor(std::unique_ptr<actor> body,
     thread_context.actors.insert(result);
   } else {
     {
-      std::lock_guard<std::mutex> g(m_cs);
+      std::lock_guard<std::mutex> g(mutex_);
 
-      m_actors.insert(result);
+      actors_.insert(result);
 
-      m_clean.reset();
+      no_actors_event_.reset();
     }
     // Create dedicated thread for the actor if necessary.
     if (thread_opt == actor_thread::exclusive) {
@@ -320,7 +323,7 @@ object_t* runtime_t::create_actor(std::unique_ptr<actor> body,
       result->scheduled = true;
       result->thread = worker;
 
-      ++m_workers.reserved;
+      ++workers_.reserved;
 
       worker->assign(result, std::chrono::steady_clock::duration());
     }
@@ -333,8 +336,8 @@ worker_t* runtime_t::create_worker() {
   worker_t* const result =
     new core::worker_t(this, [] { thread_context.is_worker_thread = true; });
 
-  if (++m_workers.count == 1) {
-    m_evnoworkers.reset();
+  if (++workers_.count == 1) {
+    no_workers_event_.reset();
   }
 
   return result;
@@ -347,35 +350,35 @@ void runtime_t::execute() {
   auto delete_worker = [this](worker_t* const item) {
     delete item;
     // Уведомить, что удалены все вычислительные потоки
-    if (--m_workers.count == 0) {
-      m_evnoworkers.signaled();
+    if (--workers_.count == 0) {
+      no_workers_event_.signaled();
     }
   };
 
   while (m_active) {
-    while (!m_queue.empty()) {
+    while (!queue_.empty()) {
       // Прежде чем извлекать объект из очереди, необходимо проверить,
       // что есть вычислительные ресурсы для его обработки
-      worker_t* worker = m_workers.idle.pop();
+      worker_t* worker = workers_.idle.pop();
 
       if (!worker) {
         // Если текущее количество потоков меньше оптимального,
         // то создать новый поток
-        if (m_workers.count < (m_workers.reserved + (m_processors << 1))) {
+        if (workers_.count < (workers_.reserved + (m_processors << 1))) {
           worker = create_worker();
         } else {
           // Подождать некоторое время осовобождения какого-нибудь потока
-          const wait_result result = m_evworker.wait(new_worker_timeout);
+          const wait_result result = idle_workers_event_.wait(new_worker_timeout);
 
-          worker = m_workers.idle.pop();
+          worker = workers_.idle.pop();
 
           if (!worker && (result == wait_result::timeout)) {
             new_worker_timeout += std::chrono::seconds(2);
 
-            if (m_workers.count < MAX_WORKERS) {
+            if (workers_.count < MAX_WORKERS) {
               worker = create_worker();
             } else {
-              m_evworker.wait();
+              idle_workers_event_.wait();
             }
           } else if (new_worker_timeout > std::chrono::seconds(2)) {
             new_worker_timeout -= std::chrono::seconds(2);
@@ -384,18 +387,18 @@ void runtime_t::execute() {
       }
 
       if (worker) {
-        if (object_t* const obj = m_queue.pop()) {
+        if (object_t* const obj = queue_.pop()) {
           worker->assign(obj, std::chrono::milliseconds(500));
         } else {
-          m_workers.idle.push(worker);
+          workers_.idle.push(worker);
         }
       }
     }
 
     if (m_terminating ||
-        (m_event.wait(std::chrono::seconds(60)) == wait_result::timeout))
+        (queue_event_.wait(std::chrono::seconds(60)) == wait_result::timeout))
     {
-      generics::stack_t<worker_t> queue(m_workers.idle.extract());
+      generics::stack_t<worker_t> queue(workers_.idle.extract());
 
       // Удалить все потоки
       while (worker_t* const item = queue.pop()) {
@@ -404,7 +407,7 @@ void runtime_t::execute() {
     } else if ((std::chrono::steady_clock::now() - last_cleanup_time) >
                std::chrono::seconds(60))
     {
-      if (worker_t* const item = m_workers.idle.pop()) {
+      if (worker_t* const item = workers_.idle.pop()) {
         delete_worker(item);
       }
 
@@ -420,17 +423,17 @@ void runtime_t::push_delete(object_t* const obj) {
 void runtime_t::push_idle(worker_t* const worker) {
   assert(worker);
 
-  m_workers.idle.push(worker);
-  m_evworker.signaled();
+  workers_.idle.push(worker);
+  idle_workers_event_.signaled();
 }
 
 object_t* runtime_t::pop_object() {
-  return m_queue.pop();
+  return queue_.pop();
 }
 
 void runtime_t::push_object(object_t* const obj) {
-  m_queue.push(obj);
-  m_event.signaled();
+  queue_.push(obj);
+  queue_event_.signaled();
 }
 
 } // namespace core

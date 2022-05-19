@@ -401,7 +401,6 @@ private:
   void set_handler(const std::type_index& type, std::unique_ptr<handler_t> h);
 
 private:
-  /// Карта обработчиков сообщений
   using handlers =
     std::unordered_map<std::type_index, std::unique_ptr<handler_t>>;
 
