@@ -109,8 +109,8 @@ private:
   /// Currently allocated worker threads.
   workers_t workers_;
   /// -
-  std::atomic<bool> m_active{true};
-  std::atomic<bool> m_terminating{false};
+  std::atomic<bool> active_{true};
+  std::atomic<bool> terminating_{false};
   /// Scheduler thread.
   std::thread m_scheduler;
 };

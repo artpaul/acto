@@ -68,12 +68,12 @@ runtime_t::runtime_t()
 }
 
 runtime_t::~runtime_t() {
-  m_terminating = true;
+  terminating_ = true;
   // Дождаться, когда все потоки будут удалены
   queue_event_.signaled();
   no_workers_event_.wait();
 
-  m_active = false;
+  active_ = false;
 
   queue_event_.signaled();
   // Stop scheduler's thread.
@@ -271,7 +271,12 @@ void runtime_t::shutdown() {
 
     {
       std::lock_guard<std::mutex> g(mutex_);
-      actors = actors_;
+
+      if (actors_.empty()) {
+        return;
+      } else {
+        actors = actors_;
+      }
     }
 
     for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
@@ -355,7 +360,7 @@ void runtime_t::execute() {
     }
   };
 
-  while (m_active) {
+  while (active_) {
     while (!queue_.empty()) {
       // Прежде чем извлекать объект из очереди, необходимо проверить,
       // что есть вычислительные ресурсы для его обработки
@@ -368,7 +373,8 @@ void runtime_t::execute() {
           worker = create_worker();
         } else {
           // Подождать некоторое время осовобождения какого-нибудь потока
-          const wait_result result = idle_workers_event_.wait(new_worker_timeout);
+          const wait_result result =
+            idle_workers_event_.wait(new_worker_timeout);
 
           worker = workers_.idle.pop();
 
@@ -395,7 +401,7 @@ void runtime_t::execute() {
       }
     }
 
-    if (m_terminating ||
+    if (terminating_ ||
         (queue_event_.wait(std::chrono::seconds(60)) == wait_result::timeout))
     {
       generics::stack_t<worker_t> queue(workers_.idle.extract());
