@@ -2,6 +2,8 @@
 #include "catch.hpp"
 
 #include <iostream>
+#include <map>
+#include <unordered_map>
 #include <vector>
 
 TEST_CASE("Finalize library") {
@@ -87,4 +89,20 @@ TEST_CASE("Process binded actors at exit") {
   t.join();
   // The sent message should be processed at thread exit.
   REQUIRE(*counter == 1);
+}
+
+TEST_CASE("Key for containers") {
+  struct A : acto::actor { };
+
+  std::map<acto::actor_ref, int> map;
+  std::unordered_map<acto::actor_ref, int> hash_map;
+  auto a = acto::spawn<A>();
+
+  map.emplace(a, 1);
+  hash_map.emplace(a, 2);
+
+  CHECK(map.find(a) == map.begin());
+  CHECK(hash_map.find(a) == hash_map.begin());
+
+  acto::destroy(a);
 }

@@ -182,6 +182,7 @@ inline void sleep(const D duration) {
  * Reference to an actor object.
  */
 class actor_ref {
+  friend class std::hash<actor_ref>;
   friend void join(actor_ref& obj);
   friend void destroy(actor_ref& object);
 
@@ -480,3 +481,11 @@ spawn(actor_ref context, const actor_thread thread_opt, P&&... p) {
 }
 
 } // namespace acto
+
+template <>
+class std::hash<acto::actor_ref> {
+public:
+  size_t operator()(const acto::actor_ref& ref) const noexcept {
+    return reinterpret_cast<size_t>(ref.m_object);
+  }
+};
