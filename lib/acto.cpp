@@ -134,8 +134,7 @@ object_t::object_t(const actor_thread thread_opt, std::unique_ptr<actor> body)
   , binded(thread_opt == actor_thread::bind)
   , exclusive(thread_opt == actor_thread::exclusive)
   , deleting(false)
-  , scheduled(false)
-  , unimpl(false) {
+  , scheduled(false) {
 }
 
 void object_t::enqueue(std::unique_ptr<msg_t> msg) noexcept {

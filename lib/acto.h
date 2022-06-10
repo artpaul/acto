@@ -47,26 +47,24 @@ struct object_t : public generics::intrusive_t<object_t> {
   using atomic_stack_t = generics::mpsc_stack_t<msg_t>;
   using intusive_stack_t = generics::stack_t<msg_t>;
 
-  // Критическая секция для доступа к полям
-  std::recursive_mutex cs;
-
+  /// State mutex.
+  std::mutex cs;
   /// Pointer to the object inherited from the actor class (aka actor body).
   actor* impl;
   /// Dedicated thread for the object.
   worker_t* thread{nullptr};
-  // Список сигналов для потоков, ожидающих уничтожения объекта.
-  waiter_t* waiters{nullptr};
-  // Очередь сообщений, поступивших данному объекту
+  /// Queue of input messages implemented with two stacks.
   atomic_stack_t input_stack;
   intusive_stack_t local_stack;
-  // Count of references to the object.
+  /// Count of references to the object.
   std::atomic<unsigned long> references{0};
+  /// List of events awaiting for object deconstruction.
+  waiter_t* waiters{nullptr};
   /// State flags.
   const uint32_t binded : 1;
   const uint32_t exclusive : 1;
   uint32_t deleting : 1;
   uint32_t scheduled : 1;
-  uint32_t unimpl : 1;
 
 public:
   object_t(const actor_thread thread_opt, std::unique_ptr<actor> body);

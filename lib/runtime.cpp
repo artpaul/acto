@@ -98,34 +98,25 @@ void runtime_t::deconstruct_object(object_t* const obj) {
   assert(obj);
 
   {
-    std::lock_guard<std::recursive_mutex> g(obj->cs);
-    // Return from a recursive call
-    // during deletion of the actor's body.
-    if (obj->unimpl) {
-      return;
-    }
+    std::lock_guard<std::mutex> g(obj->cs);
+
     obj->deleting = true;
     // The object still has some messages in the mailbox.
     if (obj->scheduled) {
       return;
-    } else {
-      assert(!obj->has_messages());
     }
+    //
     if (obj->impl) {
-      if (obj->thread) {
-        --workers_.reserved;
-        obj->thread->wakeup();
-      }
+      // Take temporary reference to the object to avoid calling the decontruct
+      // function during deleteing the object's body.
+      obj->references++;
 
-      obj->unimpl = true;
       delete obj->impl, obj->impl = nullptr;
-      obj->unimpl = false;
 
       if (obj->waiters) {
         for (object_t::waiter_t* it = obj->waiters; it != nullptr;) {
-          // TN: Необходимо читать значение следующего указателя
-          //     заранее, так как пробуждение ждущего потока
-          //     приведет к удалению текущего узла списка
+          // Make the event signaled will lead to destruction of the list node.
+          // So retrieve pointer to the next node beforehand.
           object_t::waiter_t* next = it->next;
           it->event.signaled();
           it = next;
@@ -133,14 +124,29 @@ void runtime_t::deconstruct_object(object_t* const obj) {
 
         obj->waiters = nullptr;
       }
+
+      obj->references--;
+    }
+    // The didicated thread will place itself into shared pool.
+    if (obj->thread) {
+      --workers_.reserved;
+      obj->thread->wakeup();
+      obj->thread = nullptr;
     }
     // Cannot delete the object if there are still some references to it.
     if (obj->references) {
       return;
     }
   }
+
+  const bool is_binded = obj->binded;
+
+  // There are no more references to the object,
+  // so delete it.
+  delete obj;
+
   // Remove object from the global registry.
-  if (!obj->binded) {
+  if (!is_binded) {
     std::lock_guard<std::mutex> g(mutex_);
 
     actors_.erase(obj);
@@ -149,9 +155,6 @@ void runtime_t::deconstruct_object(object_t* const obj) {
       no_actors_event_.signaled();
     }
   }
-  // There are no more references to the object,
-  // so delete it.
-  delete obj;
 }
 
 void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
@@ -185,7 +188,7 @@ void runtime_t::join(object_t* const obj) {
   object_t::waiter_t node;
 
   {
-    std::lock_guard<std::recursive_mutex> g(obj->cs);
+    std::lock_guard<std::mutex> g(obj->cs);
 
     if (obj->impl) {
       node.event.reset();
@@ -227,7 +230,7 @@ bool runtime_t::send_on_behalf(object_t* const target,
   assert(target);
 
   {
-    std::lock_guard<std::recursive_mutex> g(target->cs);
+    std::lock_guard<std::mutex> g(target->cs);
     // Cannot send messages to deleting object.
     if (target->deleting) {
       return false;

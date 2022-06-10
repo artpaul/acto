@@ -70,7 +70,7 @@ bool worker_t::process() {
 
       // There are no messages in the object's mailbox or
       // the time slice was elapsed.
-      std::lock_guard<std::recursive_mutex> g(obj->cs);
+      std::lock_guard<std::mutex> g(obj->cs);
 
       if (obj->deleting) {
         need_delete = true;
