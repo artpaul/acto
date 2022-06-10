@@ -330,7 +330,7 @@ object_t* runtime_t::create_actor(std::unique_ptr<actor> body,
 
       ++workers_.reserved;
 
-      worker->assign(result, std::chrono::steady_clock::duration());
+      worker->assign(result, std::chrono::milliseconds(500));
     }
   }
 
@@ -369,7 +369,7 @@ void runtime_t::execute() {
       if (!worker) {
         // Если текущее количество потоков меньше оптимального,
         // то создать новый поток
-        if (workers_.count < (workers_.reserved + (m_processors << 1))) {
+        if (workers_.count < (workers_.reserved + m_processors)) {
           worker = create_worker();
         } else {
           // Подождать некоторое время осовобождения какого-нибудь потока

@@ -346,7 +346,7 @@ class actor {
   };
 
 public:
-  virtual ~actor() = default;
+  virtual ~actor() noexcept = default;
 
 protected:
   inline actor_ref context() const {
