@@ -106,3 +106,28 @@ TEST_CASE("Key for containers") {
 
   acto::destroy(a);
 }
+
+TEST_CASE("Send from bootstrap") {
+  struct A : acto::actor {
+    struct M { };
+
+    A(bool& flag)
+      : flag_(flag) {
+      actor::handler<M>([this](acto::actor_ref sender, const M&) {
+        flag_ = bool(sender);
+        actor::die();
+      });
+    }
+
+    void bootstrap() override {
+      self().send<M>();
+    }
+
+    bool& flag_;
+  };
+
+  bool valid_sender = false;
+  acto::join(acto::spawn<A>(valid_sender));
+
+  CHECK(valid_sender);
+}

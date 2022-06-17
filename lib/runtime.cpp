@@ -59,6 +59,21 @@ struct binding_context_t {
 
 static thread_local binding_context_t thread_context;
 
+class active_actor_guard {
+public:
+  explicit active_actor_guard(object_t* value) noexcept
+    : saved_value_(thread_context.active_actor) {
+    thread_context.active_actor = value;
+  }
+
+  ~active_actor_guard() noexcept {
+    thread_context.active_actor = saved_value_;
+  }
+
+private:
+  object_t* const saved_value_;
+};
+
 } // namespace
 
 runtime_t::runtime_t()
@@ -164,17 +179,16 @@ void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
 
   object_t* const obj = msg->target;
 
-  try {
-    assert(thread_context.active_actor == nullptr);
+  {
+    active_actor_guard guard(obj);
 
-    thread_context.active_actor = obj;
-
-    obj->impl->consume_package(std::move(msg));
-
-    thread_context.active_actor = nullptr;
-  } catch (...) {
-    thread_context.active_actor = nullptr;
+    try {
+      obj->impl->consume_package(std::move(msg));
+    } catch (...) {
+      ; // TODO: should we suppress all exceptions?
+    }
   }
+
   if (obj->impl->terminating_) {
     deconstruct_object(obj);
   }
@@ -300,6 +314,8 @@ object_t* runtime_t::make_instance(actor_ref context,
   core::object_t* const result = create_actor(std::move(body), thread_opt);
 
   if (result) {
+    active_actor_guard guard(result);
+
     result->impl->context_ = std::move(context);
     result->impl->self_ = actor_ref(result, true);
     result->impl->bootstrap();

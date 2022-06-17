@@ -33,7 +33,7 @@ bool actor_ref::assigned() const noexcept {
   return m_object != nullptr;
 }
 
-void actor_ref::join() {
+void actor_ref::join() const {
   if (m_object) {
     core::runtime_t::instance()->join(m_object);
   }
@@ -114,7 +114,7 @@ void destroy(actor_ref& object) {
   }
 }
 
-void join(actor_ref& obj) {
+void join(const actor_ref& obj) {
   obj.join();
 }
 

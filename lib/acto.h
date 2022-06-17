@@ -181,7 +181,7 @@ inline void sleep(const D duration) {
  */
 class actor_ref {
   friend class std::hash<actor_ref>;
-  friend void join(actor_ref& obj);
+  friend void join(const actor_ref& obj);
   friend void destroy(actor_ref& object);
 
 public:
@@ -199,7 +199,7 @@ public:
   bool assigned() const noexcept;
 
   /** Waits until the actor stops. */
-  void join();
+  void join() const;
 
   /**
    * Sends a message to the actor.
@@ -421,7 +421,7 @@ void destroy(actor_ref& object);
 /**
  * Waits until the actor will finish.
  */
-void join(actor_ref& obj);
+void join(const actor_ref& obj);
 
 /**
  * Processes all messages for objects
