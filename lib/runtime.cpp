@@ -40,7 +40,7 @@ struct binding_context_t {
     //       - detect message loop.
     for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
       while (auto msg = (*ai)->select_message()) {
-        runtime->handle_message(std::move(msg));
+        runtime->handle_message(*ai, std::move(msg));
       }
       if (need_delete) {
         runtime->deconstruct_object(*ai);
@@ -172,12 +172,8 @@ void runtime_t::deconstruct_object(object_t* const obj) {
   }
 }
 
-void runtime_t::handle_message(std::unique_ptr<msg_t> msg) {
-  assert(msg);
-  assert(msg->target);
-  assert(msg->target->impl);
-
-  object_t* const obj = msg->target;
+void runtime_t::handle_message(object_t* obj, std::unique_ptr<msg_t> msg) {
+  assert(obj->impl);
 
   {
     active_actor_guard guard(obj);
@@ -254,9 +250,6 @@ bool runtime_t::send_on_behalf(object_t* const target,
         msg->sender = sender;
         acquire(sender);
       }
-      // Acquire reference to the target actor.
-      msg->target = target;
-      acquire(target);
     }
     // Enqueue the message.
     target->enqueue(std::move(msg));

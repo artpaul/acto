@@ -58,7 +58,7 @@ bool worker_t::process() {
     while (true) {
       // Handle a message.
       if (auto msg = obj->select_message()) {
-        slots_->handle_message(std::move(msg));
+        slots_->handle_message(obj, std::move(msg));
         // Continue processing messages if the object is bound to the thread or
         // the time slice has not been elapsed yet.
         if (obj->exclusive ||

@@ -35,7 +35,7 @@ public:
   void deconstruct_object(object_t* const object);
 
   ///
-  void handle_message(std::unique_ptr<msg_t> msg) override;
+  void handle_message(object_t* obj, std::unique_ptr<msg_t> msg) override;
 
   /// Ждать уничтожения тела объекта
   void join(object_t* const obj);

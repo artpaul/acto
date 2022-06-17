@@ -25,7 +25,7 @@ public:
     virtual ~callbacks() = default;
 
     /** Process the message. */
-    virtual void handle_message(std::unique_ptr<msg_t>) = 0;
+    virtual void handle_message(object_t* obj, std::unique_ptr<msg_t>) = 0;
 
     /** Schedule object to delete. */
     virtual void push_delete(object_t* const) = 0;

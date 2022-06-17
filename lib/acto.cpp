@@ -159,9 +159,6 @@ msg_t::~msg_t() {
   if (sender) {
     runtime_t::instance()->release(sender);
   }
-  if (target) {
-    runtime_t::instance()->release(target);
-  }
 }
 
 object_t* make_instance(actor_ref context,

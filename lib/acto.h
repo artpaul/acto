@@ -85,8 +85,6 @@ struct msg_t : generics::intrusive_t<msg_t> {
   /// Sender of the message.
   /// Can be empty.
   object_t* sender{nullptr};
-  /// Receiver of the message.
-  object_t* target{nullptr};
 
 public:
   constexpr msg_t(const std::type_index& idx) noexcept
