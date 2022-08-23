@@ -178,11 +178,7 @@ void runtime_t::handle_message(object_t* obj, std::unique_ptr<msg_t> msg) {
   {
     active_actor_guard guard(obj);
 
-    try {
-      obj->impl->consume_package(std::move(msg));
-    } catch (...) {
-      ; // TODO: should we suppress all exceptions?
-    }
+    obj->impl->consume_package(std::move(msg));
   }
 
   if (obj->impl->terminating_) {
