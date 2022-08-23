@@ -105,7 +105,7 @@ private:
   /// Set of managed objects.
   actors_set actors_;
   /// Queue of objects with non empty inbox.
-  generics::queue_t<object_t> queue_;
+  generics::intrusive_queue_t<object_t> queue_;
   /// Currently allocated worker threads.
   workers_t workers_;
   /// -
