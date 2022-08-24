@@ -240,12 +240,11 @@ bool runtime_t::send_on_behalf(object_t* const target,
     // Cannot send messages to deleting object.
     if (target->deleting) {
       return false;
-    } else {
-      // Acquire reference to a sender.
-      if (sender) {
-        msg->sender = sender;
-        acquire(sender);
-      }
+    }
+    // Acquire reference to a sender.
+    if (sender) {
+      msg->sender = sender;
+      acquire(sender);
     }
     // Enqueue the message.
     target->enqueue(std::move(msg));
@@ -258,11 +257,16 @@ bool runtime_t::send_on_behalf(object_t* const target,
     // a dedicated thread for message processing.
     if (worker_t* const thread = target->thread) {
       thread->wakeup();
-    } else if (!target->scheduled) {
+      return true;
+    }
+    if (target->scheduled) {
+      return true;
+    } else {
       target->scheduled = true;
-      push_object(target);
     }
   }
+
+  push_object(target);
 
   return true;
 }
