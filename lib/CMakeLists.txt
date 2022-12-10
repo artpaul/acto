@@ -1,18 +1,18 @@
-add_library (acto-lib STATIC)
+add_library(acto-lib STATIC)
 
-target_include_directories (acto-lib PUBLIC
+target_include_directories(acto-lib PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_sources (acto-lib PRIVATE
+target_sources(acto-lib PRIVATE
   "acto.cpp"
   "event.cpp"
   "runtime.cpp"
   "worker.cpp"
 )
 
-if (UNIX)
-  target_link_libraries (acto-lib PUBLIC
+if(UNIX)
+  target_link_libraries(acto-lib PUBLIC
     pthread
   )
-endif ()
+endif()
