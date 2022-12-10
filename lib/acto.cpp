@@ -118,7 +118,7 @@ void join(const actor_ref& obj) {
   obj.join();
 }
 
-void process_messages() {
+void this_thread::process_messages() {
   core::runtime_t::instance()->process_binded_actors();
 }
 

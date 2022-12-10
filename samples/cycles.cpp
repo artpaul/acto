@@ -153,7 +153,7 @@ int main() {
     // Запустить выполнение примера
     analizer.send(msg_start());
 
-    acto::core::sleep(std::chrono::seconds(5));
+    acto::this_thread::sleep_for(std::chrono::seconds(5));
     // Оставноваить выполнение и собрать статистику
     analizer.send(msg_stop());
 
