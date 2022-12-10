@@ -2,7 +2,6 @@
 
 #include "event.h"
 #include "generics.h"
-#include "platform.h"
 
 #include <atomic>
 #include <functional>
@@ -166,11 +165,6 @@ struct msg_wrap_t
     , message_container_t<T>(std::forward<Args>(args)...) {
   }
 };
-
-template <typename D>
-inline void sleep(const D duration) {
-  std::this_thread::sleep_for(duration);
-}
 
 } // namespace core
 
@@ -422,12 +416,6 @@ void destroy(actor_ref& object);
 void join(const actor_ref& obj);
 
 /**
- * Processes all messages for objects
- * binded to the current thread (with aoBindToThread option).
- */
-void process_messages();
-
-/**
  * Stops all actors.
  */
 void shutdown();
@@ -476,6 +464,20 @@ spawn(actor_ref context, const actor_thread thread_opt, P&&... p) {
     false);
 }
 
+namespace this_thread {
+
+/**
+ * Processes all messages for objects
+ * binded to the current thread (with aoBindToThread option).
+ */
+void process_messages();
+
+template <typename D>
+inline void sleep_for(const D duration) {
+  std::this_thread::sleep_for(duration);
+}
+
+} // namespace this_thread
 } // namespace acto
 
 template <>

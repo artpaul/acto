@@ -216,7 +216,7 @@ int main() {
         wall.send< msg_start >(BALLS, console);
 
         // Игра продолжается некоторое время в независимых потоках
-        acto::core::sleep(std::chrono::milliseconds(DURATION));
+        acto::this_thread::sleep_for(std::chrono::milliseconds(DURATION));
 
         // Остановить игру
         wall.send(msg_finish());
@@ -225,9 +225,9 @@ int main() {
         acto::join(wall);
 
         // Обработать сообщения для консоли
-        acto::process_messages();
+        acto::this_thread::process_messages();
       }
-      acto::core::sleep(std::chrono::milliseconds(1000));
+      acto::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
     // По зовершении работы библиотеки необходимо вызвать эту функцию,
     // чтобы освободить все занимаемые ресурсы.
