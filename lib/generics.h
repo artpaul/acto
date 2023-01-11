@@ -166,7 +166,7 @@ private:
 };
 
 /**
- * Простой интрузивный стек без каких-либо блокировок
+ * Simple intrusive stack without any locks.
  */
 template <typename T>
 class stack_t {
