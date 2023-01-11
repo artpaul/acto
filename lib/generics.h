@@ -8,7 +8,7 @@ namespace acto {
 namespace generics {
 
 /**
- * Интрузивный элемент списка
+ * Intrusive list node.
  */
 template <typename T>
 struct intrusive_t {

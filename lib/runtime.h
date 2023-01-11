@@ -12,7 +12,7 @@ namespace acto {
 namespace core {
 
 /**
- * Данные среды выполнения
+ * Global runtime environment.
  */
 class runtime_t : public worker_t::callbacks {
   using actors_set = std::unordered_set<object_t*>;
