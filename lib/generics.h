@@ -112,17 +112,17 @@ template <typename T>
 class mpsc_stack_t {
 public:
   bool empty() const noexcept {
-    return (m_head.load() == nullptr);
+    return (head_.load() == nullptr);
   }
 
   sequence_t<T> extract() noexcept {
     do {
-      T* top = m_head.load();
+      T* top = head_.load();
 
       if (top == nullptr) {
         return nullptr;
       }
-      if (m_head.compare_exchange_weak(top, nullptr)) {
+      if (head_.compare_exchange_weak(top, nullptr)) {
         return top;
       }
     } while (true);
@@ -130,9 +130,9 @@ public:
 
   void push(T* const node) noexcept {
     do {
-      T* top = m_head.load();
+      T* top = head_.load();
       node->next = top;
-      if (m_head.compare_exchange_weak(top, node)) {
+      if (head_.compare_exchange_weak(top, node)) {
         return;
       }
     } while (true);
@@ -146,14 +146,14 @@ public:
 
   T* pop() noexcept {
     do {
-      T* top = m_head.load();
+      T* top = head_.load();
 
       if (top == nullptr) {
         return nullptr;
       } else {
         T* next = top->next;
 
-        if (m_head.compare_exchange_weak(top, next)) {
+        if (head_.compare_exchange_weak(top, next)) {
           top->next = nullptr;
           return top;
         }
@@ -162,7 +162,7 @@ public:
   }
 
 private:
-  std::atomic<T*> m_head{nullptr};
+  std::atomic<T*> head_{nullptr};
 };
 
 /**
@@ -174,22 +174,22 @@ public:
   stack_t() noexcept = default;
 
   stack_t(sequence_t<T>&& seq) noexcept
-    : m_head(seq.extract()) {
+    : head_(seq.extract()) {
   }
 
   bool empty() const noexcept {
-    return !m_head;
+    return !head_;
   }
 
   sequence_t<T> extract() noexcept {
-    sequence_t<T> top = sequence_t<T>(m_head);
-    m_head = nullptr;
+    sequence_t<T> top = sequence_t<T>(head_);
+    head_ = nullptr;
     return top;
   }
 
   void push(T* const node) noexcept {
-    node->next = m_head;
-    m_head = node;
+    node->next = head_;
+    head_ = node;
   }
 
   void push(sequence_t<T>&& seq) noexcept {
@@ -199,17 +199,17 @@ public:
   }
 
   T* pop() noexcept {
-    T* const result = m_head;
+    T* const result = head_;
 
     if (result) {
-      m_head = result->next;
+      head_ = result->next;
       result->next = nullptr;
     }
     return result;
   }
 
 private:
-  T* m_head{nullptr};
+  T* head_{nullptr};
 };
 
 } // namespace generics
