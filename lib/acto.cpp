@@ -82,7 +82,7 @@ bool actor_ref::operator!=(const actor_ref& rhs) const noexcept {
 }
 
 bool actor_ref::operator<(const actor_ref& rhs) const noexcept {
-  return m_object < rhs.m_object;
+  return std::less<const core::object_t*>()(m_object, rhs.m_object);
 }
 
 void actor::die() {

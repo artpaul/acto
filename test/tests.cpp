@@ -97,14 +97,21 @@ TEST_CASE("Key for containers") {
   std::map<acto::actor_ref, int> map;
   std::unordered_map<acto::actor_ref, int> hash_map;
   auto a = acto::spawn<A>();
+  auto b = acto::spawn<A>();
 
   map.emplace(a, 1);
-  hash_map.emplace(a, 2);
+  map.emplace(b, 2);
+  hash_map.emplace(a, 1);
+  hash_map.emplace(b, 2);
 
-  CHECK(map.find(a) == map.begin());
-  CHECK(hash_map.find(a) == hash_map.begin());
+  REQUIRE(map.find(a) != map.end());
+  REQUIRE(hash_map.find(a) != hash_map.end());
+
+  CHECK(map.find(a)->second == 1);
+  CHECK(hash_map.find(a)->second == 1);
 
   acto::destroy(a);
+  acto::destroy(b);
 }
 
 TEST_CASE("Send from bootstrap") {

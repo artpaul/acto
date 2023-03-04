@@ -22,6 +22,7 @@
 // только один этот файл
 #include <acto.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -173,7 +174,7 @@ private:
     // -
     char    buffer[255];
 
-    sprintf(buffer, "Counter : %d", (int)m_counter);
+    std::snprintf(buffer, sizeof(buffer), "Counter : %d", (int)m_counter);
     // Отправить сообщение на консоль
     m_console.send< msg_out >(std::string(buffer));
     // Завершить выполнение текущего актера
