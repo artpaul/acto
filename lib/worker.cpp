@@ -73,36 +73,32 @@ bool worker_t::process() {
       std::lock_guard<std::mutex> g(obj->cs);
 
       if (obj->deleting) {
-        need_delete = true;
         // Drain the object's mailbox if it in the deleting state.
         if (obj->has_messages()) {
           time_slice_ = std::chrono::steady_clock::duration::max();
           continue;
         }
 
+        need_delete = true;
         obj->scheduled = false;
       } else if (obj->exclusive) {
         // Just wait for new messages if the object
         // exclusively bound to the thread.
         return true;
+      } else if (obj->has_messages()) {
+        // Return object to the shared queue.
+        slots_->push_object(obj);
       } else {
-        if (obj->has_messages()) {
-          // Return object to the shared queue.
-          slots_->push_object(obj);
-        } else {
-          obj->scheduled = false;
-        }
+        obj->scheduled = false;
       }
 
       break;
     }
 
-    if (need_delete) {
-      if (runtime_t::instance()->release(obj)) {
+    if (runtime_t::instance()->release(obj)) {
+      if (need_delete) {
         slots_->push_delete(obj);
       }
-    } else {
-      runtime_t::instance()->release(obj);
     }
 
     // Retrieve next object from the shared queue.

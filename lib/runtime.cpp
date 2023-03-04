@@ -30,7 +30,7 @@ struct binding_context_t {
   }
 
   /**
-   * Processes all available messages for the acctors.
+   * Processes all available messages for the actors.
    *
    * @param need_delete delete actors after process all messages.
    */
@@ -182,7 +182,8 @@ void runtime_t::handle_message(object_t* obj, std::unique_ptr<msg_t> msg) {
   }
 
   if (obj->impl->terminating_) {
-    deconstruct_object(obj);
+    std::lock_guard<std::mutex> g(obj->cs);
+    obj->deleting = true;
   }
 }
 
