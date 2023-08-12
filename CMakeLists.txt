@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.15)
 
 option(ACTO_BUILD_SAMPLES "Set to ON to build samples" OFF)
 option(ACTO_BUILD_TESTS "Set to ON to build tests" OFF)
