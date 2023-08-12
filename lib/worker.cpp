@@ -95,7 +95,8 @@ bool worker_t::process() {
       break;
     }
 
-    if (runtime_t::instance()->release(obj)) {
+    {
+      actor_ref obj_ref(obj, false);
       if (need_delete) {
         slots_->push_delete(obj);
       }
