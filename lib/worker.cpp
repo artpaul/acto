@@ -41,13 +41,14 @@ void worker_t::wakeup() {
 }
 
 void worker_t::execute() {
-  while (active_) {
+  while (true) {
+    event_.wait(); // Cond: (object_ != 0) || (active_ == false)
+    if (!active_) {
+      return;
+    }
     if (!process()) {
       slots_->push_idle(this);
     }
-
-    // Wait for new tasks.
-    event_.wait(); // Cond: (object_ != 0) || (active_ == false)
   }
 }
 
