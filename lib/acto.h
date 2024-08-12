@@ -204,7 +204,7 @@ public:
       return send_message(
         std::make_unique<
           core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
-          std::move(msg)));
+          std::forward<Msg>(msg)));
     }
     return false;
   }
@@ -235,7 +235,7 @@ public:
         sender.m_object,
         std::make_unique<
           core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
-          std::move(msg)));
+          std::forward<Msg>(msg)));
     }
     return false;
   }
