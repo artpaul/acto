@@ -20,7 +20,7 @@
 
 // Для использование библиотеки достаточно подключить
 // только один этот файл
-#include <acto.h>
+#include <acto/acto.h>
 
 #include <cstdio>
 #include <cstdlib>

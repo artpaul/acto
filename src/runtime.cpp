@@ -1,5 +1,5 @@
 #include "runtime.h"
-#include "generics.h"
+#include "acto/generics.h"
 #include "worker.h"
 
 namespace acto {
@@ -156,10 +156,6 @@ void runtime_t::deconstruct_object(object_t* const obj) {
 
   const bool is_binded = obj->binded;
 
-  // There are no more references to the object,
-  // so delete it.
-  delete obj;
-
   // Remove object from the global registry.
   if (!is_binded) {
     std::lock_guard<std::mutex> g(mutex_);
@@ -170,6 +166,10 @@ void runtime_t::deconstruct_object(object_t* const obj) {
       no_actors_event_.signaled();
     }
   }
+
+  // There are no more references to the object,
+  // so delete it.
+  delete obj;
 }
 
 void runtime_t::handle_message(object_t* obj, std::unique_ptr<msg_t> msg) {

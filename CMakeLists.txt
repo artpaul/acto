@@ -26,8 +26,35 @@ elseif(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-# Library sources.
-add_subdirectory(lib)
+set(ACTO_PUBLIC_INCLUDE_DIR "include/acto")
+
+add_library(acto-lib STATIC)
+
+target_sources(acto-lib
+  PUBLIC
+    "include/acto/acto.h"
+    "include/acto/event.h"
+    "include/acto/generics.h"
+  PRIVATE
+    "src/acto.cpp"
+    "src/event.cpp"
+    "src/runtime.cpp"
+    "src/runtime.h"
+    "src/worker.cpp"
+    "src/worker.h"
+)
+
+target_include_directories(acto-lib
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+if(UNIX)
+  target_link_libraries(acto-lib PUBLIC
+    pthread
+  )
+endif()
 
 # Build samples.
 if(ACTO_BUILD_SAMPLES)

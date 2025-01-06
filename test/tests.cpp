@@ -1,4 +1,4 @@
-#include "acto.h"
+#include <acto/acto.h>
 #include "catch.hpp"
 
 #include <iostream>
