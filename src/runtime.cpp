@@ -148,10 +148,6 @@ void runtime_t::deconstruct_object(object_t* const obj) {
       obj->thread->wakeup();
       obj->thread = nullptr;
     }
-    // Cannot delete the object if there are still some references to it.
-    if (obj->references) {
-      return;
-    }
   }
 
   const bool is_binded = obj->binded;
@@ -160,10 +156,18 @@ void runtime_t::deconstruct_object(object_t* const obj) {
   if (!is_binded) {
     std::lock_guard<std::mutex> g(mutex_);
 
-    actors_.erase(obj);
+    if (actors_.erase(obj)) {
+      if (actors_.empty()) {
+        no_actors_event_.signaled();
+      }
+    }
+  }
 
-    if (actors_.empty()) {
-      no_actors_event_.signaled();
+  {
+    std::lock_guard g(obj->cs);
+    // Cannot delete the object if there are still some references to it.
+    if (obj->references) {
+      return;
     }
   }
 

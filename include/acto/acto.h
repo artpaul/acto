@@ -174,7 +174,7 @@ struct msg_wrap_t
 class actor_ref {
   friend struct std::hash<actor_ref>;
   friend void join(const actor_ref& obj);
-  friend void destroy(actor_ref& object);
+  friend void destroy(const actor_ref& object);
 
 public:
   actor_ref() noexcept = default;
@@ -406,12 +406,21 @@ private:
 };
 
 /**
- * Destroys the given object.
+ * Sets the actor to destroying state.
+ *
+ * Actor's body will be delete when all messages sent prior state change
+ * will be processed.
  */
-void destroy(actor_ref& object);
+void destroy(const actor_ref& object);
 
 /**
- * Waits until the actor will finish.
+ * Sets the actor to destroying state and waits until actor's body will be
+ * deleted.
+ */
+void destroy_and_wait(const actor_ref& object);
+
+/**
+ * Waits until actor's body will be deleted.
  */
 void join(const actor_ref& obj);
 

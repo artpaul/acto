@@ -105,9 +105,13 @@ void actor::set_handler(const std::type_index& type,
   }
 }
 
-void destroy(actor_ref& object) {
-  actor_ref object_ref(std::move(object));
-  core::runtime_t::instance()->deconstruct_object(object_ref.m_object);
+void destroy(const actor_ref& object) {
+  core::runtime_t::instance()->deconstruct_object(object.m_object);
+}
+
+void destroy_and_wait(const actor_ref& object) {
+  destroy(object);
+  join(object);
 }
 
 void join(const actor_ref& obj) {
