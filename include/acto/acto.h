@@ -335,6 +335,24 @@ class actor {
     const F func_;
   };
 
+  template <typename M>
+  class fun_handler_no_args_t : public handler_t {
+    using F = std::function<void()>;
+
+  public:
+    fun_handler_no_args_t(F&& func)
+      : func_(std::move(func)) {
+      assert(func_);
+    }
+
+    void invoke(std::unique_ptr<core::msg_t>) const override {
+      func_();
+    }
+
+  private:
+    const F func_;
+  };
+
 public:
   virtual ~actor() noexcept = default;
 
@@ -372,6 +390,16 @@ protected:
       std::type_index(typeid(M)),
       // Callback.
       std::make_unique<fun_handler_t<M>>(std::move(func)));
+  }
+
+  /// Sets handler as functor object.
+  template <typename M>
+  inline void handler(std::function<void()> func) {
+    set_handler(
+      // Type of the handler.
+      std::type_index(typeid(M)),
+      // Callback.
+      std::make_unique<fun_handler_no_args_t<M>>(std::move(func)));
   }
 
   /// Removes handler for the given type.

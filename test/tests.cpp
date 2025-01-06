@@ -1,6 +1,7 @@
-#include <acto/acto.h>
 #include "catch.hpp"
+#include <acto/acto.h>
 
+#include <atomic>
 #include <iostream>
 #include <map>
 #include <unordered_map>
@@ -53,6 +54,35 @@ TEST_CASE("Spawn actor") {
       acto::destroy(x);
     }
   }
+  // Shutdown.
+  acto::shutdown();
+}
+
+TEST_CASE("Handler") {
+  struct A : acto::actor {
+    struct M { };
+
+    A(std::atomic<int>& x)
+      : x_(x) {
+      actor::handler<M>([this]() { x_++; });
+    }
+
+  private:
+    std::atomic<int>& x_;
+  };
+
+  std::atomic<int> x{0};
+  acto::actor_ref a = acto::spawn<A>(x);
+
+  CHECK(a.send<A::M>());
+  CHECK(a.send<A::M>());
+  CHECK(a.send<A::M>());
+  // Cleanup actor.
+  acto::destroy_and_wait(a);
+
+  // Check values.
+  REQUIRE(x.load() == 3);
+
   // Shutdown.
   acto::shutdown();
 }
