@@ -188,7 +188,7 @@ SpacesInLineCommentPrefix:
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 SpaceBeforeSquareBrackets: false
-Standard: Auto
+Standard: c++20
 StatementAttributeLikeMacros:
   - Q_EMIT
 StatementMacros:
