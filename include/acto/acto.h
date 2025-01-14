@@ -1,9 +1,10 @@
 #pragma once
 
 #include "event.h"
-#include "generics.h"
+#include "intrusive.h"
 
 #include <atomic>
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -38,13 +39,13 @@ struct msg_t;
 /**
  * Core object.
  */
-struct object_t : public generics::intrusive_t<object_t> {
-  struct waiter_t : public generics::intrusive_t<waiter_t> {
+struct object_t : public intrusive::node<object_t> {
+  struct waiter_t : public intrusive::node<waiter_t> {
     event_t event;
   };
 
-  using atomic_stack_t = generics::mpsc_stack_t<msg_t>;
-  using intusive_stack_t = generics::stack_t<msg_t>;
+  using atomic_stack = intrusive::mpsc_stack<msg_t>;
+  using intusive_stack = intrusive::stack<msg_t>;
 
   /// State mutex.
   std::mutex cs;
@@ -53,8 +54,8 @@ struct object_t : public generics::intrusive_t<object_t> {
   /// Dedicated thread for the object.
   worker_t* thread{nullptr};
   /// Queue of input messages implemented with two stacks.
-  atomic_stack_t input_stack;
-  intusive_stack_t local_stack;
+  atomic_stack input_stack;
+  intusive_stack local_stack;
   /// Count of references to the object.
   std::atomic<unsigned long> references{0};
   /// List of events awaiting for object deconstruction.
@@ -78,7 +79,7 @@ public:
   std::unique_ptr<msg_t> select_message() noexcept;
 };
 
-struct msg_t : generics::intrusive_t<msg_t> {
+struct msg_t : intrusive::node<msg_t> {
   /// Unique code for the message type.
   const std::type_index type;
   /// Sender of the message.

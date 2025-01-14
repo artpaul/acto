@@ -1,15 +1,14 @@
 #pragma once
 
 #include "acto/event.h"
-#include "acto/generics.h"
+#include "acto/intrusive.h"
 
 #include <atomic>
 #include <chrono>
 #include <functional>
 #include <thread>
 
-namespace acto {
-namespace core {
+namespace acto::core {
 
 class worker_t;
 struct object_t;
@@ -18,7 +17,7 @@ struct msg_t;
 /**
  * Worker thread.
  */
-class worker_t : public generics::intrusive_t<worker_t> {
+class worker_t : public intrusive::node<worker_t> {
 public:
   class callbacks {
   public:
@@ -75,5 +74,4 @@ private:
   std::thread thread_;
 };
 
-} // namespace core
-} // namespace acto
+} // namespace acto::core

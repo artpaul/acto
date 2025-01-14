@@ -1,5 +1,4 @@
 #include "runtime.h"
-#include "acto/generics.h"
 #include "worker.h"
 
 namespace acto {
@@ -421,7 +420,7 @@ void runtime_t::execute() {
     if (terminating_ ||
         (queue_event_.wait(std::chrono::seconds(60)) == wait_result::timeout))
     {
-      generics::stack_t<worker_t> queue(workers_.idle.extract());
+      intrusive::stack<worker_t> queue(workers_.idle.extract());
 
       // Удалить все потоки
       while (worker_t* const item = queue.pop()) {

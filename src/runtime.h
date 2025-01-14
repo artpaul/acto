@@ -8,8 +8,7 @@
 #include <thread>
 #include <unordered_set>
 
-namespace acto {
-namespace core {
+namespace acto::core {
 
 /**
  * Данные среды выполнения
@@ -86,7 +85,7 @@ private:
     /// Number of dedicated threads.
     std::atomic<unsigned long> reserved{0};
     /// List of idle threads.
-    generics::mpsc_stack_t<worker_t> idle;
+    intrusive::mpsc_stack<worker_t> idle;
   };
 
   /// Number of physical cores in the system.
@@ -105,7 +104,7 @@ private:
   /// Set of managed objects.
   actors_set actors_;
   /// Queue of objects with non empty inbox.
-  generics::intrusive_queue_t<object_t> queue_;
+  intrusive::queue<object_t> queue_;
   /// Currently allocated worker threads.
   workers_t workers_;
   /// -
@@ -115,5 +114,4 @@ private:
   std::thread m_scheduler;
 };
 
-} // namespace core
-} // namespace acto
+} // namespace acto::core

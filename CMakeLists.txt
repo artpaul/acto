@@ -34,7 +34,7 @@ target_sources(acto-lib
   PUBLIC
     "include/acto/acto.h"
     "include/acto/event.h"
-    "include/acto/generics.h"
+    "include/acto/intrusive.h"
   PRIVATE
     "src/acto.cpp"
     "src/event.cpp"
