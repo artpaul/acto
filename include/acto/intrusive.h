@@ -58,12 +58,6 @@ public:
     return nullptr;
   }
 
-  T* front() const {
-    std::lock_guard g(mutex_);
-
-    return tail_ ? tail_->next : nullptr;
-  }
-
   void push(T* const node) {
     std::lock_guard g(mutex_);
 
@@ -111,7 +105,7 @@ template <typename T>
 class mpsc_stack {
 public:
   bool empty() const noexcept {
-    return (head_.load() == nullptr);
+    return (head_.load(std::memory_order_relaxed) == nullptr);
   }
 
   sequence<T> extract() noexcept {

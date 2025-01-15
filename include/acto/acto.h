@@ -41,7 +41,7 @@ struct msg_t;
  */
 struct object_t : public intrusive::node<object_t> {
   struct waiter_t : public intrusive::node<waiter_t> {
-    event_t event;
+    event on_deleted;
   };
 
   using atomic_stack = intrusive::mpsc_stack<msg_t>;

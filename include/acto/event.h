@@ -2,10 +2,9 @@
 
 #include <chrono>
 #include <condition_variable>
-#include <memory>
+#include <mutex>
 
-namespace acto {
-namespace core {
+namespace acto::core {
 
 enum class wait_result {
   error,
@@ -13,28 +12,24 @@ enum class wait_result {
   timeout,
 };
 
-/** Событие */
-class event_t {
+class event {
 public:
-  event_t(const bool auto_reset = false);
-  ~event_t();
+  explicit event(const bool auto_reset = false);
 
 public:
-  ///
   void reset();
-  ///
+
   void signaled();
-  ///
+
   wait_result wait();
-  wait_result wait(const std::chrono::milliseconds msec);
+
+  wait_result wait(const std::chrono::nanoseconds duration);
 
 private:
-  const bool m_auto;
-  bool m_triggered;
-
-  std::mutex m_mutex;
-  std::condition_variable m_cond;
+  std::mutex mutex_;
+  std::condition_variable cond_;
+  bool auto_;
+  bool triggered_;
 };
 
-} // namespace core
-} // namespace acto
+} // namespace acto::core

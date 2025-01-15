@@ -70,7 +70,7 @@ private:
   std::chrono::steady_clock::time_point start_{};
   std::chrono::steady_clock::duration time_slice_{};
 
-  event_t event_{true};
+  event wakeup_event_{true};
   std::thread thread_;
 };
 

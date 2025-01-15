@@ -93,13 +93,13 @@ private:
 
   std::mutex mutex_;
   /// There are no more managed objects event.
-  event_t no_actors_event_;
+  event no_actors_event_;
   /// Object's queue become non empty event.
-  event_t queue_event_{true};
+  event queue_event_{true};
   /// There are some idle workers evetn.
-  event_t idle_workers_event_{true};
+  event idle_workers_event_{true};
   /// There are no more worker threads event.
-  event_t no_workers_event_;
+  event no_workers_event_;
 
   /// Set of managed objects.
   actors_set actors_;

@@ -1,8 +1,7 @@
 #include "runtime.h"
 #include "worker.h"
 
-namespace acto {
-namespace core {
+namespace acto::core {
 namespace {
 
 /**
@@ -132,7 +131,7 @@ void runtime_t::deconstruct_object(object_t* const obj) {
           // Make the event signaled will lead to destruction of the list node.
           // So retrieve pointer to the next node beforehand.
           object_t::waiter_t* next = it->next;
-          it->event.signaled();
+          it->on_deleted.signaled();
           it = next;
         }
 
@@ -201,7 +200,7 @@ void runtime_t::join(object_t* const obj) {
     std::lock_guard<std::mutex> g(obj->cs);
 
     if (obj->impl) {
-      node.event.reset();
+      node.on_deleted.reset();
       node.next = obj->waiters;
       obj->waiters = &node;
     } else {
@@ -209,7 +208,7 @@ void runtime_t::join(object_t* const obj) {
     }
   }
 
-  node.event.wait();
+  node.on_deleted.wait();
 }
 
 void runtime_t::process_binded_actors() {
@@ -420,10 +419,9 @@ void runtime_t::execute() {
     if (terminating_ ||
         (queue_event_.wait(std::chrono::seconds(60)) == wait_result::timeout))
     {
-      intrusive::stack<worker_t> queue(workers_.idle.extract());
-
-      // Удалить все потоки
-      while (worker_t* const item = queue.pop()) {
+      auto idle_workers = workers_.idle.extract();
+      // Stop all idle threads.
+      while (worker_t* const item = idle_workers.pop_front()) {
         delete_worker(item);
       }
     } else if ((std::chrono::steady_clock::now() - last_cleanup_time) >
@@ -458,5 +456,4 @@ void runtime_t::push_object(object_t* const obj) {
   queue_event_.signaled();
 }
 
-} // namespace core
-} // namespace acto
+} // namespace acto::core

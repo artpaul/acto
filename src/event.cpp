@@ -1,63 +1,46 @@
 #include "acto/event.h"
 
-namespace acto {
-namespace core {
+namespace acto::core {
 
-using unique_lock = std::unique_lock<std::mutex>;
-
-event_t::event_t(const bool auto_reset)
-  : m_auto(auto_reset)
-  , m_triggered(false) {
+event::event(const bool auto_reset)
+  : auto_(auto_reset)
+  , triggered_(false) {
 }
 
-event_t::~event_t() = default;
+void event::reset() {
+  std::lock_guard g(mutex_);
 
-void event_t::reset() {
-  unique_lock g(m_mutex);
-
-  m_triggered = false;
+  triggered_ = false;
 }
 
-void event_t::signaled() {
-  unique_lock g(m_mutex);
+void event::signaled() {
+  std::lock_guard g(mutex_);
 
-  m_triggered = true;
-  m_cond.notify_one();
+  triggered_ = true;
+  cond_.notify_one();
 }
 
-wait_result event_t::wait() {
-  unique_lock g(m_mutex);
+wait_result event::wait() {
+  std::unique_lock g(mutex_);
 
-  while (!m_triggered) {
-    m_cond.wait(g);
-  }
+  cond_.wait(g, [this] { return triggered_; });
 
-  if (m_auto) {
-    m_triggered = false;
-  }
+  triggered_ = !auto_;
 
   return wait_result::signaled;
 }
 
-wait_result event_t::wait(const std::chrono::milliseconds msec) {
-  const auto deadline = std::chrono::high_resolution_clock::now() + msec;
-  unique_lock g(m_mutex);
+wait_result event::wait(const std::chrono::nanoseconds duration) {
+  const auto deadline = std::chrono::high_resolution_clock::now() + duration;
+  std::unique_lock g(mutex_);
 
-  while (!m_triggered) {
-    if (m_cond.wait_until(g, deadline) == std::cv_status::timeout) {
-      if (m_auto) {
-        m_triggered = false;
-      }
-      return wait_result::timeout;
-    }
+  if (!cond_.wait_until(g, deadline, [this] { return triggered_; })) {
+    return wait_result::timeout;
   }
 
-  if (m_auto) {
-    m_triggered = false;
-  }
+  triggered_ = !auto_;
 
   return wait_result::signaled;
 }
 
-} // namespace core
-} // namespace acto
+} // namespace acto::core

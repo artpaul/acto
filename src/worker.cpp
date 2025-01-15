@@ -16,7 +16,7 @@ worker_t::worker_t(callbacks* const slots, std::function<void()> init_cb)
 
 worker_t::~worker_t() {
   active_ = false;
-  event_.signaled();
+  wakeup_event_.signaled();
 
   if (thread_.joinable()) {
     thread_.join();
@@ -33,16 +33,16 @@ void worker_t::assign(object_t* const obj,
   // Acquire the object.
   runtime_t::instance()->acquire(obj);
   // Wakeup the thread.
-  event_.signaled();
+  wakeup_event_.signaled();
 }
 
 void worker_t::wakeup() {
-  event_.signaled();
+  wakeup_event_.signaled();
 }
 
 void worker_t::execute() {
   while (true) {
-    event_.wait(); // Cond: (object_ != 0) || (active_ == false)
+    wakeup_event_.wait(); // Cond: (object_ != 0) || (active_ == false)
     if (!active_) {
       return;
     }
@@ -96,12 +96,11 @@ bool worker_t::process() {
       break;
     }
 
-    {
-      actor_ref obj_ref(obj, false);
-      if (need_delete) {
-        slots_->push_delete(obj);
-      }
+    if (need_delete) {
+      slots_->push_delete(obj);
     }
+    // Release current object.
+    runtime_t::instance()->release(obj);
 
     // Retrieve next object from the shared queue.
     if ((object_ = slots_->pop_object())) {
