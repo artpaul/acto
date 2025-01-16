@@ -452,8 +452,9 @@ object_t* runtime_t::pop_object() {
 }
 
 void runtime_t::push_object(object_t* const obj) {
-  queue_.push(obj);
-  queue_event_.signaled();
+  if (queue_.push(obj)) {
+    queue_event_.signaled();
+  }
 }
 
 } // namespace acto::core

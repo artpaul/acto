@@ -58,7 +58,9 @@ public:
     return nullptr;
   }
 
-  void push(T* const node) {
+  /// @brief Appends a node in the queue.
+  /// @returns true if the queue was empty.
+  bool push(T* const node) {
     std::lock_guard g(mutex_);
 
     if (tail_) {
@@ -68,6 +70,7 @@ public:
       node->next = node;
     }
     tail_ = node;
+    return node->next == node;
   }
 
   T* pop() {
