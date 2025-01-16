@@ -5,87 +5,75 @@ namespace acto {
 
 actor_ref::actor_ref(core::object_t* const an_object,
                      const bool acquire) noexcept
-  : m_object(an_object) {
-  if (m_object && acquire) {
-    core::runtime_t::instance()->acquire(m_object);
+  : object_(an_object) {
+  if (object_ && acquire) {
+    core::runtime_t::instance()->acquire(object_);
   }
 }
 
 actor_ref::actor_ref(const actor_ref& rhs) noexcept
-  : m_object(rhs.m_object) {
-  if (m_object) {
-    core::runtime_t::instance()->acquire(m_object);
+  : object_(rhs.object_) {
+  if (object_) {
+    core::runtime_t::instance()->acquire(object_);
   }
 }
 
 actor_ref::actor_ref(actor_ref&& rhs) noexcept
-  : m_object(rhs.m_object) {
-  rhs.m_object = nullptr;
+  : object_(rhs.object_) {
+  rhs.object_ = nullptr;
 }
 
 actor_ref::~actor_ref() {
-  if (m_object) {
-    core::runtime_t::instance()->release(m_object);
+  if (object_) {
+    core::runtime_t::instance()->release(object_);
   }
 }
 
 bool actor_ref::assigned() const noexcept {
-  return m_object != nullptr;
+  return object_ != nullptr;
 }
 
 void actor_ref::join() const {
-  if (m_object) {
-    core::runtime_t::instance()->join(m_object);
+  if (object_) {
+    core::runtime_t::instance()->join(object_);
   }
 }
 
 bool actor_ref::send_message(std::unique_ptr<core::msg_t> msg) const {
-  return core::runtime_t::instance()->send(m_object, std::move(msg));
+  return core::runtime_t::instance()->send(object_, std::move(msg));
 }
 
 bool actor_ref::send_message_on_behalf(core::object_t* sender,
                                        std::unique_ptr<core::msg_t> msg) const {
-  return core::runtime_t::instance()->send_on_behalf(m_object, sender,
+  return core::runtime_t::instance()->send_on_behalf(object_, sender,
                                                      std::move(msg));
 }
 
 actor_ref& actor_ref::operator=(const actor_ref& rhs) {
   if (this != &rhs) {
-    if (rhs.m_object) {
-      core::runtime_t::instance()->acquire(rhs.m_object);
+    if (rhs.object_) {
+      core::runtime_t::instance()->acquire(rhs.object_);
     }
-    if (m_object) {
-      core::runtime_t::instance()->release(m_object);
+    if (object_) {
+      core::runtime_t::instance()->release(object_);
     }
-    m_object = rhs.m_object;
+    object_ = rhs.object_;
   }
   return *this;
 }
 
 actor_ref& actor_ref::operator=(actor_ref&& rhs) {
   if (this != &rhs) {
-    if (m_object && m_object != rhs.m_object) {
-      core::runtime_t::instance()->release(m_object);
+    if (object_ && object_ != rhs.object_) {
+      core::runtime_t::instance()->release(object_);
     }
-    m_object = rhs.m_object;
-    rhs.m_object = nullptr;
+    object_ = rhs.object_;
+    rhs.object_ = nullptr;
   }
   return *this;
 }
 
-bool actor_ref::operator==(const actor_ref& rhs) const noexcept {
-  return m_object == rhs.m_object;
-}
-
-bool actor_ref::operator!=(const actor_ref& rhs) const noexcept {
-  return !operator==(rhs);
-}
-
-bool actor_ref::operator<(const actor_ref& rhs) const noexcept {
-  return std::less<const core::object_t*>()(m_object, rhs.m_object);
-}
-
-void actor::die() {
+void actor::die() noexcept {
   terminating_ = true;
 }
 
@@ -106,7 +94,9 @@ void actor::set_handler(const std::type_index& type,
 }
 
 void destroy(const actor_ref& object) {
-  core::runtime_t::instance()->deconstruct_object(object.m_object);
+  if (bool(object)) {
+    core::runtime_t::instance()->deconstruct_object(object.object_);
+  }
 }
 
 void destroy_and_wait(const actor_ref& object) {

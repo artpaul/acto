@@ -4,6 +4,7 @@
 #include "intrusive.h"
 
 #include <atomic>
+#include <bit>
 #include <cassert>
 #include <functional>
 #include <memory>
@@ -178,7 +179,7 @@ class actor_ref {
   friend void destroy(const actor_ref& object);
 
 public:
-  actor_ref() noexcept = default;
+  constexpr actor_ref() noexcept = default;
 
   actor_ref(core::object_t* const an_object, const bool acquire) noexcept;
 
@@ -201,13 +202,13 @@ public:
    */
   template <typename Msg>
   inline bool send(Msg&& msg) const {
-    if (m_object) {
-      return send_message(
-        std::make_unique<
-          core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
-          std::forward<Msg>(msg)));
+    if (!object_) {
+      return false;
     }
-    return false;
+
+    return send_message(
+      std::make_unique<core::msg_wrap_t<std::remove_cvref_t<Msg>>>(
+        std::forward<Msg>(msg)));
   }
 
   /**
@@ -217,11 +218,13 @@ public:
    */
   template <typename Msg, typename... P>
   inline bool send(P&&... p) const {
-    if (m_object) {
-      return send_message(
-        std::make_unique<core::msg_wrap_t<Msg>>(std::forward<P>(p)...));
+    if (!object_) {
+      return false;
     }
-    return false;
+
+    return send_message(
+      std::make_unique<core::msg_wrap_t<std::remove_cvref_t<Msg>>>(
+        std::forward<P>(p)...));
   }
 
   /**
@@ -231,33 +234,43 @@ public:
    */
   template <typename Msg>
   inline bool send_on_behalf(const actor_ref& sender, Msg&& msg) const {
-    if (m_object) {
-      return send_message_on_behalf(
-        sender.m_object,
-        std::make_unique<
-          core::msg_wrap_t<std::remove_cv_t<std::remove_reference_t<Msg>>>>(
-          std::forward<Msg>(msg)));
+    if (!object_) {
+      return false;
     }
-    return false;
+
+    return send_message_on_behalf(
+      sender.object_,
+      std::make_unique<core::msg_wrap_t<std::remove_cvref_t<Msg>>>(
+        std::forward<Msg>(msg)));
   }
 
   template <typename Msg, typename... P>
   inline bool send_on_behalf(const actor_ref& sender, P&&... p) const {
-    if (m_object) {
-      return send_message_on_behalf(
-        sender.m_object,
-        std::make_unique<core::msg_wrap_t<Msg>>(std::forward<P>(p)...));
+    if (!object_) {
+      return false;
     }
-    return false;
+
+    return send_message_on_behalf(
+      sender.object_,
+      std::make_unique<core::msg_wrap_t<std::remove_cvref_t<Msg>>>(
+        std::forward<P>(p)...));
   }
 
 public:
   actor_ref& operator=(const actor_ref& rhs);
   actor_ref& operator=(actor_ref&& rhs);
 
-  bool operator==(const actor_ref& rhs) const noexcept;
-  bool operator!=(const actor_ref& rhs) const noexcept;
-  bool operator<(const actor_ref& rhs) const noexcept;
+  bool operator==(const actor_ref& rhs) const noexcept {
+    return object_ == rhs.object_;
+  }
+
+  bool operator!=(const actor_ref& rhs) const noexcept {
+    return object_ != rhs.object_;
+  }
+
+  bool operator<(const actor_ref& rhs) const noexcept {
+    return std::less<const core::object_t*>()(object_, rhs.object_);
+  }
 
   explicit operator bool() const noexcept {
     return assigned();
@@ -272,7 +285,7 @@ private:
                               std::unique_ptr<core::msg_t> msg) const;
 
 private:
-  core::object_t* m_object{nullptr};
+  core::object_t* object_{nullptr};
 };
 
 /**
@@ -370,7 +383,7 @@ protected:
   }
 
   /// Stops itself.
-  void die();
+  void die() noexcept;
 
   /// Sets handler as member function pointer.
   template <typename M, typename ClassName, typename P>
@@ -520,7 +533,7 @@ inline void sleep_for(const D duration) {
 
 template <>
 struct std::hash<acto::actor_ref> {
-  size_t operator()(const acto::actor_ref& ref) const noexcept {
-    return reinterpret_cast<size_t>(ref.m_object);
+  constexpr size_t operator()(const acto::actor_ref& ref) const noexcept {
+    return std::bit_cast<size_t>(ref.object_);
   }
 };

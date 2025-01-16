@@ -11,6 +11,12 @@ TEST_CASE("Finalize library") {
   acto::shutdown();
 }
 
+TEST_CASE("Uninitialized") {
+  acto::destroy(acto::actor_ref());
+  acto::destroy_and_wait(acto::actor_ref());
+  acto::join(acto::actor_ref());
+}
+
 TEST_CASE("Spawn actor") {
   struct A : acto::actor {
     struct M {
