@@ -105,16 +105,18 @@ template <typename T>
 struct message_container<T, true> : private T {
   static constexpr bool is_value_movable = false;
 
-  constexpr message_container(T&& t)
+  constexpr message_container(T&& t) noexcept(
+    std::is_nothrow_move_constructible_v<T>)
     : T(std::move(t)) {
   }
 
   template <typename... Args>
-  constexpr message_container(Args&&... args)
+  constexpr message_container(Args&&... args) noexcept(
+    std::is_nothrow_constructible_v<T, Args...>)
     : T(std::forward<Args>(args)...) {
   }
 
-  constexpr const T& data() const {
+  constexpr const T& data() const noexcept {
     return *static_cast<const T*>(this);
   }
 };
@@ -127,16 +129,18 @@ template <typename T>
 struct message_container<T, false> {
   static constexpr bool is_value_movable = std::is_move_constructible<T>::value;
 
-  constexpr message_container(T&& t)
+  constexpr message_container(T&& t) noexcept(
+    std::is_nothrow_move_constructible_v<T>)
     : value_(std::move(t)) {
   }
 
   template <typename... Args>
-  constexpr message_container(Args&&... args)
+  constexpr message_container(Args&&... args) noexcept(
+    std::is_nothrow_constructible_v<T, Args...>)
     : value_(std::forward<Args>(args)...) {
   }
 
-  constexpr const T& data() const& {
+  constexpr const T& data() const& noexcept {
     return value_;
   }
 
@@ -156,13 +160,15 @@ template <typename T>
 struct msg_wrap_t
   : public msg_t
   , public message_container_t<T> {
-  constexpr msg_wrap_t(T&& d)
+  constexpr msg_wrap_t(T&& d) noexcept(
+    std::is_nothrow_constructible_v<message_container_t<T>, T&&>)
     : msg_t(typeid(T))
     , message_container_t<T>(std::move(d)) {
   }
 
   template <typename... Args>
-  constexpr msg_wrap_t(Args&&... args)
+  constexpr msg_wrap_t(Args&&... args) noexcept(
+    std::is_nothrow_constructible_v<message_container_t<T>, Args...>)
     : msg_t(typeid(T))
     , message_container_t<T>(std::forward<Args>(args)...) {
   }
