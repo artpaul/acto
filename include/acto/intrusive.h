@@ -42,7 +42,28 @@ private:
   T* head_;
 };
 
-template <typename T, typename Mutex = std::mutex>
+class spin_lock {
+public:
+  void lock() noexcept {
+    while (flag_.test_and_set(std::memory_order_acquire)) {
+#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+      flag_.wait(true, std::memory_order_relaxed);
+#endif
+    }
+  }
+
+  void unlock() noexcept {
+    flag_.clear(std::memory_order_release);
+#if defined(__cpp_lib_atomic_wait) && __cpp_lib_atomic_wait >= 201907L
+    flag_.notify_one();
+#endif
+  }
+
+private:
+  std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
+};
+
+template <typename T, typename Mutex = spin_lock>
 class queue {
 public:
   sequence<T> extract() {
@@ -113,7 +134,7 @@ public:
 
   sequence<T> extract() noexcept {
     do {
-      T* top = head_.load();
+      T* top = head_.load(std::memory_order_relaxed);
 
       if (top == nullptr) {
         return sequence<T>{nullptr};
@@ -126,7 +147,7 @@ public:
 
   void push(T* const node) noexcept {
     do {
-      T* top = head_.load();
+      T* top = head_.load(std::memory_order_relaxed);
       node->next = top;
       if (head_.compare_exchange_weak(top, node)) {
         return;
@@ -142,17 +163,17 @@ public:
 
   T* pop() noexcept {
     do {
-      T* top = head_.load();
-
+      T* top = head_.load(std::memory_order_consume);
+      // Check the stack is empty.
       if (top == nullptr) {
         return nullptr;
-      } else {
-        T* next = top->next;
+      }
 
-        if (head_.compare_exchange_weak(top, next)) {
-          top->next = nullptr;
-          return top;
-        }
+      T* next = top->next;
+      // Pop the item.
+      if (head_.compare_exchange_weak(top, next)) {
+        top->next = nullptr;
+        return top;
       }
     } while (true);
   }
