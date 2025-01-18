@@ -307,27 +307,38 @@ class actor {
     virtual void invoke(const std::unique_ptr<core::msg_t> msg) const = 0;
   };
 
-  /** Wrapper for member function pointers. */
+  template <typename F, typename M>
+  struct is_handler_signature {
+    static constexpr bool value =
+      std::is_invocable_v<F> || std::is_invocable_v<F, const M&> ||
+      std::is_invocable_v<F, M&&> || std::is_invocable_v<F, actor_ref> ||
+      std::is_invocable_v<F, actor_ref, const M&> ||
+      std::is_invocable_v<F, actor_ref, M&&>;
+  };
+
+  template <typename M, typename P>
+  using message_reference_t =
+    std::conditional_t<core::msg_wrap_t<M>::is_value_movable &&
+                         std::is_rvalue_reference_v<P>,
+                       core::msg_wrap_t<M>&&,
+                       const core::msg_wrap_t<M>&>;
+
+  /// Wrapper for member function pointers.
   template <typename M, typename C, typename P>
-  class mem_handler_t : public handler_t {
+  class mem_handler_t final : public handler_t {
     using F = std::function<void(C*, actor_ref, P)>;
 
   public:
-    mem_handler_t(F&& func, C* ptr)
+    mem_handler_t(F&& func, C* ptr) noexcept
       : func_(std::move(func))
       , ptr_(ptr) {
       assert(func_);
       assert(ptr_);
     }
 
-    void invoke(std::unique_ptr<core::msg_t> msg) const override {
-      using message_reference_t =
-        typename std::conditional<core::msg_wrap_t<M>::is_value_movable,
-                                  core::msg_wrap_t<M>&&,
-                                  const core::msg_wrap_t<M>&>::type;
-
+    void invoke(std::unique_ptr<core::msg_t> msg) const final {
       func_(ptr_, actor_ref(msg->sender, true),
-            static_cast<message_reference_t>(*msg.get()).data());
+            static_cast<message_reference_t<M, P>>(*msg.get()).data());
     }
 
   private:
@@ -335,38 +346,34 @@ class actor {
     C* const ptr_;
   };
 
-  /** Wrapper for functor objects. */
-  template <typename M>
-  class fun_handler_t : public handler_t {
-    using F = std::function<void(actor_ref sender, const M& msg)>;
+  /// Wrapper for functor objects.
+  template <typename M, typename... Args>
+  class fun_handler_t final : public handler_t {
+    using F = std::function<void(Args...)>;
 
   public:
-    fun_handler_t(F&& func)
+    fun_handler_t(F&& func) noexcept
       : func_(std::move(func)) {
       assert(func_);
     }
 
-    void invoke(std::unique_ptr<core::msg_t> msg) const override {
-      func_(actor_ref(msg->sender, true),
-            static_cast<core::msg_wrap_t<M>*>(msg.get())->data());
-    }
+    void invoke(std::unique_ptr<core::msg_t> msg) const final {
+      if constexpr (sizeof...(Args) == 0) {
+        func_();
+      } else if constexpr (sizeof...(Args) == 1) {
+        using P0 = std::tuple_element_t<0, std::tuple<Args...>>;
 
-  private:
-    const F func_;
-  };
+        if constexpr (std::is_same_v<actor_ref, std::decay_t<P0>>) {
+          func_(actor_ref(msg->sender, true));
+        } else {
+          func_(static_cast<message_reference_t<M, P0>>(*msg.get()).data());
+        }
+      } else if constexpr (sizeof...(Args) == 2) {
+        using P1 = std::tuple_element_t<1, std::tuple<Args...>>;
 
-  template <typename M>
-  class fun_handler_no_args_t : public handler_t {
-    using F = std::function<void()>;
-
-  public:
-    fun_handler_no_args_t(F&& func)
-      : func_(std::move(func)) {
-      assert(func_);
-    }
-
-    void invoke(std::unique_ptr<core::msg_t>) const override {
-      func_();
+        func_(actor_ref(msg->sender, true),
+              static_cast<message_reference_t<M, P1>>(*msg.get()).data());
+      }
     }
 
   private:
@@ -377,11 +384,11 @@ public:
   virtual ~actor() noexcept = default;
 
 protected:
-  inline actor_ref context() const {
+  actor_ref context() const {
     return context_;
   }
 
-  inline actor_ref self() const {
+  actor_ref self() const {
     return self_;
   }
 
@@ -391,9 +398,10 @@ protected:
   /// Stops itself.
   void die() noexcept;
 
+public:
   /// Sets handler as member function pointer.
   template <typename M, typename ClassName, typename P>
-  inline void handler(void (ClassName::*func)(actor_ref, P)) {
+  void handler(void (ClassName::*func)(actor_ref, P)) {
     set_handler(
       // Type of the handler.
       std::type_index(typeid(M)),
@@ -403,34 +411,59 @@ protected:
   }
 
   /// Sets handler as functor object.
-  template <typename M>
-  inline void handler(std::function<void(actor_ref, const M&)> func) {
-    set_handler(
-      // Type of the handler.
-      std::type_index(typeid(M)),
-      // Callback.
-      std::make_unique<fun_handler_t<M>>(std::move(func)));
-  }
-
-  /// Sets handler as functor object.
-  template <typename M>
-  inline void handler(std::function<void()> func) {
-    set_handler(
-      // Type of the handler.
-      std::type_index(typeid(M)),
-      // Callback.
-      std::make_unique<fun_handler_no_args_t<M>>(std::move(func)));
+  template <typename M,
+            typename F,
+            typename = std::enable_if_t<is_handler_signature<F, M>::value>>
+  void handler(F&& func) {
+    if constexpr (std::is_invocable_v<F>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M>>(std::move(func)));
+    } else if constexpr (std::is_invocable_v<F, const M&>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M, const M&>>(std::move(func)));
+    } else if constexpr (std::is_invocable_v<F, M&&>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M, M&&>>(std::move(func)));
+    } else if constexpr (std::is_invocable_v<F, actor_ref>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M, actor_ref>>(std::move(func)));
+    } else if constexpr (std::is_invocable_v<F, actor_ref, const M&>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M, actor_ref, const M&>>(
+          std::move(func)));
+    } else if constexpr (std::is_invocable_v<F, actor_ref, M&&>) {
+      set_handler(
+        // Type of the handler.
+        std::type_index(typeid(M)),
+        // Callback.
+        std::make_unique<fun_handler_t<M, actor_ref, M&&>>(std::move(func)));
+    }
   }
 
   /// Removes handler for the given type.
   template <typename M>
-  inline void handler() {
+  void handler() {
     set_handler(std::type_index(typeid(M)), nullptr);
   }
 
   /// Removes handler for the given type.
   template <typename M>
-  inline void handler(std::nullptr_t) {
+  void handler(std::nullptr_t) {
     set_handler(std::type_index(typeid(M)), nullptr);
   }
 

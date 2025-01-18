@@ -64,13 +64,56 @@ TEST_CASE("Spawn actor") {
   acto::shutdown();
 }
 
-TEST_CASE("Handler") {
+TEST_CASE("Function handlers") {
   struct A : acto::actor {
-    struct M { };
+    struct A1 { };
+
+    struct M0 { };
+
+    struct M1 {
+      std::string s;
+    };
+
+    struct MR {
+      std::string s;
+    };
+
+    struct M2 {
+      std::string s;
+    };
+
+    using MU = std::unique_ptr<std::string>;
 
     A(std::atomic<int>& x)
       : x_(x) {
-      actor::handler<M>([this]() { x_++; });
+      actor::handler<A1>([this](acto::actor_ref sender) {
+        REQUIRE(!bool(sender));
+        x_++;
+      });
+
+      actor::handler<M0>([this]() { x_++; });
+
+      actor::handler<M1>([this](const M1& m) {
+        REQUIRE(m.s == "M1");
+        x_++;
+      });
+
+      actor::handler<MR>([this](MR&& m) {
+        REQUIRE(m.s == "MR");
+        x_++;
+      });
+
+      actor::handler<M2>([this](acto::actor_ref sender, const M2& m) {
+        REQUIRE(!bool(sender));
+        REQUIRE(m.s == "M2");
+        x_++;
+      });
+
+      actor::handler<MU>([this](acto::actor_ref sender, MU m) {
+        REQUIRE(!bool(sender));
+        REQUIRE(*m == "MU");
+        x_++;
+      });
     }
 
   private:
@@ -80,14 +123,17 @@ TEST_CASE("Handler") {
   std::atomic<int> x{0};
   acto::actor_ref a = acto::spawn<A>(x);
 
-  CHECK(a.send<A::M>());
-  CHECK(a.send<A::M>());
-  CHECK(a.send<A::M>());
+  CHECK(a.send<A::A1>());
+  CHECK(a.send<A::M0>());
+  CHECK(a.send<A::M1>(A::M1{.s = "M1"}));
+  CHECK(a.send<A::M2>(A::M2{.s = "M2"}));
+  CHECK(a.send<A::MR>(A::MR{.s = "MR"}));
+  CHECK(a.send<A::MU>(std::make_unique<std::string>("MU")));
   // Cleanup actor.
   acto::destroy_and_wait(a);
 
   // Check values.
-  REQUIRE(x.load() == 3);
+  REQUIRE(x.load() == 6);
 
   // Shutdown.
   acto::shutdown();
@@ -112,7 +158,7 @@ TEST_CASE("Process binded actors at exit") {
     };
 
     A() {
-      actor::handler<M>([](acto::actor_ref, const M& m) { (*m.counter)++; });
+      actor::handler<M>([](const M& m) { (*m.counter)++; });
     }
   };
 
