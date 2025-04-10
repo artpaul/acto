@@ -40,6 +40,10 @@ struct binding_context_t {
       while (auto msg = (*ai)->select_message()) {
         runtime->handle_message(*ai, std::move(msg));
       }
+      {
+        std::lock_guard<std::mutex> g((*ai)->cs);
+        (*ai)->scheduled = false;
+      }
       if (need_delete) {
         runtime->deconstruct_object(*ai);
       }
