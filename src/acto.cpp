@@ -108,8 +108,8 @@ void join(const actor_ref& obj) {
   obj.join();
 }
 
-void this_thread::process_messages() {
-  core::runtime_t::instance()->process_binded_actors();
+bool this_thread::process_messages() {
+  return core::runtime_t::instance()->process_binded_actors();
 }
 
 void shutdown() {

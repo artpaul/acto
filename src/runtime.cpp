@@ -31,14 +31,17 @@ struct binding_context_t {
    * Processes all available messages for the actors.
    *
    * @param need_delete delete actors after process all messages.
+   * @return true if at least one message has been processed.
    */
-  void process_actors(const bool need_delete) {
+  bool process_actors(const bool need_delete) {
     auto runtime = runtime_t::instance();
+    bool something_was_processed = false;
     // TODO: - switch between active actors to balance message processing.
     //       - detect message loop.
     for (auto ai = actors.cbegin(); ai != actors.cend(); ++ai) {
       while (auto msg = (*ai)->select_message()) {
         runtime->handle_message(*ai, std::move(msg));
+        something_was_processed = true;
       }
       {
         std::lock_guard<std::mutex> g((*ai)->cs);
@@ -56,6 +59,8 @@ struct binding_context_t {
 
       actors.clear();
     }
+
+    return something_was_processed;
   }
 };
 
@@ -215,8 +220,8 @@ void runtime_t::join(object_t* const obj) {
   node.on_deleted.wait();
 }
 
-void runtime_t::process_binded_actors() {
-  thread_context.process_actors(false);
+bool runtime_t::process_binded_actors() {
+  return thread_context.process_actors(false);
 }
 
 unsigned long runtime_t::release(object_t* const obj) {
