@@ -40,7 +40,7 @@ public:
   void join(object_t* const obj);
 
   /// -
-  void process_binded_actors();
+  bool process_binded_actors();
 
   /// -
   unsigned long release(object_t* const obj);

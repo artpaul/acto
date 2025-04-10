@@ -559,8 +559,9 @@ namespace this_thread {
 /**
  * Processes all messages for objects
  * binded to the current thread (with aoBindToThread option).
+ * @return true if at least one message has been processed.
  */
-void process_messages();
+bool process_messages();
 
 template <typename D>
 inline void sleep_for(const D duration) {
