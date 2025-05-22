@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include <acto/acto.h>
+#include <acto/util.h>
 
 #include <atomic>
 #include <iostream>
@@ -194,6 +195,30 @@ TEST_CASE("Key for containers") {
 
   acto::destroy(a);
   acto::destroy(b);
+}
+
+TEST_CASE("Move only") {
+  struct A : acto::actor {
+    struct M : acto::util::move_only {
+      std::string s;
+    };
+
+    A() {
+      actor::handler<M>([this](M e) {
+        handle(std::move(e));
+        actor::die();
+      });
+    }
+
+    void handle(M&& m) {
+      REQUIRE(m.s == "test");
+    }
+  };
+
+  A::M ev{.s = "test"};
+  auto a = acto::spawn<A>();
+  a.send(std::move(ev));
+  acto::join(a);
 }
 
 TEST_CASE("Send from bootstrap") {
