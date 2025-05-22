@@ -215,7 +215,8 @@ TEST_CASE("Move only") {
     }
   };
 
-  A::M ev{.s = "test"};
+  A::M ev;
+  ev.s = "test";
   auto a = acto::spawn<A>();
   a.send(std::move(ev));
   acto::join(a);
