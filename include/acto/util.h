@@ -3,7 +3,7 @@
 namespace acto::util {
 
 /**
- * This base class is usefull for defining move-only events.
+ * This base class is useful for defining move-only events.
  */
 struct move_only {
   constexpr move_only() = default;
